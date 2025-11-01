@@ -14,11 +14,19 @@ Hermes is designed to surface actionable signals, track long-term structural tre
 - CSV export for historical analysis
 - Error handling and rate limit management
 
+### Space & Astronomical Events Layer ✅ NEW!
+- **ISS Tracker**: Real-time International Space Station position monitoring
+- **NEO Monitor**: Near-Earth Object (asteroid) detection and tracking
+- **Solar Activity**: Solar flare detection and geomagnetic storm alerts
+- Risk assessment for space weather impacts on infrastructure
+- CSV export for all space data sources
+
 ## Installation
 
 ### Prerequisites
 - Python 3.12+
 - Alpha Vantage API key (free at https://www.alphavantage.co)
+- NASA API key (free at https://api.nasa.gov)
 
 ### Setup
 
@@ -33,20 +41,27 @@ cd hermes
 pip install requests pandas python-dotenv
 ```
 
-3. Create a `.env` file with your API key:
+3. Create a `.env` file with your API keys:
 ```
 ALPHA_VANTAGE_KEY=your_key_here
+NASA_API_KEY=your_key_here
 ```
 
-4. Run the market data fetcher:
+4. Run any data fetcher:
 ```bash
-python fetch_market_data.py
+python fetch_market_data.py    # Stock market data
+python fetch_iss_data.py        # ISS position tracking
+python fetch_neo_data.py        # Asteroid monitoring
+python fetch_solar_data.py      # Solar flare detection
 ```
 
 ## Project Architecture
 ```
 hermes/
 ├── fetch_market_data.py    # Market data ingestion
+├── fetch_iss_data.py       # ISS position tracker
+├── fetch_neo_data.py       # Near-Earth Object monitor
+├── fetch_solar_data.py     # Solar flare detector
 ├── .env                     # API keys (not committed)
 ├── .gitignore              # Security configuration
 └── data_*.csv              # Generated data files
@@ -66,6 +81,9 @@ hermes/
 ## Data Sources
 
 - **Alpha Vantage**: Stock market data
+- **NASA NEO API**: Near-Earth Object tracking
+- **NASA DONKI**: Solar flare and space weather monitoring
+- **Open Notify**: ISS real-time position
 - More sources coming soon...
 
 ## Security
@@ -89,6 +107,9 @@ hermes/
 - [x] CSV export functionality
 - [x] Error handling
 - [x] Security setup
+- [x] ISS real-time tracking
+- [x] NEO asteroid monitoring
+- [x] Solar flare detection
 
 **Phase 2: Multi-Source Integration** (In Progress)
 - [ ] Weather API integration
@@ -99,11 +120,14 @@ hermes/
 - [ ] LLM-based event classification
 - [ ] Causal relationship modeling
 - [ ] Predictive analytics
+- [ ] Space-financial correlation analysis
 
 **Phase 4: Visualization** (Planned)
 - [ ] Streamlit dashboard
 - [ ] Interactive maps (Pydeck)
 - [ ] Real-time alerts
+- [ ] ISS tracking map
+- [ ] NEO trajectory visualization
 
 ## Contributing
 
@@ -119,4 +143,4 @@ Built by DeepmountainHackz as a comprehensive learning project in data engineeri
 
 ---
 
-**Status**: 🚧 Active Development | **Last Updated**: October 2025
+**Status**: 🚧 Active Development | **Last Updated**: November 2025
