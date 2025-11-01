@@ -29,17 +29,19 @@ def print_menu():
     print("  [4] Space Layer - Solar Activity")
     print("      - Solar flares and geomagnetic storms")
     print()
-    print("  [5] Run ALL Collectors")
+    print("  [5] Environment Layer - Weather Monitor")
+    print("      - Current weather for major cities")
+    print()
+    print("  [6] Run ALL Collectors")
     print("      - Execute complete data collection cycle")
     print()
     print("  [0] Exit")
-    print()
 
 def run_market_collector():
     """Run the market data collector"""
     print("\n🚀 Launching Markets Collector...")
     print("-" * 70)
-    os.system('python fetch_market_data.py')
+    os.system('python services/markets/fetch_market_data.py')
     print("-" * 70)
     print("✅ Markets collection complete!\n")
 
@@ -47,7 +49,7 @@ def run_iss_collector():
     """Run the ISS tracker"""
     print("\n🚀 Launching ISS Tracker...")
     print("-" * 70)
-    os.system('python fetch_iss_data.py')
+    os.system('python services/space/fetch_iss_data.py')
     print("-" * 70)
     print("✅ ISS tracking complete!\n")
 
@@ -55,7 +57,7 @@ def run_neo_collector():
     """Run the NEO monitor"""
     print("\n🚀 Launching NEO Monitor...")
     print("-" * 70)
-    os.system('python fetch_neo_data.py')
+    os.system('python services/space/fetch_neo_data.py')
     print("-" * 70)
     print("✅ NEO monitoring complete!\n")
 
@@ -63,9 +65,17 @@ def run_solar_collector():
     """Run the solar activity monitor"""
     print("\n🚀 Launching Solar Activity Monitor...")
     print("-" * 70)
-    os.system('python fetch_solar_data.py')
+    os.system('python services/space/fetch_solar_data.py')
     print("-" * 70)
     print("✅ Solar monitoring complete!\n")
+
+def run_weather_collector():
+    """Run the weather monitor"""
+    print("\n🚀 Launching Weather Monitor...")
+    print("-" * 70)
+    os.system('python services/environment/fetch_weather_data.py')
+    print("-" * 70)
+    print("✅ Weather monitoring complete!\n")
 
 def run_all_collectors():
     """Run all data collectors in sequence"""
@@ -82,7 +92,8 @@ def run_all_collectors():
         ("Markets", run_market_collector),
         ("ISS", run_iss_collector),
         ("NEO", run_neo_collector),
-        ("Solar", run_solar_collector)
+        ("Solar", run_solar_collector),
+        ("Weather", run_weather_collector)  # ADD THIS LINE
     ]
     
     completed = []
@@ -138,12 +149,14 @@ def main():
         elif choice == "4":
             run_solar_collector()
         elif choice == "5":
+            run_weather_collector()
+        elif choice == "6":
             run_all_collectors()
         elif choice == "0":
             print("\n👋 Shutting down Hermes. Stay curious!\n")
             break
         else:
-            print("\n⚠️  Invalid option. Please enter 0-5.\n")
+            print("\n⚠️  Invalid option. Please enter 0-6.\n")  # Changed from 0-5
         
         # Pause before showing menu again
         input("Press Enter to continue...")
