@@ -32,9 +32,10 @@ def print_menu():
     print("  [5] Environment Layer - Weather Monitor")
     print("      - Current weather for major cities")
     print()
-    print("  [6] Run ALL Collectors")
-    print("      - Execute complete data collection cycle")
+    print("  [6] Social Layer - News Monitor")
+    print("      - Latest headlines from major news sources")
     print()
+    print("  [7] Run ALL Collectors")
     print("  [0] Exit")
 
 def run_market_collector():
@@ -77,6 +78,14 @@ def run_weather_collector():
     print("-" * 70)
     print("✅ Weather monitoring complete!\n")
 
+def run_news_collector():
+    """Run the news monitor"""
+    print("\n🚀 Launching News Monitor...")
+    print("-" * 70)
+    os.system('python services/social/fetch_news_data.py')
+    print("-" * 70)
+    print("✅ News collection complete!\n")    
+
 def run_all_collectors():
     """Run all data collectors in sequence"""
     start_time = datetime.now()
@@ -87,13 +96,13 @@ def run_all_collectors():
     print(f"Started at: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print()
     
-    # Run each collector
     collectors = [
         ("Markets", run_market_collector),
         ("ISS", run_iss_collector),
         ("NEO", run_neo_collector),
         ("Solar", run_solar_collector),
-        ("Weather", run_weather_collector)  # ADD THIS LINE
+        ("Weather", run_weather_collector),
+        ("News", run_news_collector)  # ADD THIS
     ]
     
     completed = []
@@ -138,7 +147,7 @@ def main():
     while True:
         print_menu()
         
-        choice = input("Select option (0-5): ").strip()
+        choice = input("Select option (0-7): ").strip()
         
         if choice == "1":
             run_market_collector()
@@ -150,13 +159,14 @@ def main():
             run_solar_collector()
         elif choice == "5":
             run_weather_collector()
-        elif choice == "6":
+        elif choice == "6": run_news_collector()    
+        elif choice == "7":
             run_all_collectors()
         elif choice == "0":
             print("\n👋 Shutting down Hermes. Stay curious!\n")
             break
         else:
-            print("\n⚠️  Invalid option. Please enter 0-6.\n")  # Changed from 0-5
+            print("\n⚠️  Invalid option. Please enter 0-7.\n")  # Changed from 0-6
         
         # Pause before showing menu again
         input("Press Enter to continue...")
