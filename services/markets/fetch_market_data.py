@@ -1,12 +1,16 @@
 import os
 import requests
 import pandas as pd
+import sqlite3
 from dotenv import load_dotenv
 from datetime import datetime
 
 # Load the API key from .env file
 load_dotenv()
 API_KEY = os.getenv('ALPHA_VANTAGE_KEY')
+
+# Database path
+DATABASE_PATH = 'hermes.db'
 
 # Configuration - Add more stocks here!
 SYMBOLS = ['AAPL', 'MSFT', 'GOOGL']
@@ -22,10 +26,9 @@ def fetch_stock_data(symbol):
     
     try:
         response = requests.get(url, timeout=10)
-        response.raise_for_status()  # Raises error for bad status codes
+        response.raise_for_status()
         data = response.json()
         
-        # Check if we got valid data
         if 'Time Series (Daily)' in data:
             return data['Time Series (Daily)']
         elif 'Note' in data:
@@ -45,66 +48,92 @@ def fetch_stock_data(symbol):
         print(f"❌ Unexpected error for {symbol}: {e}")
         return None
 
-def save_to_csv(symbol, time_series):
+def save_to_database(symbol, time_series):
     """
-    Save stock data to a CSV file.
+    Save stock data to the database.
     """
-    # Convert to DataFrame (like an Excel table)
+    # Connect to database
+    conn = sqlite3.connect(DATABASE_PATH)
+    
+    # Convert to DataFrame
     df = pd.DataFrame.from_dict(time_series, orient='index')
     
-    # Rename columns to be more readable
-    df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+    # Rename columns to match database schema
+    df.columns = ['open', 'high', 'low', 'close', 'volume']
     
-    # Add symbol column
-    df['Symbol'] = symbol
+    # Add metadata columns
+    df['symbol'] = symbol
+    df['date'] = df.index
+    df['timestamp'] = datetime.now().isoformat()
     
-    # Sort by date (most recent first)
-    df = df.sort_index(ascending=False)
+    # Reorder columns to match database
+    df = df[['timestamp', 'date', 'symbol', 'open', 'high', 'low', 'close', 'volume']]
     
-    # Create filename with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"data_{symbol}_{timestamp}.csv"
+    # Convert data types
+    df['open'] = df['open'].astype(float)
+    df['high'] = df['high'].astype(float)
+    df['low'] = df['low'].astype(float)
+    df['close'] = df['close'].astype(float)
+    df['volume'] = df['volume'].astype(int)
     
-    # Save to CSV
-    df.to_csv(filename, index_label='Date')
-    print(f"✅ Saved {len(df)} days of data to {filename}")
-    
-    return df
+    try:
+        # Insert into database (ignore duplicates due to UNIQUE constraint)
+        df.to_sql('stocks', conn, if_exists='append', index=False)
+        
+        print(f"✅ Saved {len(df)} days of data for {symbol} to database")
+        
+        # Show preview of latest data
+        print(f"\n📊 Latest prices for {symbol}:")
+        latest = df.iloc[0]
+        print(f"   Date:  {latest['date']}")
+        print(f"   Open:  ${latest['open']}")
+        print(f"   Close: ${latest['close']}")
+        print()
+        
+        return len(df)
+        
+    except sqlite3.IntegrityError as e:
+        # Duplicate data - this is normal if running multiple times same day
+        print(f"⚠️  Some {symbol} data already exists in database (skipped duplicates)")
+        print()
+        return 0
+    except Exception as e:
+        print(f"❌ Database error for {symbol}: {e}")
+        print()
+        return 0
+    finally:
+        conn.close()
 
 def main():
     """
     Main function - orchestrates everything.
     """
     print("=" * 50)
-    print("HERMES Market Data Fetcher")
+    print("HERMES Market Data Fetcher (Database Mode)")
     print("=" * 50)
     print()
     
     all_data = {}
+    total_saved = 0
     
     # Fetch data for each symbol
     for symbol in SYMBOLS:
         time_series = fetch_stock_data(symbol)
         
         if time_series:
-            # Save to CSV
-            df = save_to_csv(symbol, time_series)
-            all_data[symbol] = df
-            
-            # Show preview of latest data
-            print(f"\n📊 Latest prices for {symbol}:")
-            latest_date = df.index[0]
-            latest = df.iloc[0]
-            print(f"   Date:  {latest_date}")
-            print(f"   Open:  ${latest['Open']}")
-            print(f"   Close: ${latest['Close']}")
-            print()
+            # Save to database
+            saved_count = save_to_database(symbol, time_series)
+            total_saved += saved_count
+            all_data[symbol] = True
         else:
             print(f"⚠️  Skipping {symbol} due to errors\n")
+            all_data[symbol] = False
     
     # Summary
     print("=" * 50)
-    print(f"✅ Successfully fetched data for {len(all_data)}/{len(SYMBOLS)} symbols")
+    print(f"✅ Successfully processed {len([v for v in all_data.values() if v])}/{len(SYMBOLS)} symbols")
+    print(f"💾 Total records saved to database: {total_saved}")
+    print(f"🗄️  Database: {DATABASE_PATH}")
     print("=" * 50)
 
 # Run the script
