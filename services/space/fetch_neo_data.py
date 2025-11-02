@@ -1,6 +1,7 @@
 import os
 import requests
 import pandas as pd
+import sqlite3
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
@@ -8,15 +9,14 @@ from datetime import datetime, timedelta
 load_dotenv()
 NASA_API_KEY = os.getenv('NASA_API_KEY')
 
+DATABASE_PATH = 'hermes.db'
+
 def fetch_neo_data(days=7):
     """
     Fetch Near-Earth Objects (asteroids) approaching Earth.
-    
-    Args:
-        days: Number of days to look ahead (default 7)
     """
     print("=" * 70)
-    print("HERMES Space Tracker - Near-Earth Object Monitor")
+    print("HERMES Space Tracker - Near-Earth Object Monitor (Database Mode)")
     print("=" * 70)
     print()
     
@@ -42,12 +42,12 @@ def fetch_neo_data(days=7):
                 close_approach = asteroid['close_approach_data'][0]
                 
                 all_asteroids.append({
-                    'date': date,
+                    'neo_id': asteroid['id'],
                     'name': asteroid['name'],
-                    'id': asteroid['id'],
+                    'date': date,
                     'diameter_min_m': asteroid['estimated_diameter']['meters']['estimated_diameter_min'],
                     'diameter_max_m': asteroid['estimated_diameter']['meters']['estimated_diameter_max'],
-                    'is_hazardous': asteroid['is_potentially_hazardous_asteroid'],
+                    'is_hazardous': 1 if asteroid['is_potentially_hazardous_asteroid'] else 0,
                     'miss_distance_km': float(close_approach['miss_distance']['kilometers']),
                     'miss_distance_lunar': float(close_approach['miss_distance']['lunar']),
                     'velocity_kmh': float(close_approach['relative_velocity']['kilometers_per_hour']),
@@ -63,7 +63,7 @@ def fetch_neo_data(days=7):
         print()
         
         # Show hazardous asteroids
-        hazardous = df[df['is_hazardous'] == True]
+        hazardous = df[df['is_hazardous'] == 1]
         if len(hazardous) > 0:
             print(f"⚠️  {len(hazardous)} POTENTIALLY HAZARDOUS asteroids detected:")
             print()
@@ -89,14 +89,21 @@ def fetch_neo_data(days=7):
             print(f"      Size: {asteroid['diameter_max_m']:.0f} meters")
             print()
         
-        # Save to CSV
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"data_NEO_{timestamp}.csv"
-        df.to_csv(filename, index=False)
+        # Save to database
+        conn = sqlite3.connect(DATABASE_PATH)
         
-        print("=" * 70)
-        print(f"✅ Saved {len(df)} asteroid records to {filename}")
-        print("=" * 70)
+        try:
+            df.to_sql('near_earth_objects', conn, if_exists='append', index=False)
+            print("=" * 70)
+            print(f"✅ Saved {len(df)} asteroid records to database")
+            print("=" * 70)
+        except sqlite3.IntegrityError:
+            print("=" * 70)
+            print(f"⚠️  Some asteroid data already exists in database (skipped duplicates)")
+            print("=" * 70)
+        finally:
+            conn.close()
+        
         print()
         print("📊 Summary:")
         print(f"   Total asteroids: {len(df)}")
@@ -132,7 +139,7 @@ def main():
     if days_input:
         try:
             days = int(days_input)
-            days = max(1, min(7, days))  # Clamp between 1 and 7
+            days = max(1, min(7, days))
         except ValueError:
             days = 7
     else:
@@ -143,4 +150,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

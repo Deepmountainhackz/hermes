@@ -1,20 +1,26 @@
 import os
 import requests
 import pandas as pd
+import sqlite3
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
+# Load API key
 load_dotenv()
 NASA_API_KEY = os.getenv('NASA_API_KEY')
 
+DATABASE_PATH = 'hermes.db'
+
 def fetch_solar_flares(days_back=30):
-    """Fetch recent solar flare activity."""
-    
+    """
+    Fetch recent solar flare activity from NASA DONKI.
+    """
     print("=" * 70)
-    print("HERMES Space Tracker - Solar Flare Monitor")
+    print("HERMES Space Tracker - Solar Flare Monitor (Database Mode)")
     print("=" * 70)
     print()
     
+    # Date range
     start_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
     end_date = datetime.now().strftime('%Y-%m-%d')
     
@@ -39,12 +45,15 @@ def fetch_solar_flares(days_back=30):
         for flare in flares:
             flare_list.append({
                 'begin_time': flare['beginTime'],
+                'peak_time': flare.get('peakTime', None),
+                'end_time': flare.get('endTime', None),
                 'class_type': flare['classType'],
-                'source_location': flare.get('sourceLocation', 'Unknown')
+                'source_location': flare.get('sourceLocation', 'Unknown'),
+                'active_region': str(flare.get('activeRegionNum', 'N/A')),
+                'linked_events': len(flare.get('linkedEvents', []))
             })
         
         df = pd.DataFrame(flare_list)
-        df['begin_time'] = pd.to_datetime(df['begin_time'])
         df = df.sort_values('begin_time', ascending=False)
         
         # Display results
@@ -64,26 +73,34 @@ def fetch_solar_flares(days_back=30):
         if len(x_class) > 0:
             print("🔴 X-CLASS FLARES:")
             for idx, flare in x_class.iterrows():
-                print(f"   {flare['class_type']} - {flare['begin_time'].strftime('%Y-%m-%d %H:%M')}")
+                print(f"   {flare['class_type']} - {flare['begin_time']}")
         
-        # Save to CSV
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"data_SOLAR_{timestamp}.csv"
-        df.to_csv(filename, index=False)
+        # Save to database
+        conn = sqlite3.connect(DATABASE_PATH)
         
-        print()
-        print(f"✅ Saved to {filename}")
+        try:
+            df.to_sql('solar_flares', conn, if_exists='append', index=False)
+            print()
+            print(f"✅ Saved {len(df)} solar flare records to database")
+        except sqlite3.IntegrityError:
+            print()
+            print(f"⚠️  Some solar flare data already exists in database (skipped duplicates)")
+        finally:
+            conn.close()
+        
         print()
         
         return df
         
     except Exception as e:
         print(f"❌ Error: {e}")
+        print()
         return None
 
 def fetch_geomagnetic_storms(days_back=30):
-    """Fetch geomagnetic storm data."""
-    
+    """
+    Fetch geomagnetic storm data.
+    """
     start_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
     end_date = datetime.now().strftime('%Y-%m-%d')
     
@@ -118,6 +135,7 @@ def fetch_geomagnetic_storms(days_back=30):
         return None
 
 def main():
+    """Main function"""
     days = 30
     fetch_solar_flares(days_back=days)
     fetch_geomagnetic_storms(days_back=days)

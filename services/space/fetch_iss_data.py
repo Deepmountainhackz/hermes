@@ -1,7 +1,10 @@
 import requests
 import pandas as pd
+import sqlite3
 from datetime import datetime
 import time
+
+DATABASE_PATH = 'hermes.db'
 
 def fetch_iss_position():
     """
@@ -17,9 +20,11 @@ def fetch_iss_position():
         
         if data['message'] == 'success':
             return {
-                'timestamp': datetime.fromtimestamp(data['timestamp']),
+                'timestamp': datetime.fromtimestamp(data['timestamp']).isoformat(),
                 'latitude': float(data['iss_position']['latitude']),
-                'longitude': float(data['iss_position']['longitude'])
+                'longitude': float(data['iss_position']['longitude']),
+                'speed_kmh': 27600,
+                'altitude_km': 408
             }
         else:
             print(f"❌ Unexpected response: {data}")
@@ -54,16 +59,30 @@ def fetch_people_in_space():
         print(f"❌ Error fetching astronaut data: {e}")
         return None
 
+def save_to_database(positions):
+    """
+    Save ISS positions to database.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    
+    df = pd.DataFrame(positions)
+    
+    try:
+        df.to_sql('iss_positions', conn, if_exists='append', index=False)
+        print(f"✅ Saved {len(df)} ISS position records to database")
+        return len(df)
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+        return 0
+    finally:
+        conn.close()
+
 def track_iss(duration_minutes=5, interval_seconds=10):
     """
-    Track ISS position over time and save to CSV.
-    
-    Args:
-        duration_minutes: How long to track (default 5 minutes)
-        interval_seconds: How often to fetch position (default 10 seconds)
+    Track ISS position over time and save to database.
     """
     print("=" * 60)
-    print("HERMES Space Tracker - ISS Position Monitor")
+    print("HERMES Space Tracker - ISS Position Monitor (Database Mode)")
     print("=" * 60)
     print()
     
@@ -90,7 +109,7 @@ def track_iss(duration_minutes=5, interval_seconds=10):
                 positions.append(position)
                 
                 # Display current position
-                print(f"🛰️  {position['timestamp'].strftime('%H:%M:%S')}")
+                print(f"🛰️  {position['timestamp']}")
                 print(f"   Lat: {position['latitude']:>7.3f}°")
                 print(f"   Lon: {position['longitude']:>7.3f}°")
                 print()
@@ -101,41 +120,22 @@ def track_iss(duration_minutes=5, interval_seconds=10):
     except KeyboardInterrupt:
         print("\n⚠️  Tracking stopped by user")
     
-    # Save to CSV
+    # Save to database
     if positions:
-        df = pd.DataFrame(positions)
+        saved_count = save_to_database(positions)
         
-        # Add calculated fields
-        df['speed_kmh'] = 27600  # ISS travels at ~27,600 km/h
-        df['altitude_km'] = 408  # ISS orbits at ~408 km
-        
-        # Sort by timestamp
-        df = df.sort_values('timestamp')
-        
-        # Create filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"data_ISS_{timestamp}.csv"
-        
-        # Save
-        df.to_csv(filename, index=False)
         print("=" * 60)
-        print(f"✅ Saved {len(df)} position records to {filename}")
-        print("=" * 60)
-        print()
-        
-        # Show summary
-        print("📊 Tracking Summary:")
+        print(f"📊 Tracking Summary:")
         print(f"   Duration: {duration_minutes} minutes")
-        print(f"   Records: {len(df)}")
-        print(f"   Start: {df['timestamp'].iloc[0]}")
-        print(f"   End: {df['timestamp'].iloc[-1]}")
+        print(f"   Records: {len(positions)}")
+        print(f"   Saved to database: {saved_count}")
         print(f"   Distance traveled: ~{int(27600 * duration_minutes / 60)} km")
-        print()
+        print("=" * 60)
         
-        return df
+        return len(positions)
     else:
         print("❌ No data collected")
-        return None
+        return 0
 
 def main():
     """
@@ -155,11 +155,18 @@ def main():
         print("\n📡 Fetching current ISS position...\n")
         position = fetch_iss_position()
         if position:
-            print(f"🛰️  ISS Position at {position['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"🛰️  ISS Position")
+            print(f"   Time: {position['timestamp']}")
             print(f"   Latitude:  {position['latitude']:>7.3f}°")
             print(f"   Longitude: {position['longitude']:>7.3f}°")
             print(f"   Speed: ~27,600 km/h")
             print(f"   Altitude: ~408 km")
+            
+            # Save single position
+            conn = sqlite3.connect(DATABASE_PATH)
+            pd.DataFrame([position]).to_sql('iss_positions', conn, if_exists='append', index=False)
+            conn.close()
+            print(f"\n✅ Saved to database")
     
     elif choice == "2":
         track_iss(duration_minutes=5, interval_seconds=10)
@@ -169,4 +176,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

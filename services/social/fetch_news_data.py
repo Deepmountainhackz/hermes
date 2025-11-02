@@ -1,6 +1,9 @@
 import feedparser
 import pandas as pd
+import sqlite3
 from datetime import datetime
+
+DATABASE_PATH = 'hermes.db'
 
 def fetch_rss_feed(feed_url, source_name):
     """
@@ -10,18 +13,19 @@ def fetch_rss_feed(feed_url, source_name):
         print(f"📰 Fetching {source_name}...")
         feed = feedparser.parse(feed_url)
         
-        if feed.bozo:  # Feed parsing error
+        if feed.bozo:
             print(f"   ⚠️  Warning: Feed may have issues")
         
         articles = []
         
-        for entry in feed.entries[:10]:  # Get top 10 articles
+        for entry in feed.entries[:10]:
             articles.append({
+                'timestamp': datetime.now().isoformat(),
                 'source': source_name,
                 'title': entry.get('title', 'No title'),
                 'link': entry.get('link', 'No link'),
                 'published': entry.get('published', 'Unknown date'),
-                'summary': entry.get('summary', 'No summary')[:200] + '...'  # Truncate
+                'summary': entry.get('summary', 'No summary')[:200] + '...'
             })
         
         print(f"   ✅ Found {len(articles)} articles")
@@ -31,12 +35,32 @@ def fetch_rss_feed(feed_url, source_name):
         print(f"   ❌ Error fetching {source_name}: {e}")
         return []
 
+def save_to_database(articles):
+    """
+    Save news articles to database.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    df = pd.DataFrame(articles)
+    
+    try:
+        df.to_sql('news', conn, if_exists='append', index=False)
+        print(f"✅ Saved {len(df)} news articles to database")
+        return len(df)
+    except sqlite3.IntegrityError:
+        print(f"⚠️  Some articles already exist in database (skipped duplicates)")
+        return 0
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+        return 0
+    finally:
+        conn.close()
+
 def fetch_news_feeds():
     """
     Fetch news from multiple RSS feeds.
     """
     print("=" * 70)
-    print("HERMES Social Intelligence - News Monitor")
+    print("HERMES Social Intelligence - News Monitor (Database Mode)")
     print("=" * 70)
     print()
     
@@ -61,16 +85,14 @@ def fetch_news_feeds():
         print("❌ No news articles collected")
         return None
     
-    # Convert to DataFrame
-    df = pd.DataFrame(all_articles)
-    
-    # Save to CSV
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"data_NEWS_{timestamp}.csv"
-    df.to_csv(filename, index=False)
+    # Save to database
+    saved_count = save_to_database(all_articles)
     
     print("=" * 70)
-    print(f"✅ Saved {len(df)} news articles to {filename}")
+    print(f"📊 Collection Summary:")
+    print(f"   Total articles: {len(all_articles)}")
+    print(f"   Saved to database: {saved_count}")
+    print(f"   Sources: {len(feeds)}")
     print("=" * 70)
     print()
     
@@ -78,13 +100,13 @@ def fetch_news_feeds():
     print("📰 Latest Headlines:")
     print()
     
-    # Group by source and show top headline from each
+    df = pd.DataFrame(all_articles)
+    
     for source in df['source'].unique():
         source_articles = df[df['source'] == source]
         top_article = source_articles.iloc[0]
         print(f"   [{source}]")
         print(f"   {top_article['title']}")
-        print(f"   {top_article['link']}")
         print()
     
     return df
