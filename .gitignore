@@ -1,20 +1,123 @@
-# Environment variables
+# Hermes Intelligence Platform - .gitignore
+
+# Environment variables (NEVER commit API keys!)
 .env
+.env.local
+.env.*.local
 
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Data files (often contain sensitive info)
-*.csv
-*.json
-data/
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
 
-# IDE files
+# IDE
 .vscode/
 .idea/
-
-# OS files
+*.swp
+*.swo
+*~
 .DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+~$*
+
+# OS specific
 Thumbs.db
+.DS_Store
+
+# Data files (if not tracking database)
+# Uncomment if you don't want database in Git
+# hermes.db
+# *.db
+
+# CSV files (legacy - no longer used)
+*.csv
+
+# Sensitive data
+secrets/
+private/
+
+# Build and distribution
+*.pyc
+*.pyo
+*.pyd
+
+# Documentation builds
+docs/_build/
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Database backups
+*_backup.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Cache
+.cache/
+*.cache
+
+# Output files
+output/
+exports/
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+coverage.xml
+*.cover
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
