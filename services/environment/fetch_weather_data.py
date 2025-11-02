@@ -1,154 +1,157 @@
 import os
+import sys
 import requests
-import pandas as pd
+from datetime import datetime
 import sqlite3
 from dotenv import load_dotenv
-from datetime import datetime
 
-# Load API key
+# Load environment variables
 load_dotenv()
-OPENWEATHER_KEY = os.getenv('OPENWEATHER_KEY')
 
-DATABASE_PATH = 'hermes.db'
+def is_interactive():
+    """Check if running in an interactive terminal"""
+    return sys.stdin.isatty()
 
-def fetch_weather_for_city(city_name):
-    """
-    Fetch current weather for a specific city.
-    """
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={OPENWEATHER_KEY}&units=metric"
+def get_user_input(prompt, default='y'):
+    """Get user input if interactive, otherwise use default"""
+    if is_interactive():
+        return input(prompt).strip().lower()
+    return default
+
+def connect_db():
+    """Connect to the Hermes database"""
+    return sqlite3.connect('hermes.db')
+
+def save_to_database(weather_data):
+    """Save weather data to SQLite database"""
+    conn = connect_db()
+    cursor = conn.cursor()
     
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extract relevant data
-        weather_data = {
-            'timestamp': datetime.now().isoformat(),
-            'city': data['name'],
-            'country': data['sys']['country'],
-            'temperature_c': data['main']['temp'],
-            'feels_like_c': data['main']['feels_like'],
-            'temp_min_c': data['main']['temp_min'],
-            'temp_max_c': data['main']['temp_max'],
-            'pressure_hpa': data['main']['pressure'],
-            'humidity_percent': data['main']['humidity'],
-            'weather_main': data['weather'][0]['main'],
-            'weather_description': data['weather'][0]['description'],
-            'wind_speed_ms': data['wind']['speed'],
-            'clouds_percent': data['clouds']['all'],
-            'latitude': data['coord']['lat'],
-            'longitude': data['coord']['lon']
-        }
-        
-        return weather_data
-        
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed for {city_name}: {e}")
-        return None
-    except KeyError as e:
-        print(f"❌ Unexpected data format for {city_name}: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Unexpected error for {city_name}: {e}")
-        return None
-
-def save_to_database(weather_list):
-    """
-    Save weather data to database.
-    """
-    conn = sqlite3.connect(DATABASE_PATH)
-    df = pd.DataFrame(weather_list)
+    for data in weather_data:
+        cursor.execute('''
+            INSERT INTO weather (
+                timestamp, city, country, temperature_c, feels_like_c,
+                temp_min_c, temp_max_c, pressure_hpa, humidity_percent,
+                weather_main, weather_description, wind_speed_ms,
+                clouds_percent, latitude, longitude
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            data['timestamp'],
+            data['city'],
+            data['country'],
+            data['temperature_c'],
+            data['feels_like_c'],
+            data['temp_min_c'],
+            data['temp_max_c'],
+            data['pressure_hpa'],
+            data['humidity_percent'],
+            data['weather_main'],
+            data['weather_description'],
+            data['wind_speed_ms'],
+            data['clouds_percent'],
+            data['latitude'],
+            data['longitude']
+        ))
     
-    try:
-        df.to_sql('weather', conn, if_exists='append', index=False)
-        print(f"✅ Saved {len(df)} weather records to database")
-        return len(df)
-    except Exception as e:
-        print(f"❌ Database error: {e}")
-        return 0
-    finally:
-        conn.close()
+    conn.commit()
+    records_saved = cursor.rowcount
+    conn.close()
+    return records_saved
 
-def fetch_weather_for_cities(cities):
-    """
-    Fetch weather data for multiple cities.
-    """
-    print("=" * 70)
-    print("HERMES Environment Tracker - Weather Monitor (Database Mode)")
-    print("=" * 70)
-    print()
+def fetch_weather(api_key, cities):
+    """Fetch weather data from OpenWeatherMap API"""
+    base_url = "http://api.openweathermap.org/data/2.5/weather"
+    weather_data = []
     
-    all_weather = []
+    print(f"\n🌦️  Fetching weather data for {len(cities)} cities...")
     
     for city in cities:
-        print(f"🌡️  Fetching weather for {city}...")
-        weather = fetch_weather_for_city(city)
-        
-        if weather:
-            all_weather.append(weather)
+        try:
+            params = {
+                'q': city,
+                'appid': api_key,
+                'units': 'metric'
+            }
             
-            # Display current conditions
-            print(f"   Temperature: {weather['temperature_c']:.1f}°C (feels like {weather['feels_like_c']:.1f}°C)")
-            print(f"   Conditions: {weather['weather_description'].title()}")
-            print(f"   Humidity: {weather['humidity_percent']}%")
-            print(f"   Wind: {weather['wind_speed_ms']:.1f} m/s")
-            print()
-        else:
-            print(f"   ⚠️  Failed to fetch data for {city}")
-            print()
+            response = requests.get(base_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            weather_entry = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'city': data['name'],
+                'country': data['sys']['country'],
+                'temperature_c': data['main']['temp'],
+                'feels_like_c': data['main']['feels_like'],
+                'temp_min_c': data['main']['temp_min'],
+                'temp_max_c': data['main']['temp_max'],
+                'pressure_hpa': data['main']['pressure'],
+                'humidity_percent': data['main']['humidity'],
+                'weather_main': data['weather'][0]['main'],
+                'weather_description': data['weather'][0]['description'],
+                'wind_speed_ms': data['wind']['speed'],
+                'clouds_percent': data['clouds']['all'],
+                'latitude': data['coord']['lat'],
+                'longitude': data['coord']['lon']
+            }
+            
+            weather_data.append(weather_entry)
+            print(f"  ✓ {city}: {data['main']['temp']:.1f}°C - {data['weather'][0]['description']}")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"  ✗ Error fetching data for {city}: {e}")
+            continue
     
-    if not all_weather:
-        print("❌ No weather data collected")
-        return None
-    
-    # Save to database
-    saved_count = save_to_database(all_weather)
-    
-    print("=" * 70)
-    print(f"📊 Weather Summary:")
-    print(f"   Cities: {len(all_weather)}")
-    print(f"   Saved to database: {saved_count}")
-    
-    df = pd.DataFrame(all_weather)
-    print(f"   Average Temperature: {df['temperature_c'].mean():.1f}°C")
-    print(f"   Warmest: {df.loc[df['temperature_c'].idxmax(), 'city']} ({df['temperature_c'].max():.1f}°C)")
-    print(f"   Coldest: {df.loc[df['temperature_c'].idxmin(), 'city']} ({df['temperature_c'].min():.1f}°C)")
-    print(f"   Average Humidity: {df['humidity_percent'].mean():.0f}%")
-    print("=" * 70)
-    print()
-    
-    return df
+    return weather_data
 
 def main():
-    """Main function"""
-    # Default cities
-    default_cities = [
-        "London",
-        "New York",
-        "Tokyo",
-        "Sydney",
-        "Dubai",
-        "Zurich"
-    ]
-    
+    print("="*70)
     print("Weather Monitor")
-    print("=" * 70)
-    print()
-    print("Default cities:", ", ".join(default_cities))
-    print()
+    print("="*70)
     
-    custom = input("Use default cities? (y/n): ").strip().lower()
+    # Get API key
+    api_key = os.getenv('OPENWEATHER_KEY')
+    if not api_key:
+        print("❌ Error: OPENWEATHER_KEY not found in environment variables")
+        sys.exit(1)
     
-    if custom == 'n':
-        print("\nEnter cities separated by commas (e.g., Paris, Berlin, Rome):")
-        city_input = input("> ").strip()
-        cities = [city.strip() for city in city_input.split(',')]
-    else:
+    # Default cities
+    default_cities = ['London', 'New York', 'Tokyo', 'Sydney', 'Dubai', 'Zurich']
+    
+    print(f"\nDefault cities: {', '.join(default_cities)}")
+    
+    # Ask user if they want to use default cities (auto-yes in automation)
+    use_default = get_user_input("Use default cities? (y/n): ", 'y')
+    
+    if use_default == 'y':
         cities = default_cities
+    else:
+        custom_input = input("Enter cities separated by commas: ")
+        cities = [city.strip() for city in custom_input.split(',')]
     
-    print()
-    fetch_weather_for_cities(cities)
+    # Fetch weather data
+    weather_data = fetch_weather(api_key, cities)
+    
+    if not weather_data:
+        print("\n❌ No weather data collected")
+        return
+    
+    # Save to database
+    print(f"\n💾 Saving to database...")
+    records_saved = save_to_database(weather_data)
+    print(f"✅ Saved {records_saved} weather records to database")
+    
+    # Record collection metadata
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO collection_metadata (timestamp, layer, collector, status, records_collected)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'environment', 'weather', 'success', len(weather_data)))
+    conn.commit()
+    conn.close()
+    
+    print("\n✅ Weather collection complete!")
 
 if __name__ == "__main__":
     main()
