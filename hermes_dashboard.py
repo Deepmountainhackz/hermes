@@ -488,7 +488,7 @@ elif page == "🌦️ Environment":
             
             hex_df = pd.DataFrame(hex_data)
             
-            # Create Pydeck layer
+            # Create Pydeck layer (optimized for performance)
             layer = pdk.Layer(
                 'PolygonLayer',
                 hex_df,
@@ -498,20 +498,21 @@ elif page == "🌦️ Environment":
                 line_width_min_pixels=2,
                 pickable=True,
                 auto_highlight=True,
-                elevation_scale=1000,
-                get_elevation='temperature * 100'
+                elevation_scale=500,  # Reduced for better performance
+                get_elevation='temperature * 50',  # Reduced multiplier
+                extruded=True
             )
             
-            # Set view state
+            # Set view state (optimized for fast loading)
             view_state = pdk.ViewState(
                 latitude=20,
                 longitude=0,
-                zoom=1.5,
-                pitch=45,
+                zoom=1.2,
+                pitch=30,  # Reduced from 45 for faster rendering
                 bearing=0
             )
             
-            # Create deck
+            # Create deck (using Carto style - no token needed!)
             deck = pdk.Deck(
                 layers=[layer],
                 initial_view_state=view_state,
@@ -522,7 +523,7 @@ elif page == "🌦️ Environment":
                         'color': 'white'
                     }
                 },
-                map_style='mapbox://styles/mapbox/dark-v10'
+                map_style='https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
             )
             
             st.pydeck_chart(deck)
