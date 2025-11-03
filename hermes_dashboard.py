@@ -459,79 +459,99 @@ elif page == "🌦️ Environment":
         if not filtered_weather.empty:
             st.markdown("---")
             
-            # Create H3 Hexagon Map
-            st.subheader("🌐 Interactive Weather Grid (H3 Hexagons)")
+            # Create TRUE 3D GLOBE using Plotly orthographic projection
+            st.subheader("🌐 Interactive Weather Globe (3D Sphere)")
             
-            # Prepare data for H3HexagonLayer (for globe view)
-            hex_layer_data = []
+            # Prepare data for globe
+            globe_data = []
             for _, row in filtered_weather.iterrows():
-                # Normalize temperature for color (0-50°C range)
+                # Normalize temperature for color
                 temp_norm = min(max(row['temperature_c'], -20), 50)
-                # Red for hot, blue for cold
-                red = int(255 * ((temp_norm + 20) / 70))
-                blue = int(255 * (1 - (temp_norm + 20) / 70))
                 
-                hex_layer_data.append({
-                    'hex': row['h3'],
-                    'temperature': row['temperature_c'],
+                globe_data.append({
+                    'lat': row['lat'],
+                    'lon': row['lon'],
                     'city': row['city'],
+                    'temp': row['temperature_c'],
                     'humidity': row['humidity_percent'],
-                    'description': row['weather_description'],
-                    'count': 1,
-                    'color': [red, 150, blue, 200]
+                    'description': row['weather_description']
                 })
             
-            hex_layer_df = pd.DataFrame(hex_layer_data)
+            globe_df = pd.DataFrame(globe_data)
             
-            # Create H3HexagonLayer for proper globe rendering
-            layer = pdk.Layer(
-                'H3HexagonLayer',
-                hex_layer_df,
-                get_hexagon='hex',
-                get_fill_color='color',
-                get_line_color=[255, 255, 255, 100],
-                line_width_min_pixels=1,
-                pickable=True,
-                auto_highlight=True,
-                elevation_scale=50000,
-                extruded=True,
-                coverage=1,
-                get_elevation='temperature * 1000'
+            # Create 3D globe figure with orthographic projection (sphere view!)
+            fig_globe = go.Figure()
+            
+            # Add markers for each city with size and color based on temperature
+            fig_globe.add_trace(go.Scattergeo(
+                lon=globe_df['lon'],
+                lat=globe_df['lat'],
+                text=globe_df['city'],
+                mode='markers+text',
+                marker=dict(
+                    size=globe_df['temp'].apply(lambda x: abs(x) + 10),  # Size by temp magnitude
+                    color=globe_df['temp'],
+                    colorscale=[
+                        [0, 'rgb(0, 0, 255)'],      # Cold = Blue
+                        [0.5, 'rgb(128, 0, 128)'],  # Medium = Purple
+                        [1, 'rgb(255, 0, 0)']       # Hot = Red
+                    ],
+                    cmin=-20,
+                    cmax=50,
+                    colorbar=dict(
+                        title="Temperature (°C)",
+                        thickness=15,
+                        len=0.7
+                    ),
+                    line=dict(width=1, color='white')
+                ),
+                textfont=dict(size=10, color='white'),
+                textposition='top center',
+                hovertemplate='<b>%{text}</b><br>' +
+                              'Temperature: %{marker.color:.1f}°C<br>' +
+                              '<extra></extra>'
+            ))
+            
+            # Configure as TRUE 3D GLOBE (orthographic = ball/sphere view)
+            fig_globe.update_geos(
+                projection_type='orthographic',  # THIS MAKES IT A BALL!
+                showcountries=True,
+                countrycolor='rgba(255, 255, 255, 0.3)',
+                showcoastlines=True,
+                coastlinecolor='rgba(255, 255, 255, 0.5)',
+                showland=True,
+                landcolor='rgb(30, 30, 30)',
+                showocean=True,
+                oceancolor='rgb(10, 10, 30)',
+                showlakes=True,
+                lakecolor='rgb(10, 10, 50)',
+                projection_rotation=dict(
+                    lon=0,
+                    lat=30,
+                    roll=0
+                ),
+                center=dict(lon=0, lat=30)
             )
             
-            # Set view state for GLOBE perspective
-            view_state = pdk.ViewState(
-                latitude=30,
-                longitude=0,
-                zoom=0.8,  # Zoomed out to see full globe
-                pitch=0,    # Top-down view initially
-                bearing=0,
-                min_zoom=0,
-                max_zoom=10
+            fig_globe.update_layout(
+                title=dict(
+                    text='🌍 Global Weather Monitor - 3D Sphere View',
+                    font=dict(size=20)
+                ),
+                height=700,
+                paper_bgcolor='rgb(0, 0, 0)',
+                plot_bgcolor='rgb(0, 0, 0)',
+                font=dict(color='white'),
+                geo=dict(
+                    bgcolor='rgb(0, 0, 0)'
+                ),
+                dragmode='pan'  # Enable rotation by dragging
             )
             
-            # Create deck with GLOBE view (single world, no wrapping)
-            deck = pdk.Deck(
-                layers=[layer],
-                initial_view_state=view_state,
-                tooltip={
-                    'html': '<b>{city}</b><br/>🌡️ {temperature}°C<br/>💧 {humidity}%<br/>{description}',
-                    'style': {
-                        'backgroundColor': 'rgba(0, 0, 0, 0.8)',
-                        'color': 'white',
-                        'fontSize': '14px',
-                        'padding': '10px'
-                    }
-                },
-                map_style='https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
-                parameters={
-                    'renderWorldCopies': False  # Don't repeat the world!
-                }
-            )
+            st.plotly_chart(fig_globe, use_container_width=True)
             
-            st.pydeck_chart(deck)
-            
-            st.info("🌍 **Globe Controls:** Click and drag to rotate | Scroll to zoom | Shift+drag to tilt | Red = hot, Blue = cold")
+            st.info("🌍 **Globe Controls:** Click and drag to rotate the sphere | Scroll to zoom | This is a TRUE 3D ball/sphere view!")
+
 
             
             st.markdown("---")
