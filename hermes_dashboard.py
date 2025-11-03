@@ -430,8 +430,14 @@ elif page == "🌦️ Environment":
         latest_weather = weather_df.groupby('city').first().reset_index()
         
         # Convert to H3 hexagons (resolution 4 = ~22km edge)
+        # Using h3 v4.x API (latlng_to_cell is the new function name)
+        # H3 Resolution Guide:
+        # - 0: ~1,107 km (continents)
+        # - 4: ~22 km (cities) ← WE'RE HERE
+        # - 6: ~3.2 km (neighborhoods)
+        # - 8: ~461 m (blocks)
         latest_weather['h3'] = latest_weather.apply(
-            lambda row: h3.geo_to_h3(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
+            lambda row: h3.latlng_to_cell(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
             axis=1
         )
         
@@ -460,7 +466,8 @@ elif page == "🌦️ Environment":
             hex_data = []
             for _, row in filtered_weather.iterrows():
                 h3_id = row['h3']
-                boundary = h3.h3_to_geo_boundary(h3_id)
+                # Using h3 v4.x API - returns LatLng objects
+                boundary = h3.cell_to_boundary(h3_id)
                 # Convert to [lon, lat] format for Pydeck
                 polygon = [[coord[1], coord[0]] for coord in boundary]
                 
