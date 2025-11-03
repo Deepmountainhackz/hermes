@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import h3
+import pydeck as pdk
 
 # Page config
 st.set_page_config(
@@ -36,6 +38,20 @@ def load_data(query):
     conn = get_connection()
     df = pd.read_sql_query(query, conn)
     return df
+
+# City coordinates (add these to your database eventually)
+CITY_COORDS = {
+    'Dubai': {'lat': 25.2048, 'lon': 55.2708},
+    'London': {'lat': 51.5074, 'lon': -0.1278},
+    'New York': {'lat': 40.7128, 'lon': -74.0060},
+    'Tokyo': {'lat': 35.6762, 'lon': 139.6503},
+    'Sydney': {'lat': -33.8688, 'lon': 151.2093},
+    'Paris': {'lat': 48.8566, 'lon': 2.3522},
+    'Berlin': {'lat': 52.5200, 'lon': 13.4050},
+    'Mumbai': {'lat': 19.0760, 'lon': 72.8777},
+    'Singapore': {'lat': 1.3521, 'lon': 103.8198},
+    'São Paulo': {'lat': -23.5505, 'lon': -46.6333}
+}
 
 # Sidebar
 st.sidebar.title("🌐 Hermes Intelligence")
@@ -375,10 +391,11 @@ elif page == "🛰️ Space":
         st.info("No recent solar flare activity detected (this is normal!)")
 
 # ============================================================================
-# ENVIRONMENT PAGE
+# ENVIRONMENT PAGE WITH H3 HEXAGONS
 # ============================================================================
 elif page == "🌦️ Environment":
     st.title("🌦️ Environmental Monitoring")
+    st.markdown("### Interactive Global Weather Grid")
     st.markdown("---")
     
     weather_query = """
@@ -402,62 +419,167 @@ elif page == "🌦️ Environment":
     if weather_df.empty:
         st.warning("No weather data available")
     else:
+        # Add coordinates to weather data
+        weather_df['lat'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat', 0))
+        weather_df['lon'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon', 0))
+        
+        # Fix datetime parsing
+        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'], errors='coerce', utc=True)
+        
         # Get latest weather for each city
         latest_weather = weather_df.groupby('city').first().reset_index()
         
-        # Display weather cards
-        st.subheader("Current Weather Conditions")
-        
-        cols = st.columns(min(3, len(latest_weather)))
-        for idx, (col, row) in enumerate(zip(cols, latest_weather.iterrows())):
-            with col:
-                st.markdown(f"### {row[1]['city']}")
-                st.metric("Temperature", f"{row[1]['temperature_c']:.1f}°C")
-                st.write(f"**Feels like:** {row[1]['feels_like_c']:.1f}°C")
-                st.write(f"**Conditions:** {row[1]['weather_description']}")
-                st.write(f"**Humidity:** {row[1]['humidity_percent']}%")
-                st.write(f"**Wind:** {row[1]['wind_speed_ms']} m/s")
-                st.caption(f"Updated: {row[1]['timestamp']}")
-        
-        st.markdown("---")
-        
-        # Temperature history
-        st.subheader("Temperature Trends")
-        
-        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'], errors='coerce', utc=True)
-        
-        fig_temp = go.Figure()
-        
-        for city in weather_df['city'].unique():
-            city_data = weather_df[weather_df['city'] == city]
-            fig_temp.add_trace(go.Scatter(
-                x=city_data['timestamp'],
-                y=city_data['temperature_c'],
-                name=city,
-                mode='lines+markers'
-            ))
-        
-        fig_temp.update_layout(
-            xaxis_title="Time",
-            yaxis_title="Temperature (°C)",
-            height=400,
-            hovermode='x unified'
+        # Convert to H3 hexagons (resolution 4 = ~22km edge)
+        latest_weather['h3'] = latest_weather.apply(
+            lambda row: h3.geo_to_h3(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
+            axis=1
         )
         
-        st.plotly_chart(fig_temp, use_container_width=True)
+        # Remove any rows where H3 conversion failed
+        latest_weather = latest_weather[latest_weather['h3'].notna()]
         
-        # Humidity comparison
-        st.subheader("Humidity Levels")
-        
-        fig_humidity = px.bar(
-            latest_weather,
-            x='city',
-            y='humidity_percent',
-            title="Current Humidity by City",
-            labels={'humidity_percent': 'Humidity (%)'}
+        # Region selector
+        st.subheader("🗺️ Select Regions to Display")
+        all_cities = latest_weather['city'].tolist()
+        selected_cities = st.multiselect(
+            "Choose cities:",
+            options=all_cities,
+            default=all_cities
         )
-        fig_humidity.update_layout(height=300)
-        st.plotly_chart(fig_humidity, use_container_width=True)
+        
+        # Filter data
+        filtered_weather = latest_weather[latest_weather['city'].isin(selected_cities)]
+        
+        if not filtered_weather.empty:
+            st.markdown("---")
+            
+            # Create H3 Hexagon Map
+            st.subheader("🌐 Interactive Weather Grid (H3 Hexagons)")
+            
+            # Get hexagon boundaries for each H3 cell
+            hex_data = []
+            for _, row in filtered_weather.iterrows():
+                h3_id = row['h3']
+                boundary = h3.h3_to_geo_boundary(h3_id)
+                # Convert to [lon, lat] format for Pydeck
+                polygon = [[coord[1], coord[0]] for coord in boundary]
+                
+                # Normalize temperature for color (0-50°C range)
+                temp_norm = min(max(row['temperature_c'], -20), 50)
+                # Red for hot, blue for cold
+                red = int(255 * ((temp_norm + 20) / 70))
+                blue = int(255 * (1 - (temp_norm + 20) / 70))
+                
+                hex_data.append({
+                    'polygon': polygon,
+                    'temperature': row['temperature_c'],
+                    'city': row['city'],
+                    'humidity': row['humidity_percent'],
+                    'description': row['weather_description'],
+                    'color': [red, 150, blue, 180]
+                })
+            
+            hex_df = pd.DataFrame(hex_data)
+            
+            # Create Pydeck layer
+            layer = pdk.Layer(
+                'PolygonLayer',
+                hex_df,
+                get_polygon='polygon',
+                get_fill_color='color',
+                get_line_color=[255, 255, 255],
+                line_width_min_pixels=2,
+                pickable=True,
+                auto_highlight=True,
+                elevation_scale=1000,
+                get_elevation='temperature * 100'
+            )
+            
+            # Set view state
+            view_state = pdk.ViewState(
+                latitude=20,
+                longitude=0,
+                zoom=1.5,
+                pitch=45,
+                bearing=0
+            )
+            
+            # Create deck
+            deck = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={
+                    'html': '<b>{city}</b><br/>Temperature: {temperature}°C<br/>Humidity: {humidity}%<br/>{description}',
+                    'style': {
+                        'backgroundColor': 'steelblue',
+                        'color': 'white'
+                    }
+                },
+                map_style='mapbox://styles/mapbox/dark-v10'
+            )
+            
+            st.pydeck_chart(deck)
+            
+            st.info("💡 **Tip:** Hover over hexagons to see details. Red = hot, Blue = cold. Height = temperature.")
+            
+            st.markdown("---")
+            
+            # Weather Cards
+            st.subheader("📊 Current Conditions")
+            
+            cols = st.columns(min(3, len(filtered_weather)))
+            for idx, (col, (_, row)) in enumerate(zip(cols * 10, filtered_weather.iterrows())):
+                with col:
+                    st.markdown(f"### {row['city']}")
+                    st.metric("Temperature", f"{row['temperature_c']:.1f}°C")
+                    st.write(f"**Feels like:** {row['feels_like_c']:.1f}°C")
+                    st.write(f"**Conditions:** {row['weather_description']}")
+                    st.write(f"**Humidity:** {row['humidity_percent']}%")
+                    st.write(f"**Wind:** {row['wind_speed_ms']} m/s")
+                    st.caption(f"H3: {row['h3'][:8]}...")
+            
+            st.markdown("---")
+            
+            # Temperature Trends
+            st.subheader("📈 Temperature Trends")
+            
+            fig_temp = go.Figure()
+            
+            for city in selected_cities:
+                city_data = weather_df[weather_df['city'] == city]
+                fig_temp.add_trace(go.Scatter(
+                    x=city_data['timestamp'],
+                    y=city_data['temperature_c'],
+                    name=city,
+                    mode='lines+markers'
+                ))
+            
+            fig_temp.update_layout(
+                xaxis_title="Time",
+                yaxis_title="Temperature (°C)",
+                height=400,
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig_temp, use_container_width=True)
+            
+            # Humidity comparison
+            st.subheader("💧 Humidity Comparison")
+            
+            fig_humidity = px.bar(
+                filtered_weather,
+                x='city',
+                y='humidity_percent',
+                title="Current Humidity by City",
+                labels={'humidity_percent': 'Humidity (%)'},
+                color='humidity_percent',
+                color_continuous_scale='Blues'
+            )
+            fig_humidity.update_layout(height=300)
+            st.plotly_chart(fig_humidity, use_container_width=True)
+            
+        else:
+            st.warning("Please select at least one city to display data.")
 
 # ============================================================================
 # NEWS PAGE
