@@ -462,73 +462,77 @@ elif page == "🌦️ Environment":
             # Create H3 Hexagon Map
             st.subheader("🌐 Interactive Weather Grid (H3 Hexagons)")
             
-            # Get hexagon boundaries for each H3 cell
-            hex_data = []
+            # Prepare data for H3HexagonLayer (for globe view)
+            hex_layer_data = []
             for _, row in filtered_weather.iterrows():
-                h3_id = row['h3']
-                # Using h3 v4.x API - returns LatLng objects
-                boundary = h3.cell_to_boundary(h3_id)
-                # Convert to [lon, lat] format for Pydeck
-                polygon = [[coord[1], coord[0]] for coord in boundary]
-                
                 # Normalize temperature for color (0-50°C range)
                 temp_norm = min(max(row['temperature_c'], -20), 50)
                 # Red for hot, blue for cold
                 red = int(255 * ((temp_norm + 20) / 70))
                 blue = int(255 * (1 - (temp_norm + 20) / 70))
                 
-                hex_data.append({
-                    'polygon': polygon,
+                hex_layer_data.append({
+                    'hex': row['h3'],
                     'temperature': row['temperature_c'],
                     'city': row['city'],
                     'humidity': row['humidity_percent'],
                     'description': row['weather_description'],
-                    'color': [red, 150, blue, 180]
+                    'count': 1,
+                    'color': [red, 150, blue, 200]
                 })
             
-            hex_df = pd.DataFrame(hex_data)
+            hex_layer_df = pd.DataFrame(hex_layer_data)
             
-            # Create Pydeck layer (optimized for performance)
+            # Create H3HexagonLayer for proper globe rendering
             layer = pdk.Layer(
-                'PolygonLayer',
-                hex_df,
-                get_polygon='polygon',
+                'H3HexagonLayer',
+                hex_layer_df,
+                get_hexagon='hex',
                 get_fill_color='color',
-                get_line_color=[255, 255, 255],
-                line_width_min_pixels=2,
+                get_line_color=[255, 255, 255, 100],
+                line_width_min_pixels=1,
                 pickable=True,
                 auto_highlight=True,
-                elevation_scale=500,  # Reduced for better performance
-                get_elevation='temperature * 50',  # Reduced multiplier
-                extruded=True
+                elevation_scale=50000,
+                extruded=True,
+                coverage=1,
+                get_elevation='temperature * 1000'
             )
             
-            # Set view state (optimized for fast loading)
+            # Set view state for GLOBE perspective
             view_state = pdk.ViewState(
-                latitude=20,
+                latitude=30,
                 longitude=0,
-                zoom=1.2,
-                pitch=30,  # Reduced from 45 for faster rendering
-                bearing=0
+                zoom=0.8,  # Zoomed out to see full globe
+                pitch=0,    # Top-down view initially
+                bearing=0,
+                min_zoom=0,
+                max_zoom=10
             )
             
-            # Create deck (using Carto style - no token needed!)
+            # Create deck with GLOBE view (single world, no wrapping)
             deck = pdk.Deck(
                 layers=[layer],
                 initial_view_state=view_state,
                 tooltip={
-                    'html': '<b>{city}</b><br/>Temperature: {temperature}°C<br/>Humidity: {humidity}%<br/>{description}',
+                    'html': '<b>{city}</b><br/>🌡️ {temperature}°C<br/>💧 {humidity}%<br/>{description}',
                     'style': {
-                        'backgroundColor': 'steelblue',
-                        'color': 'white'
+                        'backgroundColor': 'rgba(0, 0, 0, 0.8)',
+                        'color': 'white',
+                        'fontSize': '14px',
+                        'padding': '10px'
                     }
                 },
-                map_style='https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+                map_style='https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
+                parameters={
+                    'renderWorldCopies': False  # Don't repeat the world!
+                }
             )
             
             st.pydeck_chart(deck)
             
-            st.info("💡 **Tip:** Hover over hexagons to see details. Red = hot, Blue = cold. Height = temperature.")
+            st.info("🌍 **Globe Controls:** Click and drag to rotate | Scroll to zoom | Shift+drag to tilt | Red = hot, Blue = cold")
+
             
             st.markdown("---")
             
