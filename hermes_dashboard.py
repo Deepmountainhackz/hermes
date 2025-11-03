@@ -424,7 +424,7 @@ elif page == "🌦️ Environment":
         # Temperature history
         st.subheader("Temperature Trends")
         
-        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'], errors='coerce', utc=True)
         
         fig_temp = go.Figure()
         
