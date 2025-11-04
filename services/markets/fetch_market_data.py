@@ -1,141 +1,270 @@
-import os
+"""
+Financial Markets Data Collector
+Fetches stock market and cryptocurrency data from various free APIs
+"""
+
 import requests
-import pandas as pd
-import sqlite3
-from dotenv import load_dotenv
+import logging
 from datetime import datetime
+from typing import Optional, Dict, Any, List
+import time
 
-# Load the API key from .env file
-load_dotenv()
-API_KEY = os.getenv('ALPHA_VANTAGE_KEY')
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Database path
-DATABASE_PATH = 'hermes.db'
-
-# Configuration - Add more stocks here!
-SYMBOLS = ['AAPL', 'MSFT', 'GOOGL']
-
-def fetch_stock_data(symbol):
-    """
-    Fetch daily stock data for a given symbol.
-    Returns a dictionary with the data, or None if error.
-    """
-    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={API_KEY}'
+class MarketsDataCollector:
+    """Collector for financial markets data"""
     
-    print(f"Fetching data for {symbol}...")
-    
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+    def __init__(self):
+        # Using free APIs that don't require keys
+        self.crypto_url = "https://api.coingecko.com/api/v3"
+        self.timeout = 15
+        self.max_retries = 3
+        self.retry_delay = 2
         
-        if 'Time Series (Daily)' in data:
-            return data['Time Series (Daily)']
-        elif 'Note' in data:
-            print(f"⚠️  API rate limit hit for {symbol}. Wait a minute and try again.")
-            return None
-        else:
-            print(f"❌ Unexpected response for {symbol}: {data}")
-            return None
+    def fetch_crypto_data(self, coins: List[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Fetch cryptocurrency market data
+        
+        Args:
+            coins: List of coin IDs (default: ['bitcoin', 'ethereum', 'cardano'])
             
-    except requests.exceptions.Timeout:
-        print(f"❌ Request timeout for {symbol}")
+        Returns:
+            Dictionary containing crypto market data or None if failed
+        """
+        if coins is None:
+            coins = ['bitcoin', 'ethereum', 'cardano', 'solana', 'dogecoin']
+        
+        params = {
+            'ids': ','.join(coins),
+            'vs_currencies': 'usd',
+            'include_24hr_change': 'true',
+            'include_market_cap': 'true',
+            'include_24hr_vol': 'true'
+        }
+        
+        endpoint = f"{self.crypto_url}/simple/price"
+        
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f"Fetching crypto data for {len(coins)} coins "
+                          f"(attempt {attempt + 1}/{self.max_retries})")
+                
+                response = requests.get(
+                    endpoint,
+                    params=params,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                logger.info(f"Successfully fetched crypto data for {len(data)} coins")
+                
+                return data
+                
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP error: {e}")
+                if e.response.status_code == 429:
+                    logger.warning("Rate limit hit, waiting longer")
+                    if attempt < self.max_retries - 1:
+                        time.sleep(self.retry_delay * 5)
+                else:
+                    return None
+                    
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed: {e}")
+                return None
+                
+            except ValueError as e:
+                logger.error(f"JSON decode error: {e}")
+                return None
+                
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+                return None
+        
+        logger.error("All retry attempts failed")
         return None
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed for {symbol}: {e}")
+    
+    def fetch_crypto_global(self) -> Optional[Dict[str, Any]]:
+        """
+        Fetch global cryptocurrency market statistics
+        
+        Returns:
+            Dictionary containing global market data or None if failed
+        """
+        endpoint = f"{self.crypto_url}/global"
+        
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f"Fetching global crypto market data "
+                          f"(attempt {attempt + 1}/{self.max_retries})")
+                
+                response = requests.get(
+                    endpoint,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                logger.info("Successfully fetched global crypto market data")
+                
+                return data.get('data', {})
+                
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP error: {e}")
+                if e.response.status_code == 429:
+                    logger.warning("Rate limit hit, waiting longer")
+                    if attempt < self.max_retries - 1:
+                        time.sleep(self.retry_delay * 5)
+                else:
+                    return None
+                    
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed: {e}")
+                return None
+                
+            except ValueError as e:
+                logger.error(f"JSON decode error: {e}")
+                return None
+                
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+                return None
+        
+        logger.error("All retry attempts failed")
         return None
-    except Exception as e:
-        print(f"❌ Unexpected error for {symbol}: {e}")
-        return None
-
-def save_to_database(symbol, time_series):
-    """
-    Save stock data to the database.
-    """
-    # Connect to database
-    conn = sqlite3.connect(DATABASE_PATH)
     
-    # Convert to DataFrame
-    df = pd.DataFrame.from_dict(time_series, orient='index')
-    
-    # Rename columns to match database schema
-    df.columns = ['open', 'high', 'low', 'close', 'volume']
-    
-    # Add metadata columns
-    df['symbol'] = symbol
-    df['date'] = df.index
-    df['timestamp'] = datetime.now().isoformat()
-    
-    # Reorder columns to match database
-    df = df[['timestamp', 'date', 'symbol', 'open', 'high', 'low', 'close', 'volume']]
-    
-    # Convert data types
-    df['open'] = df['open'].astype(float)
-    df['high'] = df['high'].astype(float)
-    df['low'] = df['low'].astype(float)
-    df['close'] = df['close'].astype(float)
-    df['volume'] = df['volume'].astype(int)
-    
-    try:
-        # Insert into database (ignore duplicates due to UNIQUE constraint)
-        df.to_sql('stocks', conn, if_exists='append', index=False)
+    def fetch_data(self, coins: List[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Fetch comprehensive market data
         
-        print(f"✅ Saved {len(df)} days of data for {symbol} to database")
+        Args:
+            coins: List of cryptocurrency IDs to fetch
+            
+        Returns:
+            Dictionary containing all market data or None if failed
+        """
+        logger.info("Starting comprehensive market data collection")
         
-        # Show preview of latest data
-        print(f"\n📊 Latest prices for {symbol}:")
-        latest = df.iloc[0]
-        print(f"   Date:  {latest['date']}")
-        print(f"   Open:  ${latest['open']}")
-        print(f"   Close: ${latest['close']}")
-        print()
+        # Fetch crypto prices
+        crypto_data = self.fetch_crypto_data(coins)
         
-        return len(df)
+        # Fetch global market stats
+        global_data = self.fetch_crypto_global()
         
-    except sqlite3.IntegrityError as e:
-        # Duplicate data - this is normal if running multiple times same day
-        print(f"⚠️  Some {symbol} data already exists in database (skipped duplicates)")
-        print()
-        return 0
-    except Exception as e:
-        print(f"❌ Database error for {symbol}: {e}")
-        print()
-        return 0
-    finally:
-        conn.close()
+        # If both failed, return None
+        if crypto_data is None and global_data is None:
+            logger.error("All market data collection failed")
+            return None
+        
+        # Process and enrich the data
+        enriched_data = self._enrich_data(crypto_data or {}, global_data or {})
+        
+        return enriched_data
+    
+    def _enrich_data(self, crypto_data: Dict, global_data: Dict) -> Dict[str, Any]:
+        """Process and enrich market data"""
+        
+        # Process individual coin data
+        coins_info = []
+        total_market_cap = 0
+        
+        for coin_id, coin_data in crypto_data.items():
+            coin_info = {
+                'id': coin_id,
+                'name': coin_id.replace('-', ' ').title(),
+                'price_usd': coin_data.get('usd'),
+                'change_24h': coin_data.get('usd_24h_change'),
+                'market_cap': coin_data.get('usd_market_cap'),
+                'volume_24h': coin_data.get('usd_24h_vol')
+            }
+            coins_info.append(coin_info)
+            
+            if coin_info['market_cap']:
+                total_market_cap += coin_info['market_cap']
+        
+        # Sort by market cap
+        coins_info.sort(key=lambda x: x.get('market_cap', 0), reverse=True)
+        
+        # Extract global market data
+        global_market_cap = global_data.get('total_market_cap', {}).get('usd')
+        global_volume_24h = global_data.get('total_volume', {}).get('usd')
+        btc_dominance = global_data.get('market_cap_percentage', {}).get('btc')
+        
+        return {
+            'cryptocurrencies': coins_info,
+            'total_coins_tracked': len(coins_info),
+            'global_market_cap_usd': global_market_cap,
+            'global_volume_24h_usd': global_volume_24h,
+            'bitcoin_dominance_percent': btc_dominance,
+            'active_cryptocurrencies': global_data.get('active_cryptocurrencies'),
+            'markets': global_data.get('markets'),
+            'collection_time': datetime.utcnow().isoformat(),
+            'status': 'success'
+        }
 
 def main():
-    """
-    Main function - orchestrates everything.
-    """
-    print("=" * 50)
-    print("HERMES Market Data Fetcher (Database Mode)")
-    print("=" * 50)
-    print()
+    """Main execution function"""
+    collector = MarketsDataCollector()
     
-    all_data = {}
-    total_saved = 0
+    logger.info("Starting market data collection")
     
-    # Fetch data for each symbol
-    for symbol in SYMBOLS:
-        time_series = fetch_stock_data(symbol)
+    # Fetch data for popular cryptocurrencies
+    coins = ['bitcoin', 'ethereum', 'cardano', 'solana', 'dogecoin', 'ripple', 'polkadot']
+    data = collector.fetch_data(coins)
+    
+    if data:
+        logger.info("Market data collection successful")
+        print("\n=== Financial Markets Data ===")
+        print(f"\nGlobal Cryptocurrency Market:")
+        if data['global_market_cap_usd']:
+            print(f"  Total Market Cap: ${data['global_market_cap_usd']:,.0f}")
+        if data['global_volume_24h_usd']:
+            print(f"  24h Volume: ${data['global_volume_24h_usd']:,.0f}")
+        if data['bitcoin_dominance_percent']:
+            print(f"  Bitcoin Dominance: {data['bitcoin_dominance_percent']:.2f}%")
         
-        if time_series:
-            # Save to database
-            saved_count = save_to_database(symbol, time_series)
-            total_saved += saved_count
-            all_data[symbol] = True
-        else:
-            print(f"⚠️  Skipping {symbol} due to errors\n")
-            all_data[symbol] = False
-    
-    # Summary
-    print("=" * 50)
-    print(f"✅ Successfully processed {len([v for v in all_data.values() if v])}/{len(SYMBOLS)} symbols")
-    print(f"💾 Total records saved to database: {total_saved}")
-    print(f"🗄️  Database: {DATABASE_PATH}")
-    print("=" * 50)
+        print(f"\nTop Cryptocurrencies ({data['total_coins_tracked']} tracked):")
+        for coin in data['cryptocurrencies'][:5]:  # Show top 5
+            change_symbol = "📈" if coin.get('change_24h', 0) > 0 else "📉"
+            print(f"  {change_symbol} {coin['name']}: ${coin['price_usd']:,.2f} "
+                  f"({coin.get('change_24h', 0):+.2f}% 24h)")
+            if coin['market_cap']:
+                print(f"      Market Cap: ${coin['market_cap']:,.0f}")
+        
+        print(f"\nCollection Time: {data['collection_time']}")
+        
+        return data
+    else:
+        logger.error("Market data collection failed")
+        return None
 
-# Run the script
 if __name__ == "__main__":
     main()

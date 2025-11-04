@@ -67,8 +67,7 @@ Thumbs.db
 
 # Data files (if not tracking database)
 # Uncomment if you don't want database in Git
-# hermes.db
-# *.db
+
 
 # CSV files (legacy - no longer used)
 *.csv

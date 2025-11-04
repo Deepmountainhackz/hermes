@@ -1,390 +1,421 @@
-# Hermes Intelligence Platform
+# Production-Ready Data Collectors
 
-A multi-layer data intelligence platform that collects, stores, and visualizes real-time data from multiple sources including financial markets, space activity, environmental conditions, and news feeds.
+All 5 data collectors are now complete with comprehensive error handling, logging, and retry logic! 🚀
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-View-blue)](https://hermes-intelligence.streamlit.app/)
-![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
-![Status](https://img.shields.io/badge/Status-Active-success.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+## 📦 Files Created
 
----
-
-## Overview
-
-Hermes is an automated intelligence gathering platform that monitors:
-
-- **Weather data** across 50 major cities worldwide
-- **Stock market** prices and trends
-- **International Space Station** position tracking
-- **Near-Earth objects** and asteroid monitoring
-- **Solar activity** affecting Earth
-- **News aggregation** from multiple sources
-
-All data is collected automatically, stored in a database, and visualized through an interactive web dashboard featuring a 3D globe interface.
-
-**[View Live Demo](https://hermes-intelligence.streamlit.app/)**
+1. **fetch_iss_data.py** - ISS Position Tracker
+2. **fetch_neo_data.py** - Near Earth Objects (Asteroids)
+3. **fetch_solar_data.py** - Solar Flares & Space Weather
+4. **fetch_market_data.py** - Financial Markets (Crypto)
+5. **fetch_news_data.py** - News Articles
 
 ---
 
-## Features
+## 🎯 Features (All Collectors)
 
-### Global Weather Monitoring
-- 50 cities across all continents
-- Interactive 3D globe visualization with orthographic projection
-- Real-time temperature, humidity, and conditions
-- Historical trend analysis
-- Color-coded temperature mapping
+✅ **Comprehensive Error Handling**
+- Timeout handling
+- Connection error recovery
+- HTTP error management
+- Rate limit detection
+- JSON parsing validation
 
-### Financial Markets
-- Stock price tracking (AAPL, MSFT, GOOGL)
-- Candlestick charts with OHLC data
-- Volume analysis
-- Multi-stock performance comparison
-- Historical price trends
+✅ **Retry Logic**
+- 3 retry attempts with exponential backoff
+- Configurable retry delays
+- Smart rate limit handling
 
-### Space Tracking
-- Live ISS position with altitude and velocity
-- Near-Earth object detection and tracking
-- Solar flare monitoring (X, M, C class events)
-- Interactive orbital maps
-- Upcoming asteroid flyby data
+✅ **Professional Logging**
+- INFO, WARNING, and ERROR levels
+- Detailed execution traces
+- Timestamp tracking
 
-### News Aggregation
-- Multiple RSS feed sources
-- Automated article collection
-- Source filtering
-- Direct article links
-- Publication tracking
-
-### Automation
-- GitHub Actions workflow
-- Scheduled collection every 3 hours
-- Automatic database updates
-- Error handling and logging
-- Manual trigger capability
+✅ **Data Enrichment**
+- Additional metadata
+- Timestamp normalization
+- Statistical summaries
 
 ---
 
-## Global Coverage
+## 📋 Quick Start Guide
 
-### Cities Monitored (50 Total)
+### 1. ISS Position Tracker
 
-**North America** (8)  
-New York, Los Angeles, Chicago, Toronto, Mexico City, Miami, Vancouver, San Francisco
+**API:** Open Notify (No key required)
 
-**South America** (6)  
-São Paulo, Rio de Janeiro, Buenos Aires, Lima, Bogotá, Santiago
+```python
+from fetch_iss_data import ISSDataCollector
 
-**Europe** (10)  
-London, Paris, Berlin, Madrid, Rome, Amsterdam, Moscow, Istanbul, Athens, Stockholm
+collector = ISSDataCollector()
+data = collector.fetch_data()
 
-**Middle East & Africa** (8)  
-Dubai, Cairo, Tel Aviv, Riyadh, Johannesburg, Cape Town, Nairobi, Lagos
+print(f"ISS Location: {data['latitude']}, {data['longitude']}")
+```
 
-**Asia** (13)  
-Tokyo, Beijing, Shanghai, Hong Kong, Singapore, Mumbai, Delhi, Bangkok, Seoul, Jakarta, Manila, Kuala Lumpur, Taipei
-
-**Oceania** (5)  
-Sydney, Melbourne, Auckland, Perth, Brisbane
+**Returns:**
+- Current latitude/longitude
+- Timestamp (Unix & ISO format)
+- Collection metadata
 
 ---
 
-## Quick Start
+### 2. Near Earth Objects (NEO)
 
-### For Users
+**API:** NASA NEO (DEMO_KEY included, get your own for higher limits)
 
-Access the live dashboard at: **https://hermes-intelligence.streamlit.app/**
+```python
+from fetch_neo_data import NEODataCollector
 
-No installation required.
+collector = NEODataCollector(api_key="YOUR_NASA_API_KEY")  # Optional
+data = collector.fetch_data(days=1)
 
-### For Developers
+print(f"Total Objects: {data['total_objects']}")
+print(f"Potentially Hazardous: {data['potentially_hazardous_count']}")
+```
 
-**Prerequisites:**
-- Python 3.11 or higher
-- Git
+**Returns:**
+- All NEO objects
+- Potentially hazardous asteroids
+- Size, velocity, and miss distance data
+- Date range coverage
 
-**Installation:**
+**Get NASA API Key:**
+https://api.nasa.gov/ (Free, instant approval)
+
+---
+
+### 3. Solar Activity Tracker
+
+**API:** NASA DONKI (DEMO_KEY included)
+
+```python
+from fetch_solar_data import SolarDataCollector
+
+collector = SolarDataCollector(api_key="YOUR_NASA_API_KEY")  # Optional
+data = collector.fetch_data(days_back=7)
+
+print(f"X-Class Flares: {data['flare_breakdown']['X_class']}")
+print(f"Total CME Events: {data['total_cme']}")
+```
+
+**Returns:**
+- Solar flares (categorized by class: X, M, C, B, A)
+- Coronal Mass Ejections (CME)
+- 7-day activity summary
+
+---
+
+### 4. Financial Markets (Crypto)
+
+**API:** CoinGecko (No key required)
+
+```python
+from fetch_market_data import MarketsDataCollector
+
+collector = MarketsDataCollector()
+coins = ['bitcoin', 'ethereum', 'cardano', 'solana']
+data = collector.fetch_data(coins)
+
+print(f"Global Market Cap: ${data['global_market_cap_usd']:,.0f}")
+print(f"Bitcoin: ${data['cryptocurrencies'][0]['price_usd']}")
+```
+
+**Returns:**
+- Individual coin prices & 24h changes
+- Global market statistics
+- Bitcoin dominance
+- Market cap & volume data
+
+---
+
+### 5. News Aggregator
+
+**APIs:** NewsAPI + Hacker News
+
+```python
+from fetch_news_data import NewsDataCollector
+
+# NewsAPI key optional - will use Hacker News if not provided
+collector = NewsDataCollector(api_key="YOUR_NEWSAPI_KEY")
+data = collector.fetch_data(newsapi_category='technology', hn_limit=10)
+
+print(f"Total Articles: {data['total_articles']}")
+```
+
+**Returns:**
+- NewsAPI headlines (if key provided)
+- Hacker News top stories (always available)
+- Article metadata (title, source, URL, etc.)
+
+**Get NewsAPI Key:**
+https://newsapi.org/ (Free tier: 100 requests/day)
+
+---
+
+## 🔧 Installation
 
 ```bash
-# Clone repository
-git clone https://github.com/DeepmountainHackz/hermes.git
-cd hermes
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure API keys
-# Create .env file with:
-OPENWEATHER_API_KEY=your_key
-ALPHA_VANTAGE_KEY=your_key
-NASA_API_KEY=your_key
-
-# Run dashboard
-streamlit run hermes_dashboard.py
-```
-
-**API Keys (all free):**
-- OpenWeather: https://openweathermap.org/api
-- Alpha Vantage: https://www.alphavantage.co/support/#api-key
-- NASA: https://api.nasa.gov/
-
----
-
-## Technical Stack
-
-### Core Technologies
-- **Python 3.11+** - Primary language
-- **Streamlit** - Dashboard framework
-- **Plotly** - Data visualization and 3D rendering
-- **SQLite** - Database (PostgreSQL migration planned)
-- **GitHub Actions** - Automation and CI/CD
-
-### Data Sources
-- **OpenWeather API** - Weather data
-- **Alpha Vantage** - Stock market data
-- **NASA ISS API** - Station position tracking
-- **NASA NEO API** - Near-Earth objects
-- **NASA DONKI** - Solar activity
-- **RSS Feeds** - News sources
-
-### Geospatial Technology
-- **H3 Hexagonal Indexing** - Uber's geospatial system (foundation implemented)
-- **Orthographic Projection** - True 3D sphere rendering
-- **Interactive WebGL** - Hardware-accelerated graphics
-
----
-
-## Dashboard Interface
-
-### Overview
-Database statistics, latest stock prices, ISS position, weather highlights, recent news
-
-### Markets
-Interactive candlestick charts, volume analysis, multi-stock comparison, normalized performance tracking
-
-### Space
-Live ISS position map, near-Earth object tracking, NEO size distribution, solar flare history
-
-### Environment
-Interactive 3D globe with drag-to-rotate functionality, city selection, temperature trends, humidity comparisons
-
-### News
-Article feed with source filtering, distribution charts, direct source links
-
----
-
-## Data Collection
-
-### Automation
-Data collection runs automatically via GitHub Actions:
-- Schedule: Every 3 hours
-- Manual triggers available
-- Error handling included
-- Database auto-commit
-
-### Collection Process
-1. API requests to all configured sources
-2. Data validation and cleaning
-3. Database insertion with duplicate prevention
-4. Metadata logging
-5. Auto-commit to repository
-
-### Rate Limiting
-All API calls respect free tier limits:
-- OpenWeather: 60 calls/minute
-- Alpha Vantage: 5 calls/minute
-- NASA: 1000 calls/hour
-
----
-
-## Project Structure
-
-```
-hermes/
-├── .github/workflows/          # GitHub Actions automation
-├── database/                   # Database setup scripts
-├── services/                   # Data collection modules
-│   ├── markets/               # Stock data
-│   ├── space/                 # ISS, NEO, solar
-│   ├── environment/           # Weather data
-│   └── social/                # News feeds
-├── hermes.db                   # SQLite database
-├── hermes_dashboard.py         # Streamlit interface
-├── collect_weather_50cities.py # Weather collector
-├── requirements.txt            # Dependencies
-└── README.md                   # Documentation
+# Install required packages
+pip install requests --break-system-packages
 ```
 
 ---
 
-## Database Schema
+## 🎯 Usage Patterns
 
-**8 Tables:**
-
-1. `stocks` - Market data (date, symbol, OHLC, volume)
-2. `iss_positions` - ISS tracking (coordinates, altitude, speed)
-3. `near_earth_objects` - Asteroid data (ID, diameter, velocity, hazard status)
-4. `solar_flares` - Solar activity (class, timing, location)
-5. `weather` - Weather observations (city, temperature, conditions)
-6. `news` - Articles (source, title, link, published)
-7. `collection_metadata` - System tracking
-8. `sqlite_sequence` - Auto-increment tracking
-
-Unique constraints prevent duplicate data across all tables.
-
----
-
-## Configuration
-
-### Update Schedule
-
-Edit `.github/workflows/hermes_workflow.yml`:
-
-```yaml
-schedule:
-  - cron: '0 */3 * * *'  # Every 3 hours
-```
-
-### Add Cities
-
-Edit `collect_weather_50cities.py`:
+### Simple One-Shot Collection
 
 ```python
-CITIES = [
-    'City Name',
-    # Add more cities
-]
+from fetch_iss_data import ISSDataCollector
+
+collector = ISSDataCollector()
+data = collector.fetch_data()
+
+if data:
+    print(f"Success! ISS at {data['latitude']}, {data['longitude']}")
+else:
+    print("Collection failed - check logs")
 ```
 
-### Add Stocks
-
-Edit `services/markets/fetch_market_data.py`:
+### Scheduled Collection Loop
 
 ```python
-symbols = ['AAPL', 'MSFT', 'GOOGL']  # Add symbols
+import time
+from fetch_market_data import MarketsDataCollector
+
+collector = MarketsDataCollector()
+
+while True:
+    data = collector.fetch_data()
+    if data:
+        print(f"BTC: ${data['cryptocurrencies'][0]['price_usd']}")
+    time.sleep(300)  # Update every 5 minutes
+```
+
+### Error Handling Example
+
+```python
+from fetch_neo_data import NEODataCollector
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+collector = NEODataCollector()
+data = collector.fetch_data(days=7)
+
+if data:
+    hazardous = data['potentially_hazardous']
+    if hazardous:
+        print(f"⚠️  {len(hazardous)} potentially hazardous objects!")
+        for neo in hazardous[:3]:
+            print(f"  - {neo['name']}: {neo['diameter_max_km']:.2f} km")
+else:
+    print("Failed to collect NEO data")
 ```
 
 ---
 
-## Statistics
+## 📊 Data Structures
 
-- **Cities monitored:** 50
-- **Continents covered:** All 7
-- **Data sources:** 6 APIs
-- **Update frequency:** Every 3 hours
-- **Database records:** Growing continuously
-- **Lines of code:** 3000+
-- **Operating cost:** $0 (free tier APIs)
+### ISS Data
+```python
+{
+    'latitude': 45.2,
+    'longitude': -122.5,
+    'timestamp': 1699123456,
+    'timestamp_readable': '2024-11-04T12:30:56',
+    'collection_time': '2024-11-04T12:30:57.123456',
+    'status': 'success'
+}
+```
 
----
+### NEO Data
+```python
+{
+    'total_objects': 15,
+    'potentially_hazardous_count': 2,
+    'start_date': '2024-11-04',
+    'end_date': '2024-11-04',
+    'all_objects': [...],
+    'potentially_hazardous': [...],
+    'status': 'success'
+}
+```
 
-## Roadmap
+### Solar Data
+```python
+{
+    'total_flares': 23,
+    'total_cme': 5,
+    'flare_breakdown': {
+        'X_class': 1,
+        'M_class': 5,
+        'C_class': 15,
+        'B_class': 2,
+        'A_class': 0
+    },
+    'x_class_flares': [...],
+    'all_cme': [...],
+    'status': 'success'
+}
+```
 
-### Completed
-- Multi-layer data collection
-- 50-city global coverage
-- Interactive 3D globe visualization
-- Automated collection pipeline
-- Real-time ISS tracking
-- NEO and solar monitoring
-- Stock market integration
-- News aggregation
-- H3 geospatial foundation
+### Market Data
+```python
+{
+    'cryptocurrencies': [
+        {
+            'id': 'bitcoin',
+            'name': 'Bitcoin',
+            'price_usd': 35000.50,
+            'change_24h': 2.5,
+            'market_cap': 680000000000,
+            'volume_24h': 25000000000
+        }
+    ],
+    'global_market_cap_usd': 1200000000000,
+    'bitcoin_dominance_percent': 56.7,
+    'status': 'success'
+}
+```
 
-### Planned
-- Expand to 100+ cities
-- GDELT social unrest tracking
-- Demographics overlay
-- Event summarization with LLMs
-- Notification system
-- Historical data playback
-- Data export functionality
-- Public REST API
-- PostgreSQL migration
-- Mobile application
-
----
-
-## Contributing
-
-Contributions are welcome. Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with appropriate tests
-4. Submit a pull request
-
-Areas for contribution:
-- Additional cities or data sources
-- Performance improvements
-- Bug fixes
-- Documentation
-- Testing coverage
-- UI/UX enhancements
-
----
-
-## Use Cases
-
-**Personal:**
-- Track weather in cities of interest
-- Monitor financial markets
-- Follow space events
-- Aggregate news sources
-
-**Professional:**
-- Portfolio demonstration
-- Full-stack development showcase
-- Data engineering example
-- Automation reference
-
-**Educational:**
-- API integration learning
-- Data visualization practice
-- Automation workflows
-- Geospatial systems study
-
----
-
-## Performance
-
-- Dashboard load time: 1-2 seconds
-- Globe rendering: 60 FPS
-- Data freshness: Maximum 3 hours
-- Concurrent users: Supported
-- Mobile responsive: Yes
+### News Data
+```python
+{
+    'total_articles': 20,
+    'newsapi_count': 10,
+    'hackernews_count': 10,
+    'newsapi_articles': [...],
+    'hackernews_stories': [...],
+    'sources': ['TechCrunch', 'Hacker News', ...],
+    'status': 'success'
+}
+```
 
 ---
 
-## License
+## 🚨 Error Handling
 
-MIT License - See LICENSE file for details.
+All collectors implement:
 
-Free to use for any purpose, including commercial applications.
-
----
-
-## Acknowledgments
-
-**Data Providers:**
-- OpenWeather - Weather data API
-- Alpha Vantage - Financial market data
-- NASA - Space tracking and monitoring
-
-**Technology:**
-- Streamlit - Dashboard framework
-- Plotly - Visualization library
-- Uber H3 - Geospatial indexing
-- GitHub - Hosting and automation
+1. **Network Errors**: Automatic retry with backoff
+2. **Timeouts**: 10-15 second timeouts with retry
+3. **Rate Limits**: Detection and extended backoff
+4. **API Errors**: Graceful handling with logging
+5. **Validation**: Response structure checking
+6. **Fallbacks**: Partial data return when possible
 
 ---
 
-## Contact
+## 📝 Logging Examples
 
-Created by [@DeepmountainHackz](https://github.com/DeepmountainHackz)
+```
+2024-11-04 12:30:45 - fetch_iss_data - INFO - Fetching ISS position data (attempt 1/3)
+2024-11-04 12:30:46 - fetch_iss_data - INFO - Successfully fetched ISS position: Lat 45.2, Lon -122.5
+2024-11-04 12:30:46 - fetch_iss_data - INFO - ISS data collection successful
+```
 
-For issues or questions, please use the GitHub issue tracker.
+```
+2024-11-04 12:31:15 - fetch_market_data - WARNING - Rate limit hit, waiting longer
+2024-11-04 12:31:25 - fetch_market_data - INFO - Fetching crypto data (attempt 2/3)
+2024-11-04 12:31:26 - fetch_market_data - INFO - Successfully fetched crypto data for 5 coins
+```
 
 ---
 
-**Built with Python, SQLite, Streamlit, and GitHub Actions**
+## 🔑 API Keys Summary
+
+| Collector | API Key Required? | Get Key From | Free Tier |
+|-----------|------------------|--------------|-----------|
+| ISS | ❌ No | N/A | Unlimited |
+| NEO | ⚠️ Optional | https://api.nasa.gov/ | 1000/hour |
+| Solar | ⚠️ Optional | https://api.nasa.gov/ | 1000/hour |
+| Markets | ❌ No | N/A | Rate limited |
+| News (HN) | ❌ No | N/A | Rate limited |
+| News (API) | ✅ Yes | https://newsapi.org/ | 100/day |
+
+**Note:** DEMO_KEY works for NASA APIs but has lower rate limits. Get your own key for production use!
+
+---
+
+## 🎨 Customization
+
+### Adjust Retry Settings
+
+```python
+collector = ISSDataCollector()
+collector.max_retries = 5
+collector.retry_delay = 3
+collector.timeout = 20
+```
+
+### Custom Logging Level
+
+```python
+import logging
+
+logging.basicConfig(level=logging.DEBUG)  # More verbose
+# or
+logging.basicConfig(level=logging.ERROR)  # Only errors
+```
+
+---
+
+## 🧪 Testing
+
+Run each collector individually:
+
+```bash
+python fetch_iss_data.py
+python fetch_neo_data.py
+python fetch_solar_data.py
+python fetch_market_data.py
+python fetch_news_data.py
+```
+
+---
+
+## 🚀 Next Steps
+
+1. **Set Environment Variables** (optional but recommended):
+   ```bash
+   export NASA_API_KEY="your_key_here"
+   export NEWSAPI_KEY="your_key_here"
+   ```
+
+2. **Test Each Collector**:
+   Run the scripts to verify they work
+
+3. **Integrate Into Your App**:
+   Import and use the collectors in your main application
+
+4. **Add Database Storage**:
+   Save collected data to MongoDB, PostgreSQL, etc.
+
+5. **Create Scheduled Jobs**:
+   Use cron, celery, or APScheduler for automated collection
+
+---
+
+## 💡 Pro Tips
+
+- **Rate Limiting**: Use delays between repeated calls
+- **Caching**: Store data temporarily to reduce API calls
+- **Monitoring**: Log all collections for debugging
+- **Fallbacks**: Handle partial failures gracefully
+- **Keys**: Use environment variables for API keys
+
+---
+
+## ✅ What's Done
+
+All 5 collectors are production-ready with:
+- ✅ Error handling
+- ✅ Retry logic
+- ✅ Logging
+- ✅ Data validation
+- ✅ Enrichment
+- ✅ Documentation
+
+Ready to deploy! 🎉

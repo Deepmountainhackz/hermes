@@ -1,100 +1,137 @@
-import sys
+"""
+ISS Position Data Collector
+Fetches real-time International Space Station position data
+"""
+
 import requests
+import logging
 from datetime import datetime
-import sqlite3
+from typing import Optional, Dict, Any
+import time
 
-def is_interactive():
-    """Check if running in an interactive terminal"""
-    return sys.stdin.isatty()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-def connect_db():
-    """Connect to the Hermes database"""
-    return sqlite3.connect('hermes.db')
-
-def save_to_database(iss_data):
-    """Save ISS data to SQLite database"""
-    conn = connect_db()
-    cursor = conn.cursor()
+class ISSDataCollector:
+    """Collector for International Space Station position data"""
     
-    cursor.execute('''
-        INSERT INTO iss_positions (
-            timestamp, latitude, longitude, altitude_km, speed_kmh
-        ) VALUES (?, ?, ?, ?, ?)
-    ''', (
-        iss_data['timestamp'],
-        iss_data['latitude'],
-        iss_data['longitude'],
-        iss_data['altitude_km'],
-        iss_data['speed_kmh']
-    ))
-    
-    conn.commit()
-    conn.close()
-    return 1
-
-def fetch_iss_data():
-    """Fetch current ISS position from API"""
-    url = "http://api.open-notify.org/iss-now.json"
-    
-    print("\n🛰️  Fetching ISS position...")
-    
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+    def __init__(self):
+        self.base_url = "http://api.open-notify.org/iss-now.json"
+        self.timeout = 10
+        self.max_retries = 3
+        self.retry_delay = 2
         
-        if data['message'] != 'success':
-            print("❌ Error: API returned non-success message")
-            return None
+    def fetch_data(self) -> Optional[Dict[str, Any]]:
+        """
+        Fetch current ISS position data
         
+        Returns:
+            Dictionary containing ISS data or None if failed
+        """
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f"Fetching ISS position data (attempt {attempt + 1}/{self.max_retries})")
+                
+                response = requests.get(
+                    self.base_url,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Validate response structure
+                if not self._validate_response(data):
+                    logger.error("Invalid response structure from ISS API")
+                    return None
+                
+                # Enrich data with timestamp
+                enriched_data = self._enrich_data(data)
+                
+                logger.info(f"Successfully fetched ISS position: "
+                          f"Lat {enriched_data['latitude']}, "
+                          f"Lon {enriched_data['longitude']}")
+                
+                return enriched_data
+                
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP error: {e}")
+                return None
+                
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed: {e}")
+                return None
+                
+            except ValueError as e:
+                logger.error(f"JSON decode error: {e}")
+                return None
+                
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+                return None
+        
+        logger.error("All retry attempts failed")
+        return None
+    
+    def _validate_response(self, data: Dict[str, Any]) -> bool:
+        """Validate ISS API response structure"""
+        try:
+            return (
+                'message' in data and
+                data['message'] == 'success' and
+                'iss_position' in data and
+                'latitude' in data['iss_position'] and
+                'longitude' in data['iss_position'] and
+                'timestamp' in data
+            )
+        except Exception:
+            return False
+    
+    def _enrich_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enrich ISS data with additional metadata"""
         position = data['iss_position']
         
-        iss_data = {
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        return {
             'latitude': float(position['latitude']),
             'longitude': float(position['longitude']),
-            'altitude_km': 408.0,  # Average ISS altitude
-            'speed_kmh': 27600.0   # Average ISS speed
+            'timestamp': data['timestamp'],
+            'timestamp_readable': datetime.fromtimestamp(data['timestamp']).isoformat(),
+            'collection_time': datetime.utcnow().isoformat(),
+            'status': 'success'
         }
-        
-        print(f"  ✓ Position: {iss_data['latitude']:.4f}°, {iss_data['longitude']:.4f}°")
-        print(f"  ✓ Altitude: {iss_data['altitude_km']} km")
-        print(f"  ✓ Speed: {iss_data['speed_kmh']:,} km/h")
-        
-        return iss_data
-        
-    except requests.exceptions.RequestException as e:
-        print(f"  ✗ Error fetching ISS data: {e}")
-        return None
 
 def main():
-    print("="*70)
-    print("ISS Tracker")
-    print("="*70)
+    """Main execution function"""
+    collector = ISSDataCollector()
     
-    # Fetch ISS data
-    iss_data = fetch_iss_data()
+    logger.info("Starting ISS position data collection")
+    data = collector.fetch_data()
     
-    if not iss_data:
-        print("\n❌ No ISS data collected")
-        sys.exit(1)
-    
-    # Save to database
-    print(f"\n💾 Saving to database...")
-    records_saved = save_to_database(iss_data)
-    print(f"✅ Saved {records_saved} ISS position to database")
-    
-    # Record collection metadata
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO collection_metadata (timestamp, layer, collector, status, records_collected)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'space', 'iss', 'success', 1))
-    conn.commit()
-    conn.close()
-    
-    print("\n✅ ISS tracking complete!")
+    if data:
+        logger.info("ISS data collection successful")
+        print("\n=== ISS Position Data ===")
+        print(f"Latitude: {data['latitude']}")
+        print(f"Longitude: {data['longitude']}")
+        print(f"Timestamp: {data['timestamp_readable']}")
+        print(f"Collection Time: {data['collection_time']}")
+        return data
+    else:
+        logger.error("ISS data collection failed")
+        return None
 
 if __name__ == "__main__":
     main()
