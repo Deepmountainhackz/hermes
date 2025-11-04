@@ -110,7 +110,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigate to:",
-    ["🏠 Overview", "📈 Markets", "🛰️ Space", "🌦️ Environment", "📰 News"]
+    ["🏠 Overview", "📈 Markets", "🛰️ Space", "🌍 Geography", "🌦️ Environment", "📰 News"]
 )
 
 st.sidebar.markdown("---")
@@ -442,6 +442,232 @@ elif page == "🛰️ Space":
         st.info("No recent solar flare activity detected (this is normal!)")
 
 # ============================================================================
+# GEOGRAPHY PAGE - NEW!
+# ============================================================================
+elif page == "🌍 Geography":
+    st.title("🌍 Country Intelligence & Demographics")
+    st.markdown("### Global Country Profiles and Analytics")
+    st.markdown("---")
+    
+    # Check if countries table exists
+    try:
+        countries_query = """
+        SELECT 
+            name,
+            official_name,
+            region,
+            subregion,
+            population,
+            area_km2,
+            population_density,
+            capital,
+            languages,
+            currencies,
+            flag_emoji,
+            latitude,
+            longitude,
+            border_count,
+            un_member,
+            timestamp
+        FROM countries
+        ORDER BY population DESC
+        """
+        countries_df = load_data(countries_query)
+        
+        if countries_df.empty:
+            st.warning("No country data available yet. Run the country collector to populate data!")
+            st.code("python services/geography/fetch_country_data.py", language="bash")
+        else:
+            # Top Stats
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("🗺️ Countries Tracked", f"{len(countries_df):,}")
+            
+            with col2:
+                total_pop = countries_df['population'].sum()
+                st.metric("👥 Total Population", f"{total_pop:,.0f}")
+            
+            with col3:
+                avg_density = countries_df['population_density'].mean()
+                st.metric("📊 Avg Density", f"{avg_density:.1f}/km²")
+            
+            with col4:
+                un_members = countries_df['un_member'].sum()
+                st.metric("🇺🇳 UN Members", f"{un_members}")
+            
+            st.markdown("---")
+            
+            # Region Filter
+            st.subheader("🗺️ Filter by Region")
+            regions = ['All'] + sorted(countries_df['region'].dropna().unique().tolist())
+            selected_region = st.selectbox("Select Region:", regions)
+            
+            if selected_region != 'All':
+                filtered_df = countries_df[countries_df['region'] == selected_region]
+            else:
+                filtered_df = countries_df
+            
+            st.write(f"**Showing {len(filtered_df)} countries**")
+            
+            st.markdown("---")
+            
+            # World Map of Countries
+            st.subheader("🌐 Interactive Country Map")
+            
+            # Prepare map data
+            map_data = filtered_df[['name', 'latitude', 'longitude', 'population', 'flag_emoji']].copy()
+            map_data = map_data.dropna(subset=['latitude', 'longitude'])
+            
+            if not map_data.empty:
+                fig_map = go.Figure()
+                
+                fig_map.add_trace(go.Scattergeo(
+                    lon=map_data['longitude'],
+                    lat=map_data['latitude'],
+                    text=map_data['name'],
+                    mode='markers+text',
+                    marker=dict(
+                        size=map_data['population'].apply(lambda x: min(max(x / 5_000_000, 5), 30)),
+                        color=map_data['population'],
+                        colorscale='Viridis',
+                        showscale=True,
+                        colorbar=dict(title="Population"),
+                        line=dict(width=0.5, color='white')
+                    ),
+                    textfont=dict(size=8),
+                    textposition='top center',
+                    hovertemplate='<b>%{text}</b><br>' +
+                                  'Population: %{marker.color:,.0f}<br>' +
+                                  '<extra></extra>'
+                ))
+                
+                fig_map.update_geos(
+                    projection_type='natural earth',
+                    showcountries=True,
+                    countrycolor='lightgray',
+                    showcoastlines=True,
+                    coastlinecolor='gray',
+                    showland=True,
+                    landcolor='white',
+                    showocean=True,
+                    oceancolor='lightblue'
+                )
+                
+                fig_map.update_layout(
+                    title='World Countries by Population',
+                    height=600,
+                    geo=dict(bgcolor='#f0f2f6')
+                )
+                
+                st.plotly_chart(fig_map, use_container_width=True)
+            
+            st.markdown("---")
+            
+            # Top Countries by Population
+            st.subheader("👥 Top Countries by Population")
+            
+            top_countries = filtered_df.nlargest(10, 'population')
+            
+            fig_pop = px.bar(
+                top_countries,
+                x='name',
+                y='population',
+                title="Top 10 Most Populous Countries",
+                labels={'population': 'Population', 'name': 'Country'},
+                color='population',
+                color_continuous_scale='Blues'
+            )
+            fig_pop.update_layout(height=400)
+            st.plotly_chart(fig_pop, use_container_width=True)
+            
+            st.markdown("---")
+            
+            # Population Density Analysis
+            st.subheader("📊 Population Density Analysis")
+            
+            density_df = filtered_df.nlargest(10, 'population_density')
+            
+            fig_density = px.bar(
+                density_df,
+                x='name',
+                y='population_density',
+                title="Top 10 Most Densely Populated Countries",
+                labels={'population_density': 'People per km²', 'name': 'Country'},
+                color='population_density',
+                color_continuous_scale='Reds'
+            )
+            fig_density.update_layout(height=400)
+            st.plotly_chart(fig_density, use_container_width=True)
+            
+            st.markdown("---")
+            
+            # Country Profiles
+            st.subheader("🗂️ Detailed Country Profiles")
+            
+            # Country selector
+            country_names = sorted(filtered_df['name'].tolist())
+            selected_country = st.selectbox("Select a country for detailed profile:", country_names)
+            
+            if selected_country:
+                country = filtered_df[filtered_df['name'] == selected_country].iloc[0]
+                
+                # Display country profile
+                col1, col2, col3 = st.columns([1, 2, 1])
+                
+                with col1:
+                    st.markdown(f"## {country['flag_emoji']}")
+                    st.markdown(f"### {country['name']}")
+                    st.caption(country['official_name'])
+                
+                with col2:
+                    st.write(f"**Region:** {country['region']} - {country['subregion']}")
+                    st.write(f"**Capital:** {country['capital']}")
+                    st.write(f"**Languages:** {country['languages']}")
+                    st.write(f"**Currency:** {country['currencies']}")
+                
+                with col3:
+                    st.metric("Population", f"{country['population']:,.0f}")
+                    st.metric("Area", f"{country['area_km2']:,.0f} km²")
+                    st.metric("Density", f"{country['population_density']:.1f}/km²")
+                
+                st.markdown("---")
+                
+                # Additional details
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.write(f"**Coordinates:** {country['latitude']:.2f}°, {country['longitude']:.2f}°")
+                    st.write(f"**UN Member:** {'Yes ✅' if country['un_member'] == 1 else 'No ❌'}")
+                
+                with col2:
+                    st.write(f"**Bordering Countries:** {country['border_count']}")
+                
+                with col3:
+                    st.caption(f"Last Updated: {country['timestamp']}")
+            
+            st.markdown("---")
+            
+            # Region Distribution
+            st.subheader("🌍 Countries by Region")
+            
+            region_counts = countries_df['region'].value_counts().reset_index()
+            region_counts.columns = ['region', 'count']
+            
+            fig_regions = px.pie(
+                region_counts,
+                values='count',
+                names='region',
+                title="Distribution of Countries by Region"
+            )
+            fig_regions.update_layout(height=400)
+            st.plotly_chart(fig_regions, use_container_width=True)
+            
+    except Exception as e:
+        st.error(f"Error loading country data: {e}")
+        st.info("💡 The countries table may not exist yet. Make sure you've run the country data collector and it's saving to the database.")
+
+# ============================================================================
 # ENVIRONMENT PAGE WITH H3 HEXAGONS
 # ============================================================================
 elif page == "🌦️ Environment":
@@ -481,12 +707,6 @@ elif page == "🌦️ Environment":
         latest_weather = weather_df.groupby('city').first().reset_index()
         
         # Convert to H3 hexagons (resolution 4 = ~22km edge)
-        # Using h3 v4.x API (latlng_to_cell is the new function name)
-        # H3 Resolution Guide:
-        # - 0: ~1,107 km (continents)
-        # - 4: ~22 km (cities) ← WE'RE HERE
-        # - 6: ~3.2 km (neighborhoods)
-        # - 8: ~461 m (blocks)
         latest_weather['h3'] = latest_weather.apply(
             lambda row: h3.latlng_to_cell(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
             axis=1

@@ -1,8 +1,19 @@
+# Core Dependencies
 streamlit>=1.39.0
 pandas>=2.2.0
 plotly>=5.24.0
 requests>=2.31.0
+
+# Data Collection
 python-dotenv>=1.0.0
 feedparser>=6.0.11
+
+# Visualization & Mapping
 h3>=4.0.0
 pydeck>=0.8.0
+
+# Database (comes with Python, but listing for clarity)
+# sqlite3 is built-in
+
+# Additional utilities (if needed)
+# Add any other packages your collectors use
