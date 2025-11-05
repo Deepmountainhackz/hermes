@@ -1,0 +1,76 @@
+name: Automated Data Collection
+
+on:
+  # Run every hour
+  schedule:
+    - cron: '0 * * * *'  # Every hour at minute 0
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  collect-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run ISS Collector
+      env:
+        NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+        ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+        OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+        NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+      run: |
+        python services/space/fetch_iss_data.py
+    
+    - name: Run NEO Collector
+      env:
+        NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+      run: |
+        python services/space/fetch_neo_data.py
+    
+    - name: Run Solar Flares Collector
+      env:
+        NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+      run: |
+        python services/space/fetch_solar_data.py
+    
+    - name: Run Markets Collector
+      env:
+        ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+      run: |
+        python services/markets/fetch_market_data.py
+    
+    - name: Run News Collector
+      env:
+        NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+      run: |
+        python services/social/fetch_news_data.py
+    
+    - name: Run Weather Collector
+      env:
+        OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+      run: |
+        python services/environment/fetch_weather_data.py
+    
+    - name: Run Country Collector
+      run: |
+        python services/geography/fetch_country_data.py
+    
+    - name: Commit and push if database changed
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add hermes.db
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update: Data collection $(date +'%Y-%m-%d %H:%M UTC')" && git push)
