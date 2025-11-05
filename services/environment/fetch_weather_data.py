@@ -1,157 +1,203 @@
-import os
-import sys
+"""
+Weather Data Collector - FIXED VERSION
+Fetches current weather data from OpenWeatherMap API
+"""
+
 import requests
+import logging
 from datetime import datetime
-import sqlite3
+from typing import Optional, Dict, Any
+import time
+import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-def is_interactive():
-    """Check if running in an interactive terminal"""
-    return sys.stdin.isatty()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-def get_user_input(prompt, default='y'):
-    """Get user input if interactive, otherwise use default"""
-    if is_interactive():
-        return input(prompt).strip().lower()
-    return default
-
-def connect_db():
-    """Connect to the Hermes database"""
-    return sqlite3.connect('hermes.db')
-
-def save_to_database(weather_data):
-    """Save weather data to SQLite database"""
-    conn = connect_db()
-    cursor = conn.cursor()
+class WeatherDataCollector:
+    """Collector for current weather data"""
     
-    for data in weather_data:
-        cursor.execute('''
-            INSERT INTO weather (
-                timestamp, city, country, temperature_c, feels_like_c,
-                temp_min_c, temp_max_c, pressure_hpa, humidity_percent,
-                weather_main, weather_description, wind_speed_ms,
-                clouds_percent, latitude, longitude
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            data['timestamp'],
-            data['city'],
-            data['country'],
-            data['temperature_c'],
-            data['feels_like_c'],
-            data['temp_min_c'],
-            data['temp_max_c'],
-            data['pressure_hpa'],
-            data['humidity_percent'],
-            data['weather_main'],
-            data['weather_description'],
-            data['wind_speed_ms'],
-            data['clouds_percent'],
-            data['latitude'],
-            data['longitude']
-        ))
+    def __init__(self, api_key: Optional[str] = None):
+        self.base_url = "http://api.openweathermap.org/data/2.5/weather"
+        self.api_key = api_key or os.environ.get('OPENWEATHER_API_KEY')
+        self.timeout = 10
+        self.max_retries = 3
+        self.retry_delay = 2
+        
+    def fetch_data(self, city: str = None, lat: float = None, lon: float = None) -> Optional[Dict[str, Any]]:
+        """
+        Fetch current weather data
+        
+        Args:
+            city: City name (e.g., 'London', 'New York')
+            lat: Latitude (alternative to city)
+            lon: Longitude (alternative to city)
+            
+        Returns:
+            Dictionary containing weather data or None if failed
+        """
+        if not self.api_key or self.api_key == 'your_key_here':
+            logger.warning("OpenWeatherMap API key not provided or invalid. Please set OPENWEATHER_API_KEY in .env file")
+            logger.info("Get your free API key at: https://openweathermap.org/api")
+            return None
+        
+        # Build parameters
+        params = {
+            'appid': self.api_key,
+            'units': 'metric'  # Celsius
+        }
+        
+        if city:
+            params['q'] = city
+        elif lat is not None and lon is not None:
+            params['lat'] = lat
+            params['lon'] = lon
+        else:
+            logger.error("Either city or lat/lon coordinates must be provided")
+            return None
+        
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f"Fetching weather data for {city or f'{lat},{lon}'} "
+                          f"(attempt {attempt + 1}/{self.max_retries})")
+                
+                response = requests.get(
+                    self.base_url,
+                    params=params,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Validate response structure
+                if not self._validate_response(data):
+                    logger.error("Invalid response structure from Weather API")
+                    return None
+                
+                # Enrich data with additional metadata
+                enriched_data = self._enrich_data(data)
+                
+                logger.info(f"Successfully fetched weather data for {enriched_data['city']}: "
+                          f"{enriched_data['temperature']}°C, {enriched_data['conditions']}")
+                
+                return enriched_data
+                
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout on attempt {attempt + 1}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP error: {e}")
+                if e.response.status_code == 401:
+                    logger.error("Invalid API key. Please check your OPENWEATHER_API_KEY")
+                    return None
+                elif e.response.status_code == 404:
+                    logger.error(f"City not found: {city}")
+                    return None
+                elif e.response.status_code == 429:
+                    logger.warning("Rate limit hit, waiting longer")
+                    if attempt < self.max_retries - 1:
+                        time.sleep(self.retry_delay * 3)
+                else:
+                    return None
+                    
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed: {e}")
+                return None
+                
+            except ValueError as e:
+                logger.error(f"JSON decode error: {e}")
+                return None
+                
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}", exc_info=True)
+                return None
+        
+        logger.error("All retry attempts failed")
+        return None
     
-    conn.commit()
-    records_saved = cursor.rowcount
-    conn.close()
-    return records_saved
-
-def fetch_weather(api_key, cities):
-    """Fetch weather data from OpenWeatherMap API"""
-    base_url = "http://api.openweathermap.org/data/2.5/weather"
-    weather_data = []
-    
-    print(f"\n🌦️  Fetching weather data for {len(cities)} cities...")
-    
-    for city in cities:
+    def _validate_response(self, data: Dict[str, Any]) -> bool:
+        """Validate Weather API response structure"""
         try:
-            params = {
-                'q': city,
-                'appid': api_key,
-                'units': 'metric'
-            }
-            
-            response = requests.get(base_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            weather_entry = {
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'city': data['name'],
-                'country': data['sys']['country'],
-                'temperature_c': data['main']['temp'],
-                'feels_like_c': data['main']['feels_like'],
-                'temp_min_c': data['main']['temp_min'],
-                'temp_max_c': data['main']['temp_max'],
-                'pressure_hpa': data['main']['pressure'],
-                'humidity_percent': data['main']['humidity'],
-                'weather_main': data['weather'][0]['main'],
-                'weather_description': data['weather'][0]['description'],
-                'wind_speed_ms': data['wind']['speed'],
-                'clouds_percent': data['clouds']['all'],
-                'latitude': data['coord']['lat'],
-                'longitude': data['coord']['lon']
-            }
-            
-            weather_data.append(weather_entry)
-            print(f"  ✓ {city}: {data['main']['temp']:.1f}°C - {data['weather'][0]['description']}")
-            
-        except requests.exceptions.RequestException as e:
-            print(f"  ✗ Error fetching data for {city}: {e}")
-            continue
+            return (
+                'main' in data and
+                'temp' in data['main'] and
+                'weather' in data and
+                len(data['weather']) > 0 and
+                'name' in data
+            )
+        except Exception:
+            return False
     
-    return weather_data
+    def _enrich_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enrich weather data with additional metadata"""
+        main = data['main']
+        weather = data['weather'][0]
+        
+        return {
+            'city': data['name'],
+            'country': data.get('sys', {}).get('country'),
+            'temperature': round(main['temp'], 1),
+            'feels_like': round(main['feels_like'], 1),
+            'temp_min': round(main['temp_min'], 1),
+            'temp_max': round(main['temp_max'], 1),
+            'pressure': main['pressure'],
+            'humidity': main['humidity'],
+            'conditions': weather['main'],
+            'description': weather['description'],
+            'wind_speed': data.get('wind', {}).get('speed'),
+            'wind_direction': data.get('wind', {}).get('deg'),
+            'clouds': data.get('clouds', {}).get('all'),
+            'visibility': data.get('visibility'),
+            'sunrise': data.get('sys', {}).get('sunrise'),
+            'sunset': data.get('sys', {}).get('sunset'),
+            'coordinates': {
+                'lat': data['coord']['lat'],
+                'lon': data['coord']['lon']
+            },
+            'timestamp': data['dt'],
+            'collection_time': datetime.utcnow().isoformat(),
+            'status': 'success'
+        }
 
 def main():
-    print("="*70)
-    print("Weather Monitor")
-    print("="*70)
+    """Main execution function"""
+    collector = WeatherDataCollector()
     
-    # Get API key
-    api_key = os.getenv('OPENWEATHER_KEY')
-    if not api_key:
-        print("❌ Error: OPENWEATHER_KEY not found in environment variables")
-        sys.exit(1)
+    logger.info("Starting weather data collection")
+    data = collector.fetch_data(city='London')
     
-    # Default cities
-    default_cities = ['London', 'New York', 'Tokyo', 'Sydney', 'Dubai', 'Zurich']
-    
-    print(f"\nDefault cities: {', '.join(default_cities)}")
-    
-    # Ask user if they want to use default cities (auto-yes in automation)
-    use_default = get_user_input("Use default cities? (y/n): ", 'y')
-    
-    if use_default == 'y':
-        cities = default_cities
+    if data:
+        logger.info("Weather data collection successful")
+        print("\n=== Weather Data ===")
+        print(f"City: {data['city']}, {data['country']}")
+        print(f"Temperature: {data['temperature']}°C (Feels like: {data['feels_like']}°C)")
+        print(f"Conditions: {data['conditions']} - {data['description']}")
+        print(f"Humidity: {data['humidity']}%")
+        print(f"Wind Speed: {data['wind_speed']} m/s")
+        print(f"Collection Time: {data['collection_time']}")
+        return data
     else:
-        custom_input = input("Enter cities separated by commas: ")
-        cities = [city.strip() for city in custom_input.split(',')]
-    
-    # Fetch weather data
-    weather_data = fetch_weather(api_key, cities)
-    
-    if not weather_data:
-        print("\n❌ No weather data collected")
-        return
-    
-    # Save to database
-    print(f"\n💾 Saving to database...")
-    records_saved = save_to_database(weather_data)
-    print(f"✅ Saved {records_saved} weather records to database")
-    
-    # Record collection metadata
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO collection_metadata (timestamp, layer, collector, status, records_collected)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'environment', 'weather', 'success', len(weather_data)))
-    conn.commit()
-    conn.close()
-    
-    print("\n✅ Weather collection complete!")
+        logger.error("Weather data collection failed")
+        print("\n⚠️  Weather collection failed. Common issues:")
+        print("   1. Missing or invalid API key in .env file")
+        print("   2. Get your free API key at: https://openweathermap.org/api")
+        print("   3. Copy .env.example to .env and add your key")
+        return None
 
 if __name__ == "__main__":
     main()
