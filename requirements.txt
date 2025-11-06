@@ -10,6 +10,7 @@ psycopg2-binary==2.9.9
 # Geospatial
 pydeck==0.8.1b0
 h3==3.7.6
+geopy==2.4.1
 
 # Environment
 python-dotenv==1.0.0

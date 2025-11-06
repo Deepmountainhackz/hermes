@@ -5,7 +5,7 @@ Creates all necessary tables in PostgreSQL
 
 import os
 import sys
-import psycopg
+import psycopg2
 import logging
 from dotenv import load_dotenv
 
@@ -132,6 +132,96 @@ SCHEMAS = {
             collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(code)
         )
+    """,
+    
+    'commodities': """
+        CREATE TABLE IF NOT EXISTS commodities (
+            id SERIAL PRIMARY KEY,
+            symbol VARCHAR(50) NOT NULL,
+            timestamp DATE NOT NULL,
+            price DECIMAL(15, 4),
+            unit VARCHAR(20),
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, timestamp)
+        )
+    """,
+    
+    'forex': """
+        CREATE TABLE IF NOT EXISTS forex (
+            id SERIAL PRIMARY KEY,
+            pair VARCHAR(20) NOT NULL,
+            from_currency VARCHAR(10) NOT NULL,
+            to_currency VARCHAR(10) NOT NULL,
+            exchange_rate DECIMAL(15, 6),
+            timestamp TIMESTAMP NOT NULL,
+            bid_price DECIMAL(15, 6),
+            ask_price DECIMAL(15, 6),
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(pair, timestamp)
+        )
+    """,
+    
+    'earthquakes': """
+        CREATE TABLE IF NOT EXISTS earthquakes (
+            id SERIAL PRIMARY KEY,
+            earthquake_id VARCHAR(100) UNIQUE NOT NULL,
+            magnitude DECIMAL(3, 1),
+            place VARCHAR(500),
+            timestamp TIMESTAMP,
+            latitude DECIMAL(10, 6),
+            longitude DECIMAL(10, 6),
+            depth_km DECIMAL(10, 2),
+            magnitude_type VARCHAR(10),
+            event_type VARCHAR(50),
+            tsunami BOOLEAN DEFAULT FALSE,
+            significance INTEGER,
+            url TEXT,
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    
+    'storms': """
+        CREATE TABLE IF NOT EXISTS storms (
+            id SERIAL PRIMARY KEY,
+            storm_id VARCHAR(100) UNIQUE NOT NULL,
+            title VARCHAR(500),
+            timestamp TIMESTAMP,
+            latitude DECIMAL(10, 6),
+            longitude DECIMAL(10, 6),
+            status VARCHAR(50),
+            category VARCHAR(100),
+            source_url TEXT,
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    
+    'wildfires': """
+        CREATE TABLE IF NOT EXISTS wildfires (
+            id SERIAL PRIMARY KEY,
+            fire_id VARCHAR(100) UNIQUE NOT NULL,
+            title VARCHAR(500),
+            timestamp TIMESTAMP,
+            latitude DECIMAL(10, 6),
+            longitude DECIMAL(10, 6),
+            status VARCHAR(50),
+            source_url TEXT,
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    
+    'economic_indicators': """
+        CREATE TABLE IF NOT EXISTS economic_indicators (
+            id SERIAL PRIMARY KEY,
+            country VARCHAR(100) NOT NULL,
+            indicator_type VARCHAR(100) NOT NULL,
+            indicator_name VARCHAR(200),
+            series_id VARCHAR(100) NOT NULL,
+            timestamp DATE NOT NULL,
+            value DECIMAL(20, 4),
+            unit VARCHAR(100),
+            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(series_id, timestamp)
+        )
     """
 }
 
@@ -147,7 +237,7 @@ def initialize_database():
     try:
         # Connect to database
         logger.info("Connecting to PostgreSQL database...")
-        conn = psycopg.connect(db_url, autocommit=True)
+        conn = psycopg2.connect(db_url)
         cur = conn.cursor()
         
         # Create each table
@@ -156,6 +246,8 @@ def initialize_database():
             cur.execute(schema)
             logger.info(f"✓ Table {table_name} created successfully")
         
+        # Commit changes
+        conn.commit()
         logger.info("✓ All tables created successfully!")
         
         # Show table list

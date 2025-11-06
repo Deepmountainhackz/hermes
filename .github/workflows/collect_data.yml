@@ -1,9 +1,9 @@
 name: Automated Data Collection
 
 on:
-  # Run every hour
+  # Run every 2 hours (to avoid API rate limits)
   schedule:
-    - cron: '0 * * * *'  # Every hour at minute 0
+    - cron: '0 */2 * * *'
   
   # Allow manual trigger
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
       run: |
         python services/space/fetch_solar_data.py
     
-    - name: Run Stock Market Collector
+    - name: Run Markets Collector
       env:
         ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -59,6 +59,20 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         python services/markets/fetch_commodity_data.py
+    
+    - name: Run Forex Collector
+      env:
+        ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python services/markets/fetch_forex_data.py
+    
+    - name: Run Economic Indicators Collector
+      env:
+        FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python services/markets/fetch_economic_data.py
     
     - name: Run News Collector
       env:
@@ -73,6 +87,24 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         python services/environment/fetch_weather_data.py
+    
+    - name: Run Earthquake Collector
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python services/environment/fetch_earthquake_data.py
+    
+    - name: Run Wildfire Collector
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python services/environment/fetch_wildfire_data.py
+    
+    - name: Run Storm Collector
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        python services/environment/fetch_storm_data.py
     
     - name: Run Country Collector
       env:
