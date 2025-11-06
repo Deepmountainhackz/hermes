@@ -4,8 +4,8 @@ pandas==2.1.4
 plotly==5.18.0
 requests==2.31.0
 
-# Database
-psycopg2-binary==2.9.9
+# Database - Using psycopg3 for Python 3.13 compatibility
+psycopg[binary]==3.1.18
 
 # Geospatial
 pydeck==0.8.1b0
