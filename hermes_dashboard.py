@@ -1,11 +1,18 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import h3
 from config_cities import CITY_COORDS  # Move city data to separate file
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Import database module
+from database import get_db_connection
 
 # ============================================================================
 # CONFIGURATION & SETUP
@@ -29,12 +36,15 @@ st.markdown("""
 # DATABASE & HELPER FUNCTIONS
 # ============================================================================
 
-@st.cache_resource
-def get_connection():
-    return sqlite3.connect('hermes.db', check_same_thread=False)
-
+@st.cache_data(ttl=60)
 def load_data(query):
-    return pd.read_sql_query(query, get_connection())
+    """Load data from PostgreSQL database"""
+    try:
+        with get_db_connection() as conn:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        st.error(f"Database error: {e}")
+        return pd.DataFrame()
 
 def render_metric_row(metrics_data, columns=4):
     """Render a row of metrics with consistent styling"""
@@ -128,10 +138,10 @@ if page == "🏠 Overview":
     
     # System metrics
     metrics = [
-        ("📈 Stock Records", f"{load_data('SELECT COUNT(*) as c FROM stocks')['c'][0]:,}", None),
-        ("☄️ NEO Records", f"{load_data('SELECT COUNT(*) as c FROM near_earth_objects')['c'][0]:,}", None),
-        ("🌦️ Weather Records", f"{load_data('SELECT COUNT(*) as c FROM weather')['c'][0]:,}", None),
-        ("📰 News Articles", f"{load_data('SELECT COUNT(*) as c FROM news')['c'][0]:,}", None)
+        ("📈 Stock Records", f"{load_data('SELECT COUNT(*) as c FROM stocks')['c'][0] if not load_data('SELECT COUNT(*) as c FROM stocks').empty else 0:,}", None),
+        ("☄️ NEO Records", f"{load_data('SELECT COUNT(*) as c FROM near_earth_objects')['c'][0] if not load_data('SELECT COUNT(*) as c FROM near_earth_objects').empty else 0:,}", None),
+        ("🌦️ Weather Records", f"{load_data('SELECT COUNT(*) as c FROM weather')['c'][0] if not load_data('SELECT COUNT(*) as c FROM weather').empty else 0:,}", None),
+        ("📰 News Articles", f"{load_data('SELECT COUNT(*) as c FROM news')['c'][0] if not load_data('SELECT COUNT(*) as c FROM news').empty else 0:,}", None)
     ]
     render_metric_row(metrics)
     
@@ -140,8 +150,8 @@ if page == "🏠 Overview":
     # Latest stock prices
     st.subheader("📈 Latest Stock Prices")
     stocks = load_data("""
-        SELECT symbol, close as price, ROUND(((close - open) / open * 100), 2) as change
-        FROM stocks WHERE date = (SELECT MAX(date) FROM stocks)
+        SELECT symbol, close as price, ROUND(((close - open) / open * 100)::numeric, 2) as change
+        FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
         ORDER BY symbol
     """)
     
@@ -160,27 +170,27 @@ if page == "🏠 Overview":
         iss = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 1")
         if not iss.empty:
             st.write(f"**📍 Location:** {iss['latitude'][0]:.4f}°, {iss['longitude'][0]:.4f}°")
-            st.write(f"**🚀 Altitude:** {iss['altitude_km'][0]:.2f} km")
-            st.write(f"**⚡ Speed:** {iss['speed_kmh'][0]:,.2f} km/h")
+            st.write(f"**🚀 Altitude:** {iss['altitude'][0]:.2f} km")
+            st.write(f"**⚡ Speed:** {iss['velocity'][0]:,.2f} km/h")
     
     with col2:
         st.subheader("🌦️ Weather Snapshot")
         weather = load_data("""
-            SELECT city, temperature_c, weather_description
+            SELECT city, temperature, description
             FROM weather WHERE timestamp = (SELECT MAX(timestamp) FROM weather)
             LIMIT 3
         """)
         for _, row in weather.iterrows():
-            st.write(f"**{row['city']}:** {row['temperature_c']:.1f}°C - {row['weather_description']}")
+            st.write(f"**{row['city']}:** {row['temperature']:.1f}°C - {row['description']}")
     
     st.markdown("---")
     
     # Latest news
     st.subheader("📰 Latest Headlines")
-    news = load_data("SELECT source, title, published FROM news ORDER BY published DESC LIMIT 5")
+    news = load_data("SELECT source, title, published_at FROM news ORDER BY published_at DESC LIMIT 5")
     for _, row in news.iterrows():
         st.write(f"**[{row['source']}]** {row['title']}")
-        st.caption(row['published'])
+        st.caption(str(row['published_at']))
 
 # ============================================================================
 # PAGE: MARKETS
@@ -190,8 +200,8 @@ elif page == "📈 Markets":
     st.title("📈 Stock Market Analysis")
     st.markdown("---")
     
-    stocks_df = load_data("SELECT * FROM stocks ORDER BY date, symbol")
-    stocks_df['date'] = pd.to_datetime(stocks_df['date'])
+    stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp, symbol")
+    stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
     
     if stocks_df.empty:
         st.warning("No stock data available")
@@ -217,7 +227,7 @@ elif page == "📈 Markets":
         # Candlestick chart
         st.subheader(f"{selected_symbol} Price History")
         fig = go.Figure(go.Candlestick(
-            x=symbol_df['date'],
+            x=symbol_df['timestamp'],
             open=symbol_df['open'], high=symbol_df['high'],
             low=symbol_df['low'], close=symbol_df['close'],
             name=selected_symbol
@@ -228,7 +238,7 @@ elif page == "📈 Markets":
         
         # Volume
         st.subheader("Trading Volume")
-        fig_vol = px.bar(symbol_df, x='date', y='volume')
+        fig_vol = px.bar(symbol_df, x='timestamp', y='volume')
         fig_vol.update_layout(height=300)
         st.plotly_chart(fig_vol, use_container_width=True)
         
@@ -236,7 +246,7 @@ elif page == "📈 Markets":
         st.markdown("---")
         st.subheader("Compare All Stocks")
         fig_comp = create_comparison_chart(
-            stocks_df, 'date', 'close', 'symbol',
+            stocks_df, 'timestamp', 'close', 'symbol',
             "Normalized Stock Performance (Base 100)", normalize=True
         )
         st.plotly_chart(fig_comp, use_container_width=True)
@@ -276,8 +286,8 @@ elif page == "🛰️ Space":
             metrics = [
                 ("📍 Latitude", f"{latest['latitude']:.4f}°", None),
                 ("📍 Longitude", f"{latest['longitude']:.4f}°", None),
-                ("🚀 Altitude", f"{latest['altitude_km']:.2f} km", None),
-                ("⚡ Speed", f"{latest['speed_kmh']:,.0f} km/h", None)
+                ("🚀 Altitude", f"{latest['altitude']:.2f} km", None),
+                ("⚡ Speed", f"{latest['velocity']:,.0f} km/h", None)
             ]
             for label, value, _ in metrics:
                 st.metric(label, value)
@@ -289,21 +299,21 @@ elif page == "🛰️ Space":
     st.subheader("☄️ Near-Earth Objects")
     neo_df = load_data("""
         SELECT name, 
-               ROUND(diameter_max_m/1000.0, 3) as max_diameter_km,
-               ROUND(velocity_kmh, 0) as velocity_kmh,
-               ROUND(miss_distance_km, 0) as miss_distance_km,
-               is_hazardous, date
+               ROUND((estimated_diameter_max/1000.0)::numeric, 3) as max_diameter_km,
+               ROUND(relative_velocity::numeric, 0) as velocity_kmh,
+               ROUND(miss_distance::numeric, 0) as miss_distance_km,
+               is_potentially_hazardous, date
         FROM near_earth_objects
-        WHERE date(date) >= date('now')
+        WHERE date >= CURRENT_DATE
         ORDER BY date LIMIT 20
     """)
     
     if not neo_df.empty:
-        neo_df['is_hazardous'] = neo_df['is_hazardous'].apply(lambda x: '⚠️ YES' if x == 1 else '✅ No')
+        neo_df['is_potentially_hazardous'] = neo_df['is_potentially_hazardous'].apply(lambda x: '⚠️ YES' if x else '✅ No')
         st.dataframe(neo_df, use_container_width=True, hide_index=True)
         
         fig = px.scatter(neo_df, x='date', y='max_diameter_km', size='max_diameter_km',
-                        color='is_hazardous', hover_data=['name', 'velocity_kmh'],
+                        color='is_potentially_hazardous', hover_data=['name', 'velocity_kmh'],
                         title="Upcoming Near-Earth Objects")
         st.plotly_chart(fig, use_container_width=True)
     else:
@@ -316,7 +326,7 @@ elif page == "🛰️ Space":
     solar_df = load_data("""
         SELECT class_type, begin_time, peak_time, source_location
         FROM solar_flares
-        WHERE date(begin_time) >= date('now', '-30 days')
+        WHERE begin_time >= CURRENT_DATE - INTERVAL '30 days'
         ORDER BY begin_time DESC
     """)
     
@@ -335,9 +345,9 @@ elif page == "🌍 Geography":
     
     try:
         countries_df = load_data("""
-            SELECT name, official_name, region, subregion, population, area_km2,
-                   population_density, capital, languages, currencies, flag_emoji,
-                   latitude, longitude, border_count, un_member, timestamp
+            SELECT name, code, region, subregion, population, area,
+                   capital, languages, currencies,
+                   latitude, longitude
             FROM countries ORDER BY population DESC
         """)
         
@@ -348,8 +358,8 @@ elif page == "🌍 Geography":
             metrics = [
                 ("🗺️ Countries", f"{len(countries_df):,}", None),
                 ("👥 Total Population", f"{countries_df['population'].sum():,.0f}", None),
-                ("📊 Avg Density", f"{countries_df['population_density'].mean():.1f}/km²", None),
-                ("🇺🇳 UN Members", f"{countries_df['un_member'].sum()}", None)
+                ("📊 Avg Area", f"{countries_df['area'].mean():,.0f} km²", None),
+                ("🌍 Regions", f"{countries_df['region'].nunique()}", None)
             ]
             render_metric_row(metrics)
             
@@ -364,7 +374,7 @@ elif page == "🌍 Geography":
             
             # Map
             st.subheader("🌐 Country Map")
-            map_data = filtered[['name', 'latitude', 'longitude', 'population', 'flag_emoji']].dropna(subset=['latitude', 'longitude'])
+            map_data = filtered[['name', 'latitude', 'longitude', 'population']].dropna(subset=['latitude', 'longitude'])
             
             if not map_data.empty:
                 fig = go.Figure(go.Scattergeo(
@@ -396,10 +406,10 @@ elif page == "🌍 Geography":
                 st.plotly_chart(fig, use_container_width=True)
             
             with col2:
-                st.subheader("📊 Top by Density")
-                top_density = filtered.nlargest(10, 'population_density')
-                fig = px.bar(top_density, x='name', y='population_density', 
-                            color='population_density', color_continuous_scale='Reds')
+                st.subheader("📊 Top by Area")
+                top_area = filtered.nlargest(10, 'area')
+                fig = px.bar(top_area, x='name', y='area', 
+                            color='area', color_continuous_scale='Greens')
                 fig.update_layout(height=400)
                 st.plotly_chart(fig, use_container_width=True)
             
@@ -415,19 +425,16 @@ elif page == "🌍 Geography":
                 col1, col2, col3 = st.columns([1, 2, 1])
                 
                 with col1:
-                    st.markdown(f"## {country['flag_emoji']}")
                     st.markdown(f"### {country['name']}")
-                    st.caption(country['official_name'])
+                    st.caption(country['code'])
                 
                 with col2:
                     st.write(f"**Region:** {country['region']} - {country['subregion']}")
                     st.write(f"**Capital:** {country['capital']}")
-                    st.write(f"**Languages:** {country['languages']}")
                 
                 with col3:
                     st.metric("Population", f"{country['population']:,.0f}")
-                    st.metric("Area", f"{country['area_km2']:,.0f} km²")
-                    st.metric("Density", f"{country['population_density']:.1f}/km²")
+                    st.metric("Area", f"{country['area']:,.0f} km²")
     
     except Exception as e:
         st.error(f"Error: {e}")
@@ -459,7 +466,7 @@ elif page == "🌦️ Environment":
         
         # City selector
         selected_cities = st.multiselect("Cities:", latest['city'].tolist(), 
-                                        default=latest['city'].tolist())
+                                        default=latest['city'].tolist()[:10])  # Default to first 10
         filtered = latest[latest['city'].isin(selected_cities)]
         
         if not filtered.empty:
@@ -467,7 +474,7 @@ elif page == "🌦️ Environment":
             
             # 3D Globe
             st.subheader("🌐 Weather Globe")
-            fig = create_globe_map(filtered, 'lat', 'lon', 'temperature_c', 'city',
+            fig = create_globe_map(filtered, 'lat', 'lon', 'temperature', 'city',
                                   '🌍 Global Weather - 3D Sphere View')
             st.plotly_chart(fig, use_container_width=True)
             st.info("🌍 **Controls:** Drag to rotate | Scroll to zoom")
@@ -480,10 +487,10 @@ elif page == "🌦️ Environment":
             for idx, (col, (_, row)) in enumerate(zip(cols * 10, filtered.iterrows())):
                 with col:
                     st.markdown(f"### {row['city']}")
-                    st.metric("Temperature", f"{row['temperature_c']:.1f}°C")
-                    st.write(f"**Feels like:** {row['feels_like_c']:.1f}°C")
-                    st.write(f"**Conditions:** {row['weather_description']}")
-                    st.write(f"**Humidity:** {row['humidity_percent']}%")
+                    st.metric("Temperature", f"{row['temperature']:.1f}°C")
+                    st.write(f"**Feels like:** {row['feels_like']:.1f}°C")
+                    st.write(f"**Conditions:** {row['description']}")
+                    st.write(f"**Humidity:** {row['humidity']}%")
             
             st.markdown("---")
             
@@ -493,7 +500,7 @@ elif page == "🌦️ Environment":
             for city in selected_cities:
                 city_data = weather_df[weather_df['city'] == city]
                 fig.add_trace(go.Scatter(x=city_data['timestamp'], 
-                                        y=city_data['temperature_c'],
+                                        y=city_data['temperature'],
                                         name=city, mode='lines+markers'))
             fig.update_layout(xaxis_title="Time", yaxis_title="Temperature (°C)", 
                             height=400, hovermode='x unified')
@@ -507,7 +514,7 @@ elif page == "📰 News":
     st.title("📰 News Intelligence")
     st.markdown("---")
     
-    news_df = load_data("SELECT * FROM news ORDER BY published DESC")
+    news_df = load_data("SELECT * FROM news ORDER BY published_at DESC")
     
     if news_df.empty:
         st.warning("No news data")
@@ -525,12 +532,12 @@ elif page == "📰 News":
             col1, col2 = st.columns([4, 1])
             with col1:
                 st.subheader(article['title'])
-                if pd.notna(article['summary']) and article['summary']:
-                    st.write(article['summary'])
-                st.markdown(f"[Read more →]({article['link']})")
+                if pd.notna(article['description']) and article['description']:
+                    st.write(article['description'])
+                st.markdown(f"[Read more →]({article['url']})")
             with col2:
                 st.write(f"**{article['source']}**")
-                st.caption(article['published'])
+                st.caption(str(article['published_at']))
             st.markdown("---")
         
         # Distribution
