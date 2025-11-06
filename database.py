@@ -4,8 +4,8 @@ Centralized database connection management for Hermes
 """
 
 import os
-import psycopg
-from psycopg.rows import dict_row
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import logging
 from typing import Optional
 from contextlib import contextmanager
@@ -37,9 +37,12 @@ def get_db_connection():
     conn = None
     try:
         db_url = get_database_url()
-        conn = psycopg.connect(db_url, row_factory=dict_row, autocommit=True)
+        conn = psycopg2.connect(db_url)
         yield conn
+        conn.commit()
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"Database error: {e}")
         raise
     finally:
@@ -59,7 +62,7 @@ def execute_query(query: str, params: tuple = None, fetch: bool = True):
         Query results if fetch=True, None otherwise
     """
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(query, params)
             if fetch:
                 return cur.fetchall()

@@ -1,6 +1,6 @@
 """
-Stock Market Data Collector
-Fetches stock data from Alpha Vantage and saves to PostgreSQL
+Commodity Data Collector
+Fetches commodity prices from Alpha Vantage and saves to PostgreSQL
 """
 
 import requests
@@ -28,8 +28,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class StockDataCollector:
-    """Collector for stock market data"""
+class CommodityDataCollector:
+    """Collector for commodity price data"""
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get('ALPHA_VANTAGE_KEY')
@@ -41,23 +41,42 @@ class StockDataCollector:
         if not self.api_key:
             logger.error("ALPHA_VANTAGE_KEY not found in environment!")
         
-    def fetch_stock_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def fetch_commodity(self, symbol: str, interval: str = "daily") -> Optional[Dict[str, Any]]:
         """
-        Fetch current stock quote for a symbol
+        Fetch commodity price data
         
         Args:
-            symbol: Stock symbol (e.g., 'AAPL', 'GOOGL')
+            symbol: Commodity symbol (e.g., 'WTI', 'BRENT', 'NATURAL_GAS')
+            interval: Time interval (daily, weekly, monthly)
             
         Returns:
-            Dictionary containing stock data or None if failed
+            Dictionary containing commodity data or None if failed
         """
         if not self.api_key:
             logger.error("Alpha Vantage API key not provided")
             return None
         
+        # Map commodity symbols to Alpha Vantage functions
+        commodity_functions = {
+            'WTI': 'WTI',           # Crude Oil
+            'BRENT': 'BRENT',       # Brent Crude
+            'NATURAL_GAS': 'NATURAL_GAS',
+            'COPPER': 'COPPER',
+            'ALUMINUM': 'ALUMINUM',
+            'WHEAT': 'WHEAT',
+            'CORN': 'CORN',
+            'COTTON': 'COTTON',
+            'SUGAR': 'SUGAR',
+            'COFFEE': 'COFFEE'
+        }
+        
+        if symbol not in commodity_functions:
+            logger.error(f"Unsupported commodity: {symbol}")
+            return None
+        
         params = {
-            'function': 'GLOBAL_QUOTE',
-            'symbol': symbol,
+            'function': commodity_functions[symbol],
+            'interval': interval,
             'apikey': self.api_key
         }
         
@@ -74,18 +93,21 @@ class StockDataCollector:
                 
                 data = response.json()
                 
-                if 'Global Quote' not in data:
+                # Check for API errors
+                if 'Error Message' in data:
+                    logger.error(f"API Error for {symbol}: {data['Error Message']}")
+                    return None
+                
+                if 'Note' in data:
+                    logger.warning(f"API Note for {symbol}: {data['Note']}")
+                    return None
+                
+                if 'data' not in data:
                     logger.error(f"Unexpected API response for {symbol}: {data}")
                     return None
                 
-                quote = data['Global Quote']
-                
-                if not quote:
-                    logger.warning(f"No data returned for {symbol}")
-                    return None
-                
                 logger.info(f"✓ Successfully fetched data for {symbol}")
-                return quote
+                return data
                 
             except requests.exceptions.Timeout:
                 logger.warning(f"Timeout on attempt {attempt + 1} for {symbol}")
@@ -121,79 +143,75 @@ class StockDataCollector:
         logger.error(f"All retry attempts failed for {symbol}")
         return None
     
-    def save_to_database(self, symbol: str, quote: Dict[str, Any]) -> bool:
+    def save_to_database(self, symbol: str, data: Dict[str, Any]) -> bool:
         """
-        Save stock data to PostgreSQL database
+        Save commodity data to PostgreSQL database
         
         Args:
-            symbol: Stock symbol
-            quote: Quote data from Alpha Vantage
+            symbol: Commodity symbol
+            data: Commodity data from Alpha Vantage
             
         Returns:
             True if successful, False otherwise
         """
         try:
-            # Parse the data
-            trading_day = quote.get('07. latest trading day', '')
-            if not trading_day:
-                logger.error(f"No trading day in quote for {symbol}")
+            # Extract latest data point
+            commodity_data_list = data.get('data', [])
+            if not commodity_data_list:
+                logger.error(f"No data points for {symbol}")
                 return False
             
-            timestamp = datetime.strptime(trading_day, '%Y-%m-%d')
+            latest = commodity_data_list[0]
             
-            stock_data = {
+            # Parse the data
+            timestamp = datetime.strptime(latest.get('date', ''), '%Y-%m-%d')
+            
+            commodity_record = {
                 'symbol': symbol,
                 'timestamp': timestamp,
-                'open': float(quote.get('02. open', 0)),
-                'high': float(quote.get('03. high', 0)),
-                'low': float(quote.get('04. low', 0)),
-                'close': float(quote.get('05. price', 0)),
-                'volume': int(quote.get('06. volume', 0))
+                'price': float(latest.get('value', 0)),
+                'unit': latest.get('unit', 'USD')
             }
             
             # Insert into database using ON CONFLICT for upsert
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO stocks 
-                        (symbol, timestamp, open, high, low, close, volume)
-                        VALUES (%(symbol)s, %(timestamp)s, %(open)s, %(high)s, 
-                                %(low)s, %(close)s, %(volume)s)
+                        INSERT INTO commodities 
+                        (symbol, timestamp, price, unit)
+                        VALUES (%(symbol)s, %(timestamp)s, %(price)s, %(unit)s)
                         ON CONFLICT (symbol, timestamp) 
                         DO UPDATE SET
-                            open = EXCLUDED.open,
-                            high = EXCLUDED.high,
-                            low = EXCLUDED.low,
-                            close = EXCLUDED.close,
-                            volume = EXCLUDED.volume,
+                            price = EXCLUDED.price,
+                            unit = EXCLUDED.unit,
                             collected_at = CURRENT_TIMESTAMP
-                    """, stock_data)
+                    """, commodity_record)
             
-            logger.info(f"✓ Saved {symbol} data to database: ${stock_data['close']:.2f}")
+            logger.info(f"✓ Saved {symbol} data to database: ${commodity_record['price']:.2f}")
             return True
             
         except Exception as e:
             logger.error(f"Failed to save {symbol} to database: {e}")
             return False
     
-    def collect_stocks(self, symbols: List[str] = None) -> Dict[str, Any]:
+    def collect_commodities(self, symbols: List[str] = None) -> Dict[str, Any]:
         """
-        Collect data for multiple stocks
+        Collect data for multiple commodities
         
         Args:
-            symbols: List of stock symbols (default: AAPL, GOOGL, MSFT)
+            symbols: List of commodity symbols
             
         Returns:
             Dictionary with collection results
         """
         if symbols is None:
-            symbols = ['AAPL', 'GOOGL', 'MSFT']
+            symbols = ['WTI', 'NATURAL_GAS', 'COPPER', 'WHEAT', 'CORN']
         
         results = {
             'total': len(symbols),
             'successful': 0,
             'failed': 0,
-            'stocks': [],
+            'commodities': [],
             'errors': []
         }
         
@@ -202,18 +220,22 @@ class StockDataCollector:
             if i > 0:
                 time.sleep(12)  # Alpha Vantage free tier: 5 calls/minute
             
-            quote = self.fetch_stock_quote(symbol)
+            data = self.fetch_commodity(symbol)
             
-            if quote:
-                if self.save_to_database(symbol, quote):
+            if data:
+                if self.save_to_database(symbol, data):
                     results['successful'] += 1
-                    results['stocks'].append({
-                        'symbol': symbol,
-                        'price': float(quote.get('05. price', 0)),
-                        'change': quote.get('09. change'),
-                        'change_percent': quote.get('10. change percent'),
-                        'volume': quote.get('06. volume')
-                    })
+                    
+                    # Extract price for display
+                    commodity_data_list = data.get('data', [])
+                    if commodity_data_list:
+                        latest = commodity_data_list[0]
+                        results['commodities'].append({
+                            'symbol': symbol,
+                            'price': float(latest.get('value', 0)),
+                            'date': latest.get('date'),
+                            'unit': latest.get('unit', 'USD')
+                        })
                 else:
                     results['failed'] += 1
                     results['errors'].append(f"{symbol}: Failed to save to database")
@@ -225,26 +247,21 @@ class StockDataCollector:
 
 def main():
     """Main execution function"""
-    logger.info("=== Stock Market Data Collection ===\n")
+    logger.info("=== Commodity Data Collection ===\n")
     
-    collector = StockDataCollector()
+    collector = CommodityDataCollector()
     
-    # Expanded stock list - diversified across sectors
+    # Commodity list - energy, metals, agriculture
     symbols = [
-        # Technology
-        'AAPL', 'GOOGL', 'MSFT',
-        # Finance
-        'JPM', 'GS', 'V',
-        # Energy
-        'XOM', 'CVX',
-        # Healthcare
-        'JNJ', 'UNH',
-        # Consumer
-        'WMT', 'PG'
+        'WTI',          # Crude Oil
+        'NATURAL_GAS',  # Natural Gas
+        'COPPER',       # Copper
+        'WHEAT',        # Wheat
+        'CORN'          # Corn
     ]
     
-    logger.info(f"Collecting data for {len(symbols)} stocks: {', '.join(symbols)}")
-    results = collector.collect_stocks(symbols)
+    logger.info(f"Collecting data for {len(symbols)} commodities: {', '.join(symbols)}")
+    results = collector.collect_commodities(symbols)
     
     # Print results
     print(f"\n=== Collection Complete ===")
@@ -252,11 +269,10 @@ def main():
     print(f"Successful: {results['successful']}")
     print(f"Failed: {results['failed']}")
     
-    if results['stocks']:
-        print(f"\n📈 Stock Prices:")
-        for stock in results['stocks']:
-            change_symbol = "📈" if '+' in str(stock.get('change_percent', '')) else "📉"
-            print(f"  {change_symbol} {stock['symbol']}: ${stock['price']:.2f} ({stock.get('change_percent', 'N/A')})")
+    if results['commodities']:
+        print(f"\n💰 Commodity Prices:")
+        for commodity in results['commodities']:
+            print(f"  {commodity['symbol']}: ${commodity['price']:.2f} {commodity['unit']} ({commodity['date']})")
     
     if results['errors']:
         print(f"\n❌ Errors:")
