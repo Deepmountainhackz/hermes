@@ -1,6 +1,6 @@
 """
 ISS Position Data Collector
-Fetches real-time International Space Station position data
+Fetches real-time International Space Station position data and saves to PostgreSQL
 """
 
 import requests
@@ -8,6 +8,18 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 import time
+import os
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Add project root to path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+from database import get_db_connection
 
 # Configure logging
 logging.basicConfig(
@@ -111,8 +123,55 @@ class ISSDataCollector:
             'timestamp': data['timestamp'],
             'timestamp_readable': datetime.fromtimestamp(data['timestamp']).isoformat(),
             'collection_time': datetime.utcnow().isoformat(),
+            'altitude': 408.0,  # Average ISS altitude in km
+            'velocity': 27600.0,  # Average ISS velocity in km/h
             'status': 'success'
         }
+    
+    def save_to_database(self, data: Dict[str, Any]) -> bool:
+        """
+        Save ISS position data to PostgreSQL database
+        
+        Args:
+            data: ISS position data dictionary
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Prepare data for database
+            timestamp = datetime.fromtimestamp(data['timestamp'])
+            
+            iss_data = {
+                'timestamp': timestamp,
+                'latitude': data['latitude'],
+                'longitude': data['longitude'],
+                'altitude': data['altitude'],
+                'velocity': data['velocity']
+            }
+            
+            # Insert into database
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        INSERT INTO iss_positions 
+                        (timestamp, latitude, longitude, altitude, velocity)
+                        VALUES (%(timestamp)s, %(latitude)s, %(longitude)s, 
+                                %(altitude)s, %(velocity)s)
+                        ON CONFLICT (timestamp) DO UPDATE SET
+                            latitude = EXCLUDED.latitude,
+                            longitude = EXCLUDED.longitude,
+                            altitude = EXCLUDED.altitude,
+                            velocity = EXCLUDED.velocity,
+                            collected_at = CURRENT_TIMESTAMP
+                    """, iss_data)
+            
+            logger.info(f"✓ Saved ISS position to database")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save ISS data to database: {e}")
+            return False
 
 def main():
     """Main execution function"""
@@ -123,9 +182,18 @@ def main():
     
     if data:
         logger.info("ISS data collection successful")
+        
+        # Save to database
+        if collector.save_to_database(data):
+            logger.info("✓ ISS data saved to database")
+        else:
+            logger.error("✗ Failed to save ISS data to database")
+        
         print("\n=== ISS Position Data ===")
         print(f"Latitude: {data['latitude']}")
         print(f"Longitude: {data['longitude']}")
+        print(f"Altitude: {data['altitude']} km")
+        print(f"Velocity: {data['velocity']} km/h")
         print(f"Timestamp: {data['timestamp_readable']}")
         print(f"Collection Time: {data['collection_time']}")
         return data

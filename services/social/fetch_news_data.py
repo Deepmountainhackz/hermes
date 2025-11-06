@@ -1,14 +1,25 @@
 """
 News Data Collector
-Fetches latest news articles from various free news APIs
+Fetches latest news articles from NewsAPI and saves to PostgreSQL
 """
 
 import requests
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 import time
 import os
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Add project root to path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+from database import get_db_connection
 
 # Configure logging
 logging.basicConfig(
@@ -18,51 +29,45 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class NewsDataCollector:
-    """Collector for news articles from multiple sources"""
+    """Collector for news articles"""
     
     def __init__(self, api_key: Optional[str] = None):
-        # NewsAPI - Free tier available (requires API key)
-        self.newsapi_url = "https://newsapi.org/v2"
         self.api_key = api_key or os.environ.get('NEWSAPI_KEY')
-        
-        # Hacker News API (no key required)
-        self.hackernews_url = "https://hacker-news.firebaseio.com/v0"
-        
+        self.base_url = "https://newsapi.org/v2/top-headlines"
         self.timeout = 15
         self.max_retries = 3
         self.retry_delay = 2
         
-    def fetch_newsapi_headlines(self, 
-                                category: str = 'general',
-                                country: str = 'us') -> Optional[List[Dict[str, Any]]]:
+        if not self.api_key:
+            logger.error("NEWSAPI_KEY not found in environment!")
+    
+    def fetch_headlines(self, category: str = 'business') -> Optional[List[Dict[str, Any]]]:
         """
         Fetch top headlines from NewsAPI
         
         Args:
-            category: News category (business, technology, sports, etc.)
-            country: Country code (us, gb, ca, etc.)
+            category: News category (business, technology, general, etc.)
             
         Returns:
             List of news articles or None if failed
         """
         if not self.api_key:
-            logger.warning("NewsAPI key not provided, skipping NewsAPI headlines")
+            logger.error("NewsAPI key not provided")
             return None
         
-        endpoint = f"{self.newsapi_url}/top-headlines"
         params = {
             'category': category,
-            'country': country,
+            'language': 'en',
+            'pageSize': 50,
             'apiKey': self.api_key
         }
         
         for attempt in range(self.max_retries):
             try:
-                logger.info(f"Fetching NewsAPI headlines for {category}/{country} "
-                          f"(attempt {attempt + 1}/{self.max_retries})")
+                logger.info(f"Fetching {category} news (attempt {attempt + 1}/{self.max_retries})")
                 
                 response = requests.get(
-                    endpoint,
+                    self.base_url,
                     params=params,
                     timeout=self.timeout
                 )
@@ -71,44 +76,18 @@ class NewsDataCollector:
                 data = response.json()
                 
                 if data.get('status') != 'ok':
-                    logger.error(f"NewsAPI returned error: {data.get('message', 'Unknown')}")
+                    logger.error(f"NewsAPI error: {data.get('message', 'Unknown')}")
                     return None
                 
                 articles = data.get('articles', [])
-                logger.info(f"Successfully fetched {len(articles)} NewsAPI headlines")
-                
+                logger.info(f"✓ Fetched {len(articles)} {category} articles")
                 return articles
                 
-            except requests.exceptions.Timeout:
-                logger.warning(f"Timeout on attempt {attempt + 1}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
-                    
-            except requests.exceptions.ConnectionError as e:
-                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
-                    
-            except requests.exceptions.HTTPError as e:
-                logger.error(f"HTTP error: {e}")
-                if e.response.status_code == 429:
-                    logger.warning("Rate limit hit, waiting longer")
-                    if attempt < self.max_retries - 1:
-                        time.sleep(self.retry_delay * 5)
-                elif e.response.status_code == 401:
-                    logger.error("Invalid API key")
-                    return None
-                else:
-                    return None
-                    
             except requests.exceptions.RequestException as e:
                 logger.error(f"Request failed: {e}")
-                return None
-                
-            except ValueError as e:
-                logger.error(f"JSON decode error: {e}")
-                return None
-                
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                    
             except Exception as e:
                 logger.error(f"Unexpected error: {e}", exc_info=True)
                 return None
@@ -116,204 +95,123 @@ class NewsDataCollector:
         logger.error("All retry attempts failed")
         return None
     
-    def fetch_hackernews_top(self, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    def save_to_database(self, articles: List[Dict[str, Any]], category: str) -> int:
         """
-        Fetch top stories from Hacker News
+        Save news articles to PostgreSQL database
         
         Args:
-            limit: Number of stories to fetch (max 30)
+            articles: List of news articles
+            category: News category
             
         Returns:
-            List of news stories or None if failed
+            Number of articles saved
         """
-        limit = min(limit, 30)  # Cap at 30
+        saved_count = 0
         
-        for attempt in range(self.max_retries):
-            try:
-                logger.info(f"Fetching Hacker News top {limit} stories "
-                          f"(attempt {attempt + 1}/{self.max_retries})")
-                
-                # Get top story IDs
-                response = requests.get(
-                    f"{self.hackernews_url}/topstories.json",
-                    timeout=self.timeout
-                )
-                response.raise_for_status()
-                story_ids = response.json()[:limit]
-                
-                # Fetch individual stories
-                stories = []
-                for story_id in story_ids:
-                    try:
-                        story_response = requests.get(
-                            f"{self.hackernews_url}/item/{story_id}.json",
-                            timeout=self.timeout
-                        )
-                        story_response.raise_for_status()
-                        story = story_response.json()
-                        
-                        if story:
-                            stories.append({
-                                'title': story.get('title'),
-                                'url': story.get('url'),
-                                'score': story.get('score'),
-                                'author': story.get('by'),
-                                'time': story.get('time'),
-                                'comments': story.get('descendants', 0),
-                                'type': story.get('type')
-                            })
-                        
-                        # Small delay to avoid rate limiting
-                        time.sleep(0.1)
-                        
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch story {story_id}: {e}")
+        try:
+            for article in articles:
+                try:
+                    # Skip if missing required fields
+                    if not article.get('title') or not article.get('source'):
                         continue
-                
-                logger.info(f"Successfully fetched {len(stories)} Hacker News stories")
-                return stories
-                
-            except requests.exceptions.Timeout:
-                logger.warning(f"Timeout on attempt {attempt + 1}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
                     
-            except requests.exceptions.ConnectionError as e:
-                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
+                    # Parse published date
+                    published_at = None
+                    if article.get('publishedAt'):
+                        try:
+                            published_at = datetime.fromisoformat(
+                                article['publishedAt'].replace('Z', '+00:00')
+                            )
+                        except:
+                            pass
                     
-            except requests.exceptions.HTTPError as e:
-                logger.error(f"HTTP error: {e}")
-                return None
+                    article_data = {
+                        'title': article['title'][:500],  # Limit length
+                        'description': article.get('description', '')[:1000] if article.get('description') else None,
+                        'url': article.get('url', '')[:500],
+                        'source': article['source'].get('name', 'Unknown')[:255],
+                        'published_at': published_at,
+                        'author': article.get('author', '')[:255] if article.get('author') else None,
+                        'category': category
+                    }
                     
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Request failed: {e}")
-                return None
-                
-            except ValueError as e:
-                logger.error(f"JSON decode error: {e}")
-                return None
-                
-            except Exception as e:
-                logger.error(f"Unexpected error: {e}", exc_info=True)
-                return None
-        
-        logger.error("All retry attempts failed")
-        return None
-    
-    def fetch_data(self, 
-                   newsapi_category: str = 'technology',
-                   hn_limit: int = 10) -> Optional[Dict[str, Any]]:
-        """
-        Fetch comprehensive news data from multiple sources
-        
-        Args:
-            newsapi_category: Category for NewsAPI
-            hn_limit: Number of Hacker News stories to fetch
+                    # Insert into database
+                    with get_db_connection() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                INSERT INTO news 
+                                (title, description, url, source, published_at, author, category)
+                                VALUES (%(title)s, %(description)s, %(url)s, %(source)s,
+                                        %(published_at)s, %(author)s, %(category)s)
+                                ON CONFLICT (title, source) DO UPDATE SET
+                                    description = EXCLUDED.description,
+                                    url = EXCLUDED.url,
+                                    published_at = EXCLUDED.published_at,
+                                    author = EXCLUDED.author,
+                                    collected_at = CURRENT_TIMESTAMP
+                            """, article_data)
+                    
+                    saved_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to save article: {e}")
+                    continue
             
-        Returns:
-            Dictionary containing all news data or None if failed
-        """
-        logger.info("Starting comprehensive news data collection")
-        
-        # Fetch NewsAPI headlines (if key available)
-        newsapi_articles = self.fetch_newsapi_headlines(category=newsapi_category)
-        
-        # Fetch Hacker News stories
-        hn_stories = self.fetch_hackernews_top(limit=hn_limit)
-        
-        # If both failed, return None
-        if newsapi_articles is None and hn_stories is None:
-            logger.error("All news data collection failed")
-            return None
-        
-        # Process and enrich the data
-        enriched_data = self._enrich_data(
-            newsapi_articles or [],
-            hn_stories or [],
-            newsapi_category
-        )
-        
-        return enriched_data
+            logger.info(f"✓ Saved {saved_count} news articles to database")
+            return saved_count
+            
+        except Exception as e:
+            logger.error(f"Failed to process news data: {e}")
+            return saved_count
     
-    def _enrich_data(self, 
-                     newsapi_articles: List[Dict],
-                     hn_stories: List[Dict],
-                     category: str) -> Dict[str, Any]:
-        """Process and enrich news data"""
+    def collect_all_categories(self) -> Dict[str, Any]:
+        """
+        Collect news from multiple categories
         
-        # Process NewsAPI articles
-        processed_newsapi = []
-        for article in newsapi_articles[:10]:  # Limit to top 10
-            processed_newsapi.append({
-                'title': article.get('title'),
-                'description': article.get('description'),
-                'url': article.get('url'),
-                'source': article.get('source', {}).get('name'),
-                'published_at': article.get('publishedAt'),
-                'author': article.get('author')
-            })
-        
-        # Calculate some stats
-        total_articles = len(processed_newsapi) + len(hn_stories)
-        
-        # Get unique sources
-        sources = set()
-        if processed_newsapi:
-            sources.update([a.get('source') for a in processed_newsapi if a.get('source')])
-        if hn_stories:
-            sources.add('Hacker News')
-        
-        return {
-            'total_articles': total_articles,
-            'newsapi_count': len(processed_newsapi),
-            'hackernews_count': len(hn_stories),
-            'category': category,
-            'sources': list(sources),
-            'newsapi_articles': processed_newsapi,
-            'hackernews_stories': hn_stories,
-            'collection_time': datetime.utcnow().isoformat(),
-            'status': 'success'
+        Returns:
+            Collection results
+        """
+        categories = ['business', 'technology']
+        results = {
+            'total_articles': 0,
+            'saved': 0,
+            'categories': {}
         }
+        
+        for category in categories:
+            articles = self.fetch_headlines(category)
+            
+            if articles:
+                saved = self.save_to_database(articles, category)
+                results['categories'][category] = {
+                    'fetched': len(articles),
+                    'saved': saved
+                }
+                results['total_articles'] += len(articles)
+                results['saved'] += saved
+                
+                # Rate limiting
+                time.sleep(2)
+        
+        return results
 
 def main():
     """Main execution function"""
-    # You can set NEWSAPI_KEY environment variable for NewsAPI access
-    # Otherwise, it will only fetch Hacker News
     collector = NewsDataCollector()
     
     logger.info("Starting news data collection")
-    data = collector.fetch_data(newsapi_category='technology', hn_limit=10)
+    results = collector.collect_all_categories()
     
-    if data:
-        logger.info("News data collection successful")
-        print("\n=== News Data Collection ===")
-        print(f"Total Articles: {data['total_articles']}")
-        print(f"NewsAPI Articles: {data['newsapi_count']}")
-        print(f"Hacker News Stories: {data['hackernews_count']}")
-        print(f"Sources: {', '.join(data['sources'])}")
-        
-        if data['newsapi_articles']:
-            print("\n📰 Top NewsAPI Headlines:")
-            for i, article in enumerate(data['newsapi_articles'][:3], 1):
-                print(f"\n{i}. {article['title']}")
-                print(f"   Source: {article['source']}")
-                if article['description']:
-                    print(f"   {article['description'][:100]}...")
-        
-        if data['hackernews_stories']:
-            print("\n🔥 Top Hacker News Stories:")
-            for i, story in enumerate(data['hackernews_stories'][:3], 1):
-                print(f"\n{i}. {story['title']}")
-                print(f"   Score: {story['score']} | Comments: {story['comments']} | By: {story['author']}")
-        
-        print(f"\nCollection Time: {data['collection_time']}")
-        
-        return data
-    else:
-        logger.error("News data collection failed")
-        return None
+    print(f"\n=== News Data Collection ===")
+    print(f"Total articles fetched: {results['total_articles']}")
+    print(f"Total saved to database: {results['saved']}")
+    
+    for category, stats in results['categories'].items():
+        print(f"\n{category.capitalize()}:")
+        print(f"  Fetched: {stats['fetched']}")
+        print(f"  Saved: {stats['saved']}")
+    
+    return results
 
 if __name__ == "__main__":
     main()

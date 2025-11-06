@@ -1,6 +1,6 @@
 """
-Near Earth Objects (NEO) Data Collector
-Fetches asteroid and comet data from NASA's NEO API
+Near-Earth Objects (NEO) Data Collector
+Fetches asteroid data from NASA API and saves to PostgreSQL
 """
 
 import requests
@@ -9,6 +9,17 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 import time
 import os
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Add project root to path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+from database import get_db_connection
 
 # Configure logging
 logging.basicConfig(
@@ -18,28 +29,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class NEODataCollector:
-    """Collector for Near Earth Objects data from NASA"""
+    """Collector for Near-Earth Objects data"""
     
     def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get('NASA_API_KEY')
         self.base_url = "https://api.nasa.gov/neo/rest/v1/feed"
-        self.api_key = api_key or os.environ.get('NASA_API_KEY', 'DEMO_KEY')
         self.timeout = 15
         self.max_retries = 3
         self.retry_delay = 2
         
+        if not self.api_key:
+            logger.error("NASA_API_KEY not found in environment!")
+    
     def fetch_data(self, days: int = 1) -> Optional[Dict[str, Any]]:
         """
-        Fetch NEO data for specified number of days
+        Fetch NEO data for the specified number of days
         
         Args:
-            days: Number of days to fetch (1-7, default 1)
+            days: Number of days to fetch (default: 1)
             
         Returns:
             Dictionary containing NEO data or None if failed
         """
-        # Limit days to API constraint
-        days = min(max(days, 1), 7)
+        if not self.api_key:
+            logger.error("NASA API key not provided")
+            return None
         
+        # Get date range
         start_date = datetime.now().date()
         end_date = start_date + timedelta(days=days-1)
         
@@ -51,8 +67,7 @@ class NEODataCollector:
         
         for attempt in range(self.max_retries):
             try:
-                logger.info(f"Fetching NEO data for {start_date} to {end_date} "
-                          f"(attempt {attempt + 1}/{self.max_retries})")
+                logger.info(f"Fetching NEO data (attempt {attempt + 1}/{self.max_retries})")
                 
                 response = requests.get(
                     self.base_url,
@@ -63,47 +78,19 @@ class NEODataCollector:
                 
                 data = response.json()
                 
-                # Validate response structure
-                if not self._validate_response(data):
-                    logger.error("Invalid response structure from NEO API")
-                    return None
-                
-                # Process and enrich data
-                enriched_data = self._enrich_data(data)
-                
-                logger.info(f"Successfully fetched NEO data: "
-                          f"{enriched_data['total_objects']} objects, "
-                          f"{enriched_data['potentially_hazardous_count']} potentially hazardous")
-                
-                return enriched_data
+                logger.info(f"Successfully fetched NEO data")
+                return data
                 
             except requests.exceptions.Timeout:
                 logger.warning(f"Timeout on attempt {attempt + 1}")
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay)
                     
-            except requests.exceptions.ConnectionError as e:
-                logger.error(f"Connection error on attempt {attempt + 1}: {e}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed: {e}")
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay)
                     
-            except requests.exceptions.HTTPError as e:
-                logger.error(f"HTTP error: {e}")
-                if e.response.status_code == 429:
-                    logger.warning("Rate limit hit, waiting longer")
-                    if attempt < self.max_retries - 1:
-                        time.sleep(self.retry_delay * 3)
-                else:
-                    return None
-                    
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Request failed: {e}")
-                return None
-                
-            except ValueError as e:
-                logger.error(f"JSON decode error: {e}")
-                return None
-                
             except Exception as e:
                 logger.error(f"Unexpected error: {e}", exc_info=True)
                 return None
@@ -111,56 +98,72 @@ class NEODataCollector:
         logger.error("All retry attempts failed")
         return None
     
-    def _validate_response(self, data: Dict[str, Any]) -> bool:
-        """Validate NEO API response structure"""
+    def save_to_database(self, data: Dict[str, Any]) -> int:
+        """
+        Save NEO data to PostgreSQL database
+        
+        Args:
+            data: NEO data from NASA API
+            
+        Returns:
+            Number of NEOs saved
+        """
+        saved_count = 0
+        
         try:
-            return (
-                'element_count' in data and
-                'near_earth_objects' in data
-            )
-        except Exception:
-            return False
-    
-    def _enrich_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process and enrich NEO data"""
-        neo_objects = data['near_earth_objects']
-        
-        # Collect all NEOs across all dates
-        all_neos = []
-        potentially_hazardous = []
-        
-        for date, neos in neo_objects.items():
-            for neo in neos:
-                neo_info = {
-                    'id': neo['id'],
-                    'name': neo['name'],
-                    'date': date,
-                    'diameter_min_km': neo['estimated_diameter']['kilometers']['estimated_diameter_min'],
-                    'diameter_max_km': neo['estimated_diameter']['kilometers']['estimated_diameter_max'],
-                    'potentially_hazardous': neo['is_potentially_hazardous_asteroid'],
-                    'close_approach_date': neo['close_approach_data'][0]['close_approach_date'] if neo['close_approach_data'] else None,
-                    'relative_velocity_kmh': float(neo['close_approach_data'][0]['relative_velocity']['kilometers_per_hour']) if neo['close_approach_data'] else None,
-                    'miss_distance_km': float(neo['close_approach_data'][0]['miss_distance']['kilometers']) if neo['close_approach_data'] else None
-                }
-                all_neos.append(neo_info)
+            near_earth_objects = data.get('near_earth_objects', {})
+            
+            for date_str, neos in near_earth_objects.items():
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 
-                if neo['is_potentially_hazardous_asteroid']:
-                    potentially_hazardous.append(neo_info)
-        
-        return {
-            'total_objects': data['element_count'],
-            'potentially_hazardous_count': len(potentially_hazardous),
-            'start_date': list(neo_objects.keys())[0] if neo_objects else None,
-            'end_date': list(neo_objects.keys())[-1] if neo_objects else None,
-            'all_objects': all_neos,
-            'potentially_hazardous': potentially_hazardous,
-            'collection_time': datetime.utcnow().isoformat(),
-            'status': 'success'
-        }
+                for neo in neos:
+                    try:
+                        # Extract data
+                        neo_data = {
+                            'neo_id': neo['id'],
+                            'name': neo['name'],
+                            'date': date,
+                            'diameter_min': float(neo['estimated_diameter']['kilometers']['estimated_diameter_min']),
+                            'diameter_max': float(neo['estimated_diameter']['kilometers']['estimated_diameter_max']),
+                            'velocity': float(neo['close_approach_data'][0]['relative_velocity']['kilometers_per_hour']),
+                            'miss_distance': float(neo['close_approach_data'][0]['miss_distance']['kilometers']),
+                            'hazardous': neo['is_potentially_hazardous_asteroid']
+                        }
+                        
+                        # Insert into database
+                        with get_db_connection() as conn:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    INSERT INTO near_earth_objects 
+                                    (neo_id, name, date, estimated_diameter_min, estimated_diameter_max,
+                                     relative_velocity, miss_distance, is_potentially_hazardous)
+                                    VALUES (%(neo_id)s, %(name)s, %(date)s, %(diameter_min)s, %(diameter_max)s,
+                                            %(velocity)s, %(miss_distance)s, %(hazardous)s)
+                                    ON CONFLICT (neo_id, date) DO UPDATE SET
+                                        name = EXCLUDED.name,
+                                        estimated_diameter_min = EXCLUDED.estimated_diameter_min,
+                                        estimated_diameter_max = EXCLUDED.estimated_diameter_max,
+                                        relative_velocity = EXCLUDED.relative_velocity,
+                                        miss_distance = EXCLUDED.miss_distance,
+                                        is_potentially_hazardous = EXCLUDED.is_potentially_hazardous,
+                                        collected_at = CURRENT_TIMESTAMP
+                                """, neo_data)
+                        
+                        saved_count += 1
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to save NEO {neo.get('id')}: {e}")
+                        continue
+            
+            logger.info(f"✓ Saved {saved_count} NEO records to database")
+            return saved_count
+            
+        except Exception as e:
+            logger.error(f"Failed to process NEO data: {e}")
+            return saved_count
 
 def main():
     """Main execution function"""
-    # You can set NASA_API_KEY environment variable or it will use DEMO_KEY
     collector = NEODataCollector()
     
     logger.info("Starting NEO data collection")
@@ -168,17 +171,13 @@ def main():
     
     if data:
         logger.info("NEO data collection successful")
-        print("\n=== Near Earth Objects Data ===")
-        print(f"Total Objects: {data['total_objects']}")
-        print(f"Potentially Hazardous: {data['potentially_hazardous_count']}")
-        print(f"Date Range: {data['start_date']} to {data['end_date']}")
-        print(f"Collection Time: {data['collection_time']}")
         
-        if data['potentially_hazardous']:
-            print("\nPotentially Hazardous Objects:")
-            for neo in data['potentially_hazardous'][:5]:  # Show first 5
-                print(f"  - {neo['name']}: {neo['diameter_max_km']:.2f} km diameter, "
-                      f"miss distance: {neo['miss_distance_km']:.0f} km")
+        # Save to database
+        saved = collector.save_to_database(data)
+        
+        print(f"\n=== NEO Data Collection ===")
+        print(f"Total NEOs: {data.get('element_count', 0)}")
+        print(f"Saved to database: {saved}")
         
         return data
     else:
