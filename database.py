@@ -1,97 +1,84 @@
 """
-PostgreSQL Database Connection Utility
-Centralized database connection management for Hermes
+Database connection manager for Hermes Intelligence Platform
+Uses PostgreSQL with psycopg version 3 (Python 3.13 compatible)
 """
 
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import logging
-from typing import Optional
+import psycopg
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-logger = logging.getLogger(__name__)
-
-def get_database_url() -> str:
-    """Get database URL from environment"""
-    db_url = os.environ.get('DATABASE_URL')
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-    return db_url
-
-@contextmanager
 def get_db_connection():
     """
-    Context manager for database connections
-    
-    Usage:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM stocks")
-                results = cur.fetchall()
+    Get PostgreSQL database connection using psycopg version 3
+    Uses DATABASE_URL from environment variables
     """
-    conn = None
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+    
+    # Connect using psycopg version 3
+    conn = psycopg.connect(database_url)
+    
+    return conn
+
+@contextmanager
+def get_db_connection_context():
+    """
+    Context manager for database connections
+    Automatically handles commit/rollback and close
+    """
+    conn = get_db_connection()
     try:
-        db_url = get_database_url()
-        conn = psycopg2.connect(db_url)
         yield conn
         conn.commit()
     except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"Database error: {e}")
-        raise
+        conn.rollback()
+        raise e
     finally:
-        if conn:
-            conn.close()
+        conn.close()
 
-def execute_query(query: str, params: tuple = None, fetch: bool = True):
-    """
-    Execute a SQL query
+# For backwards compatibility with collectors using 'with get_db_connection() as conn'
+# This makes get_db_connection() work as a context manager
+class DatabaseConnection:
+    def __init__(self):
+        self.conn = None
     
-    Args:
-        query: SQL query string
-        params: Query parameters (optional)
-        fetch: Whether to fetch results (default True)
+    def __enter__(self):
+        self.conn = get_db_connection()
+        return self.conn
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        self.conn.close()
+        return False
+
+# Monkey patch to make the function work as context manager
+_original_get_db_connection = get_db_connection
+
+def get_db_connection():
+    """Get database connection - works both as function and context manager"""
+    class ConnectionContextManager:
+        def __init__(self):
+            self.conn = None
         
-    Returns:
-        Query results if fetch=True, None otherwise
-    """
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, params)
-            if fetch:
-                return cur.fetchall()
-            return None
-
-def insert_data(table: str, data: dict):
-    """
-    Insert data into a table
+        def __enter__(self):
+            self.conn = _original_get_db_connection()
+            return self.conn
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if exc_type is not None:
+                self.conn.rollback()
+            else:
+                self.conn.commit()
+            self.conn.close()
+            return False
     
-    Args:
-        table: Table name
-        data: Dictionary of column: value pairs
-    """
-    columns = ', '.join(data.keys())
-    placeholders = ', '.join(['%s'] * len(data))
-    query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-    
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, tuple(data.values()))
-
-def table_exists(table_name: str) -> bool:
-    """Check if a table exists"""
-    query = """
-        SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = %s
-        )
-    """
-    result = execute_query(query, (table_name,))
-    return result[0]['exists'] if result else False
+    return ConnectionContextManager()
