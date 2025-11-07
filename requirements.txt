@@ -7,9 +7,9 @@ requests==2.32.3
 # Database - psycopg (version 3) works with Python 3.13
 psycopg[binary]==3.2.3
 
-# Geospatial
+# Geospatial - Updated h3 version for Python 3.13
 pydeck==0.9.1
-h3==3.7.7
+h3==4.1.2
 geopy==2.4.1
 
 # Environment
