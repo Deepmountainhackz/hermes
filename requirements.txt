@@ -1,16 +1,35 @@
-# Core dependencies
-streamlit==1.39.0
-pandas==2.2.3
-plotly==5.24.1
-requests==2.32.3
+# Core framework
+streamlit>=1.32.0
 
-# Database - psycopg (version 3) works with Python 3.13
-psycopg[binary]==3.2.3
+# Database
+psycopg2-binary>=2.9.9
 
-# Geospatial - Updated h3 version for Python 3.13
-pydeck==0.9.1
-h3==4.1.2
-geopy==2.4.1
+# Data processing
+pandas>=2.2.0
+numpy>=1.26.0
 
-# Environment
-python-dotenv==1.0.1
+# Visualization
+plotly>=5.18.0
+
+# HTTP requests
+requests>=2.31.0
+
+# Market data
+yfinance>=0.2.36
+
+# NEW - Configuration management
+pydantic>=2.6.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+
+# NEW - Reliability
+tenacity>=8.2.3
+
+# NEW - Logging
+structlog>=24.1.0
+
+# Development (optional but recommended)
+pytest>=8.0.0
+pytest-cov>=4.1.0
+black>=24.0.0
+ruff>=0.2.0
