@@ -164,28 +164,28 @@ class TestMarketsService:
             with patch('time.sleep'):
                 result = service.collect_and_store_data(None)
 
-            assert result['total_stocks'] == len(MarketsService.DEFAULT_SYMBOLS)
+            assert result['total_symbols'] == len(MarketsService.DEFAULT_SYMBOLS)
 
     # =========================================================================
-    # get_latest_stocks Tests
+    # get_latest_prices Tests
     # =========================================================================
 
     @pytest.mark.unit
-    def test_get_latest_stocks(self, service, mock_repository, sample_stock_list):
-        """Test getting latest stocks from repository."""
+    def test_get_latest_prices(self, service, mock_repository, sample_stock_list):
+        """Test getting latest prices from repository."""
         mock_repository.get_all_latest_stocks.return_value = sample_stock_list
 
-        result = service.get_latest_stocks()
+        result = service.get_latest_prices()
 
         assert len(result) == 3
         mock_repository.get_all_latest_stocks.assert_called_once()
 
     @pytest.mark.unit
-    def test_get_latest_stocks_empty(self, service, mock_repository):
-        """Test getting latest stocks when none exist."""
+    def test_get_latest_prices_empty(self, service, mock_repository):
+        """Test getting latest prices when none exist."""
         mock_repository.get_all_latest_stocks.return_value = []
 
-        result = service.get_latest_stocks()
+        result = service.get_latest_prices()
 
         assert result == []
 

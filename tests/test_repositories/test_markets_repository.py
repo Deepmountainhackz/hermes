@@ -53,9 +53,10 @@ class TestMarketsRepository:
         mock_cursor.execute.assert_called_once()
 
     @pytest.mark.unit
-    def test_create_tables_failure(self, repository, mock_db_manager):
+    def test_create_tables_failure(self, repository, mock_conn_context):
         """Test table creation failure."""
-        mock_db_manager.get_connection.return_value.__enter__.side_effect = Exception("DB Error")
+        mock_conn, mock_cursor = mock_conn_context
+        mock_cursor.execute.side_effect = Exception("DB Error")
 
         with pytest.raises(DatabaseError):
             repository.create_tables()
