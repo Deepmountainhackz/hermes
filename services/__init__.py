@@ -1,4 +1,10 @@
-"""Services package."""
+"""
+Services Package
+Business logic layer for the Hermes Intelligence Platform.
+
+Each service handles data fetching, transformation, and orchestration
+for a specific data domain.
+"""
 from .markets_service import MarketsService
 from .commodities_service import CommoditiesService
 from .forex_service import ForexService
@@ -8,6 +14,13 @@ from .space_service import SpaceService
 from .disasters_service import DisastersService
 from .news_service import NewsService
 
-__all__ = ['MarketsService', 'CommoditiesService', 'ForexService',
-           'EconomicsService', 'WeatherService', 'SpaceService',
-           'DisastersService', 'NewsService']
+__all__ = [
+    'MarketsService',
+    'CommoditiesService',
+    'ForexService',
+    'EconomicsService',
+    'WeatherService',
+    'SpaceService',
+    'DisastersService',
+    'NewsService',
+]
