@@ -167,7 +167,7 @@ if page == "🏠 Overview":
     # Latest stock prices
     st.subheader("📈 Latest Stock Prices")
     stocks = load_data("""
-        SELECT symbol, close as price, ROUND(((close - open) / open * 100)::numeric, 2) as change
+        SELECT symbol, price, change_percent as change
         FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
         ORDER BY symbol
     """)
@@ -216,54 +216,55 @@ if page == "🏠 Overview":
 elif page == "📈 Markets":
     st.title("📈 Stock Market Analysis")
     st.markdown("---")
-    
+
     stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp, symbol")
-    stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-    
+
     if stocks_df.empty:
         st.warning("No stock data available")
     else:
+        stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
         selected_symbol = st.selectbox("Select Stock:", stocks_df['symbol'].unique())
         symbol_df = stocks_df[stocks_df['symbol'] == selected_symbol].copy()
-        
+
         # Metrics
         latest = symbol_df.iloc[-1]
         prev = symbol_df.iloc[-2] if len(symbol_df) > 1 else latest
-        change = ((latest['close'] - prev['close']) / prev['close'] * 100) if prev['close'] != 0 else 0
-        
+        change = latest.get('change_percent', 0) or 0
+
         metrics = [
-            ("Current Price", f"${latest['close']:.2f}", f"{change:+.2f}%"),
-            ("High", f"${symbol_df['high'].max():.2f}", None),
-            ("Low", f"${symbol_df['low'].min():.2f}", None),
-            ("Avg Volume", f"{symbol_df['volume'].mean():,.0f}", None)
+            ("Current Price", f"${latest['price']:.2f}" if latest['price'] else "N/A", f"{change:+.2f}%"),
+            ("Change", f"${latest.get('change', 0) or 0:.2f}", None),
+            ("Volume", f"{latest.get('volume', 0) or 0:,.0f}", None),
+            ("Avg Volume", f"{symbol_df['volume'].mean():,.0f}" if symbol_df['volume'].notna().any() else "N/A", None)
         ]
         render_metric_row(metrics)
-        
+
         st.markdown("---")
-        
-        # Candlestick chart
+
+        # Price history line chart (replacing candlestick since we don't have OHLC data)
         st.subheader(f"{selected_symbol} Price History")
-        fig = go.Figure(go.Candlestick(
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
             x=symbol_df['timestamp'],
-            open=symbol_df['open'], high=symbol_df['high'],
-            low=symbol_df['low'], close=symbol_df['close'],
+            y=symbol_df['price'],
+            mode='lines+markers',
             name=selected_symbol
         ))
-        fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)", 
-                         height=500, xaxis_rangeslider_visible=False)
+        fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)", height=500)
         st.plotly_chart(fig, use_container_width=True)
-        
+
         # Volume
-        st.subheader("Trading Volume")
-        fig_vol = px.bar(symbol_df, x='timestamp', y='volume')
-        fig_vol.update_layout(height=300)
-        st.plotly_chart(fig_vol, use_container_width=True)
-        
+        if symbol_df['volume'].notna().any():
+            st.subheader("Trading Volume")
+            fig_vol = px.bar(symbol_df, x='timestamp', y='volume')
+            fig_vol.update_layout(height=300)
+            st.plotly_chart(fig_vol, use_container_width=True)
+
         # Comparison
         st.markdown("---")
         st.subheader("Compare All Stocks")
         fig_comp = create_comparison_chart(
-            stocks_df, 'timestamp', 'close', 'symbol',
+            stocks_df, 'timestamp', 'price', 'symbol',
             "Normalized Stock Performance (Base 100)", normalize=True
         )
         st.plotly_chart(fig_comp, use_container_width=True)
