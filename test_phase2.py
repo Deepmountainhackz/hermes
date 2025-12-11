@@ -2,7 +2,7 @@
 Test Phase 2: Repository Layer
 """
 
-from services.data.market_repository import MarketRepository
+from repositories.market_repository import MarketRepository
 from config.settings import settings
 
 print("\n" + "="*60)

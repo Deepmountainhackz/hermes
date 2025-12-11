@@ -1,0 +1,13 @@
+"""Repositories package."""
+from .markets_repository import MarketsRepository
+from .commodities_repository import CommoditiesRepository
+from .forex_repository import ForexRepository
+from .economics_repository import EconomicsRepository
+from .weather_repository import WeatherRepository
+from .space_repository import SpaceRepository
+from .disasters_repository import DisastersRepository
+from .news_repository import NewsRepository
+
+__all__ = ['MarketsRepository', 'CommoditiesRepository', 'ForexRepository', 
+           'EconomicsRepository', 'WeatherRepository', 'SpaceRepository', 
+           'DisastersRepository', 'NewsRepository']
