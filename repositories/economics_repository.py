@@ -21,8 +21,6 @@ class EconomicsRepository:
     
     def create_tables(self) -> None:
         """Create the economic_indicators table if it doesn't exist."""
-        drop_table_query = "DROP TABLE IF EXISTS economic_indicators CASCADE;"
-        
         create_table_query = """
         CREATE TABLE IF NOT EXISTS economic_indicators (
             id SERIAL PRIMARY KEY,
@@ -34,22 +32,18 @@ class EconomicsRepository:
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(indicator, country, timestamp)
         );
-        """
-        
-        create_indexes_query = """
+
         CREATE INDEX IF NOT EXISTS idx_econ_indicator ON economic_indicators(indicator);
         CREATE INDEX IF NOT EXISTS idx_econ_country ON economic_indicators(country);
         CREATE INDEX IF NOT EXISTS idx_econ_timestamp ON economic_indicators(timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_table_query)
                     cur.execute(create_table_query)
-                    cur.execute(create_indexes_query)
                 conn.commit()
-            logger.info("Economic indicators table created successfully")
+            logger.info("Economic indicators table and indexes created/verified successfully")
         except Exception as e:
             logger.error(f"Error creating economic indicators table: {e}")
             raise DatabaseError(f"Failed to create economic indicators table: {e}")

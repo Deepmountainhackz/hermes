@@ -12,7 +12,7 @@ class WeatherRepository:
         self.db_manager = db_manager
     
     def create_tables(self) -> None:
-        drop_query = "DROP TABLE IF EXISTS weather CASCADE;"
+        """Create the weather table if it doesn't exist."""
         create_query = """
         CREATE TABLE IF NOT EXISTS weather (
             id SERIAL PRIMARY KEY,
@@ -27,18 +27,19 @@ class WeatherRepository:
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(city, timestamp)
         );
+
         CREATE INDEX IF NOT EXISTS idx_weather_city ON weather(city);
         CREATE INDEX IF NOT EXISTS idx_weather_timestamp ON weather(timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_query)
                     cur.execute(create_query)
                 conn.commit()
-            logger.info("Weather table created")
+            logger.info("Weather table and indexes created/verified successfully")
         except Exception as e:
+            logger.error(f"Error creating weather table: {e}")
             raise DatabaseError(f"Failed to create weather table: {e}")
     
     def insert_bulk_weather_data(self, weather_data_list: List[Dict[str, Any]]) -> int:

@@ -26,9 +26,6 @@ class CommoditiesRepository:
     
     def create_tables(self) -> None:
         """Create the commodities table if it doesn't exist."""
-        # Drop existing table if schema is wrong
-        drop_table_query = "DROP TABLE IF EXISTS commodities CASCADE;"
-        
         create_table_query = """
         CREATE TABLE IF NOT EXISTS commodities (
             id SERIAL PRIMARY KEY,
@@ -41,23 +38,16 @@ class CommoditiesRepository:
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(symbol, timestamp)
         );
-        """
-        
-        create_indexes_query = """
+
         CREATE INDEX IF NOT EXISTS idx_commodities_symbol ON commodities(symbol);
         CREATE INDEX IF NOT EXISTS idx_commodities_timestamp ON commodities(timestamp);
         CREATE INDEX IF NOT EXISTS idx_commodities_symbol_timestamp ON commodities(symbol, timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    # Drop old table
-                    cur.execute(drop_table_query)
-                    # Create new table
                     cur.execute(create_table_query)
-                    # Create indexes
-                    cur.execute(create_indexes_query)
                 conn.commit()
             logger.info("Commodities table and indexes created/verified successfully")
         except Exception as e:

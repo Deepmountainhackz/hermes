@@ -26,8 +26,6 @@ class ForexRepository:
     
     def create_tables(self) -> None:
         """Create the forex table if it doesn't exist."""
-        drop_table_query = "DROP TABLE IF EXISTS forex CASCADE;"
-        
         create_table_query = """
         CREATE TABLE IF NOT EXISTS forex (
             id SERIAL PRIMARY KEY,
@@ -40,20 +38,16 @@ class ForexRepository:
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(pair, timestamp)
         );
-        """
-        
-        create_indexes_query = """
+
         CREATE INDEX IF NOT EXISTS idx_forex_pair ON forex(pair);
         CREATE INDEX IF NOT EXISTS idx_forex_timestamp ON forex(timestamp);
         CREATE INDEX IF NOT EXISTS idx_forex_pair_timestamp ON forex(pair, timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_table_query)
                     cur.execute(create_table_query)
-                    cur.execute(create_indexes_query)
                 conn.commit()
             logger.info("Forex table and indexes created/verified successfully")
         except Exception as e:

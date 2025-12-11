@@ -12,7 +12,7 @@ class NewsRepository:
         self.db_manager = db_manager
     
     def create_tables(self):
-        drop_query = "DROP TABLE IF EXISTS news CASCADE;"
+        """Create the news table if it doesn't exist."""
         create_query = """
         CREATE TABLE IF NOT EXISTS news (
             id SERIAL PRIMARY KEY,
@@ -23,17 +23,19 @@ class NewsRepository:
             published_at TIMESTAMP,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
         CREATE INDEX IF NOT EXISTS idx_news_source ON news(source);
         CREATE INDEX IF NOT EXISTS idx_news_timestamp ON news(timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_query)
                     cur.execute(create_query)
                 conn.commit()
+            logger.info("News table and indexes created/verified successfully")
         except Exception as e:
+            logger.error(f"Error creating news table: {e}")
             raise DatabaseError(f"Failed to create news table: {e}")
     
     def insert_bulk_news_data(self, news_data_list: List[Dict]) -> int:

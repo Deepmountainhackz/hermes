@@ -12,7 +12,7 @@ class DisastersRepository:
         self.db_manager = db_manager
     
     def create_tables(self):
-        drop_query = "DROP TABLE IF EXISTS disasters CASCADE;"
+        """Create the disasters table if it doesn't exist."""
         create_query = """
         CREATE TABLE IF NOT EXISTS disasters (
             id SERIAL PRIMARY KEY,
@@ -22,17 +22,19 @@ class DisastersRepository:
             description TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
         CREATE INDEX IF NOT EXISTS idx_disasters_type ON disasters(disaster_type);
         CREATE INDEX IF NOT EXISTS idx_disasters_timestamp ON disasters(timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_query)
                     cur.execute(create_query)
                 conn.commit()
+            logger.info("Disasters table and indexes created/verified successfully")
         except Exception as e:
+            logger.error(f"Error creating disasters table: {e}")
             raise DatabaseError(f"Failed to create disasters table: {e}")
     
     def insert_bulk_disaster_data(self, disaster_data_list: List[Dict]) -> int:

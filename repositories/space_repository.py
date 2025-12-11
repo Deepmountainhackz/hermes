@@ -12,7 +12,7 @@ class SpaceRepository:
         self.db_manager = db_manager
     
     def create_tables(self):
-        drop_query = "DROP TABLE IF EXISTS space_events CASCADE;"
+        """Create the space_events table if it doesn't exist."""
         create_query = """
         CREATE TABLE IF NOT EXISTS space_events (
             id SERIAL PRIMARY KEY,
@@ -22,17 +22,19 @@ class SpaceRepository:
             data JSONB,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
         CREATE INDEX IF NOT EXISTS idx_space_type ON space_events(event_type);
         CREATE INDEX IF NOT EXISTS idx_space_timestamp ON space_events(timestamp);
         """
-        
+
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute(drop_query)
                     cur.execute(create_query)
                 conn.commit()
+            logger.info("Space events table and indexes created/verified successfully")
         except Exception as e:
+            logger.error(f"Error creating space events table: {e}")
             raise DatabaseError(f"Failed to create space table: {e}")
     
     def insert_bulk_space_data(self, space_data_list: List[Dict]) -> int:
