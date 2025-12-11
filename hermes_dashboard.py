@@ -7,12 +7,29 @@ import h3
 from config_cities import CITY_COORDS  # Move city data to separate file
 import os
 from dotenv import load_dotenv
+import psycopg
+from psycopg.rows import dict_row
 
 # Load environment variables
 load_dotenv()
 
-# Import database module
-from database import get_db_connection
+# Import from core module
+from core.config import Config
+
+# Initialize config
+config = Config()
+
+
+def get_db_connection():
+    """Get a database connection using psycopg3."""
+    return psycopg.connect(
+        host=config.DATABASE_HOST,
+        port=config.DATABASE_PORT,
+        dbname=config.DATABASE_NAME,
+        user=config.DATABASE_USER,
+        password=config.DATABASE_PASSWORD,
+        row_factory=dict_row
+    )
 
 # ============================================================================
 # CONFIGURATION & SETUP
