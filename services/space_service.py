@@ -12,10 +12,11 @@ class SpaceService:
         self.config = config
         self.repository = repository
         self.api_key = getattr(config, 'NASA_API_KEY', 'DEMO_KEY')
+        self.timeout = config.API_TIMEOUT
     
     def fetch_iss_position(self) -> Optional[Dict]:
         try:
-            response = requests.get("http://api.open-notify.org/iss-now.json", timeout=10)
+            response = requests.get("http://api.open-notify.org/iss-now.json", timeout=self.timeout)
             data = response.json()
             return {
                 'event_type': 'ISS_POSITION',

@@ -13,6 +13,7 @@ class NewsService:
         self.repository = repository
         self.api_key = getattr(config, 'NEWS_API_KEY', None)
         self.base_url = "https://newsapi.org/v2/top-headlines"
+        self.timeout = config.API_TIMEOUT
     
     def fetch_news(self) -> List[Dict]:
         if not self.api_key:
@@ -26,7 +27,7 @@ class NewsService:
                 'pageSize': 10,
                 'language': 'en'
             }
-            response = requests.get(self.base_url, params=params, timeout=10)
+            response = requests.get(self.base_url, params=params, timeout=self.timeout)
             data = response.json()
             
             results = []

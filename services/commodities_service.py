@@ -40,8 +40,10 @@ class CommoditiesService:
         self.repository = repository
         self.api_key = config.ALPHA_VANTAGE_API_KEY
         self.base_url = "https://www.alphavantage.co/query"
-        self.max_retries = 3
-        self.retry_delay = 2  # seconds
+        self.max_retries = config.API_MAX_RETRIES
+        self.retry_delay = config.API_RETRY_DELAY
+        self.timeout = config.API_TIMEOUT
+        self.rate_limit_delay = config.ALPHA_VANTAGE_RATE_LIMIT_DELAY
     
     def _make_api_request(self, params: Dict[str, str]) -> Dict[str, Any]:
         """
@@ -60,7 +62,7 @@ class CommoditiesService:
         
         for attempt in range(self.max_retries):
             try:
-                response = requests.get(self.base_url, params=params, timeout=10)
+                response = requests.get(self.base_url, params=params, timeout=self.timeout)
                 response.raise_for_status()
                 
                 data = response.json()
@@ -203,9 +205,8 @@ class CommoditiesService:
                 results.append(commodity_data)
             
             # Rate limiting: Alpha Vantage free tier = 5 calls/minute
-            # Wait 12 seconds between calls to stay under limit
             if i < len(commodities) - 1:
-                time.sleep(12)
+                time.sleep(self.rate_limit_delay)
         
         return results
     

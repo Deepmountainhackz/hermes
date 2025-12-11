@@ -16,11 +16,13 @@ class WeatherService:
         self.repository = repository
         self.api_key = config.OPENWEATHER_API_KEY
         self.base_url = "https://api.openweathermap.org/data/2.5/weather"
+        self.timeout = config.API_TIMEOUT
+        self.rate_limit_delay = config.DEFAULT_RATE_LIMIT_DELAY
     
     def fetch_weather(self, city: str) -> Optional[Dict]:
         try:
             params = {'q': city, 'appid': self.api_key, 'units': 'metric'}
-            response = requests.get(self.base_url, params=params, timeout=10)
+            response = requests.get(self.base_url, params=params, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
             
@@ -46,7 +48,7 @@ class WeatherService:
             data = self.fetch_weather(city)
             if data:
                 results.append(data)
-            time.sleep(1)
+            time.sleep(self.rate_limit_delay)
         
         successful = 0
         if results:

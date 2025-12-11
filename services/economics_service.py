@@ -34,8 +34,10 @@ class EconomicsService:
         self.repository = repository
         self.api_key = config.FRED_API_KEY if hasattr(config, 'FRED_API_KEY') else None
         self.base_url = "https://api.stlouisfed.org/fred/series/observations"
-        self.max_retries = 3
-        self.retry_delay = 2
+        self.max_retries = config.API_MAX_RETRIES
+        self.retry_delay = config.API_RETRY_DELAY
+        self.timeout = config.API_TIMEOUT
+        self.rate_limit_delay = config.DEFAULT_RATE_LIMIT_DELAY
     
     def _make_api_request(self, params: Dict[str, str]) -> Dict[str, Any]:
         """Make a request to FRED API with retry logic."""
@@ -45,7 +47,7 @@ class EconomicsService:
         
         for attempt in range(self.max_retries):
             try:
-                response = requests.get(self.base_url, params=params, timeout=10)
+                response = requests.get(self.base_url, params=params, timeout=self.timeout)
                 response.raise_for_status()
                 return response.json()
             except requests.exceptions.RequestException as e:
@@ -112,7 +114,7 @@ class EconomicsService:
                 if data:
                     results.append(data)
                 
-                time.sleep(1)  # Rate limiting
+                time.sleep(self.rate_limit_delay)  # Rate limiting
         
         return results
     

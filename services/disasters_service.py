@@ -12,10 +12,11 @@ class DisastersService:
         self.config = config
         self.repository = repository
         self.usgs_url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson"
+        self.timeout = config.API_TIMEOUT
     
     def fetch_earthquakes(self) -> List[Dict]:
         try:
-            response = requests.get(self.usgs_url, timeout=10)
+            response = requests.get(self.usgs_url, timeout=self.timeout)
             data = response.json()
             
             results = []

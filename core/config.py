@@ -48,7 +48,19 @@ class Config:
         # Application Settings
         self.ENV: str = os.getenv('ENV', 'development')
         self.DEBUG: bool = os.getenv('DEBUG', 'False').lower() == 'true'
-    
+
+        # API Request Settings
+        self.API_TIMEOUT: int = int(os.getenv('API_TIMEOUT', '15'))
+        self.API_MAX_RETRIES: int = int(os.getenv('API_MAX_RETRIES', '3'))
+        self.API_RETRY_DELAY: int = int(os.getenv('API_RETRY_DELAY', '2'))
+
+        # Rate Limiting Settings (Alpha Vantage free tier: 5 calls/minute)
+        self.ALPHA_VANTAGE_RATE_LIMIT_DELAY: int = int(os.getenv('ALPHA_VANTAGE_RATE_LIMIT_DELAY', '12'))
+        self.DEFAULT_RATE_LIMIT_DELAY: int = int(os.getenv('DEFAULT_RATE_LIMIT_DELAY', '1'))
+
+        # Data Retention Settings
+        self.DATA_RETENTION_DAYS: int = int(os.getenv('DATA_RETENTION_DAYS', '365'))
+
     def validate(self) -> bool:
         """
         Validate that required configuration is present.
