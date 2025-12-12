@@ -170,12 +170,18 @@ if page == "🏠 Overview":
     st.markdown("### Real-time Multi-Layer Intelligence Dashboard")
     st.markdown("---")
     
-    # System metrics
+    # System metrics - helper function to safely get count
+    def get_count(table):
+        df = load_data(f'SELECT COUNT(*) as c FROM {table}')
+        if df.empty:
+            return 0
+        return int(df['c'].iloc[0])
+
     metrics = [
-        ("📈 Stock Records", f"{load_data('SELECT COUNT(*) as c FROM stocks')['c'][0] if not load_data('SELECT COUNT(*) as c FROM stocks').empty else 0:,}", None),
-        ("☄️ NEO Records", f"{load_data('SELECT COUNT(*) as c FROM near_earth_objects')['c'][0] if not load_data('SELECT COUNT(*) as c FROM near_earth_objects').empty else 0:,}", None),
-        ("🌦️ Weather Records", f"{load_data('SELECT COUNT(*) as c FROM weather')['c'][0] if not load_data('SELECT COUNT(*) as c FROM weather').empty else 0:,}", None),
-        ("📰 News Articles", f"{load_data('SELECT COUNT(*) as c FROM news')['c'][0] if not load_data('SELECT COUNT(*) as c FROM news').empty else 0:,}", None)
+        ("📈 Stock Records", f"{get_count('stocks'):,}", None),
+        ("☄️ NEO Records", f"{get_count('near_earth_objects'):,}", None),
+        ("🌦️ Weather Records", f"{get_count('weather'):,}", None),
+        ("📰 News Articles", f"{get_count('news'):,}", None)
     ]
     render_metric_row(metrics)
     
