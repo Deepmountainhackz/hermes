@@ -10,24 +10,41 @@ from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
 
-# Load environment variables
+# Load environment variables (for local development)
 load_dotenv()
 
-# Import from core module
-from core.config import Config
 
-# Initialize config
-config = Config()
+def get_db_config():
+    """Get database configuration from Streamlit secrets or environment variables."""
+    # Try Streamlit secrets first (for Streamlit Cloud)
+    if hasattr(st, 'secrets') and 'database' in st.secrets:
+        return {
+            'host': st.secrets.database.host,
+            'port': st.secrets.database.port,
+            'dbname': st.secrets.database.name,
+            'user': st.secrets.database.user,
+            'password': st.secrets.database.password,
+        }
+
+    # Fall back to environment variables (for local development)
+    return {
+        'host': os.getenv('DATABASE_HOST', 'localhost'),
+        'port': os.getenv('DATABASE_PORT', '5432'),
+        'dbname': os.getenv('DATABASE_NAME', 'hermes'),
+        'user': os.getenv('DATABASE_USER', 'postgres'),
+        'password': os.getenv('DATABASE_PASSWORD', ''),
+    }
 
 
 def get_db_connection():
     """Get a database connection using psycopg3."""
+    config = get_db_config()
     return psycopg.connect(
-        host=config.DATABASE_HOST,
-        port=config.DATABASE_PORT,
-        dbname=config.DATABASE_NAME,
-        user=config.DATABASE_USER,
-        password=config.DATABASE_PASSWORD,
+        host=config['host'],
+        port=config['port'],
+        dbname=config['dbname'],
+        user=config['user'],
+        password=config['password'],
         row_factory=dict_row
     )
 
