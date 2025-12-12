@@ -75,7 +75,13 @@ def load_data(query):
     """Load data from PostgreSQL database"""
     try:
         with get_db_connection() as conn:
-            return pd.read_sql_query(query, conn)
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                if not rows:
+                    return pd.DataFrame()
+                # dict_row returns list of dicts
+                return pd.DataFrame(rows)
     except Exception as e:
         st.error(f"Database error: {e}")
         return pd.DataFrame()
@@ -172,10 +178,17 @@ if page == "🏠 Overview":
     
     # System metrics - helper function to safely get count
     def get_count(table):
-        df = load_data(f'SELECT COUNT(*) as c FROM {table}')
-        if df.empty:
+        try:
+            df = load_data(f'SELECT COUNT(*) as c FROM {table}')
+            if df.empty:
+                return 0
+            # Handle different return formats from psycopg3/pandas
+            if 'c' in df.columns:
+                return int(df['c'].iloc[0])
+            # Fallback: get first column, first row
+            return int(df.iloc[0, 0])
+        except Exception:
             return 0
-        return int(df['c'].iloc[0])
 
     metrics = [
         ("📈 Stock Records", f"{get_count('stocks'):,}", None),
