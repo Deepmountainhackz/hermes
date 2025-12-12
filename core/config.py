@@ -33,9 +33,10 @@ class Config:
         
         # API Keys
         self.ALPHA_VANTAGE_API_KEY: str = os.getenv('ALPHA_VANTAGE_API_KEY', '')
-        self.NEWSAPI_KEY: str = os.getenv('NEWSAPI_KEY', '')
+        self.NEWS_API_KEY: str = os.getenv('NEWS_API_KEY', '')
         self.OPENWEATHER_API_KEY: str = os.getenv('OPENWEATHER_API_KEY', '')
         self.NASA_API_KEY: str = os.getenv('NASA_API_KEY', 'DEMO_KEY')
+        self.FRED_API_KEY: str = os.getenv('FRED_API_KEY', '')
         
         # Logging Configuration
         self.LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
