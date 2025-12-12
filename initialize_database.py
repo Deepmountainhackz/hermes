@@ -1,52 +1,168 @@
 """
 Database Initialization Script
-Creates all necessary tables in PostgreSQL
+Creates all necessary tables in PostgreSQL using the new schema.
 """
 
-import os
-import sys
-import psycopg2
 import logging
-from dotenv import load_dotenv
+import sys
 
-# Load environment variables from .env file
-load_dotenv()
+from core.config import Config
+from core.database import DatabaseManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# SQL schemas for all tables
+# SQL schemas for all tables - matches repository definitions
 SCHEMAS = {
     'stocks': """
-        CREATE TABLE IF NOT EXISTS stocks (
+        DROP TABLE IF EXISTS stocks CASCADE;
+        CREATE TABLE stocks (
             id SERIAL PRIMARY KEY,
             symbol VARCHAR(10) NOT NULL,
-            timestamp TIMESTAMP NOT NULL,
-            open DECIMAL(10, 2),
-            high DECIMAL(10, 2),
-            low DECIMAL(10, 2),
-            close DECIMAL(10, 2),
+            name VARCHAR(255),
+            price DECIMAL(15, 4),
+            change DECIMAL(15, 4),
+            change_percent DECIMAL(10, 4),
             volume BIGINT,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            market_cap BIGINT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(symbol, timestamp)
-        )
+        );
+        CREATE INDEX idx_stocks_symbol ON stocks(symbol);
+        CREATE INDEX idx_stocks_timestamp ON stocks(timestamp);
     """,
-    
+
+    'forex': """
+        DROP TABLE IF EXISTS forex CASCADE;
+        CREATE TABLE forex (
+            id SERIAL PRIMARY KEY,
+            pair VARCHAR(10) NOT NULL,
+            from_currency VARCHAR(3) NOT NULL,
+            to_currency VARCHAR(3) NOT NULL,
+            rate DECIMAL(15, 8),
+            bid DECIMAL(15, 8),
+            ask DECIMAL(15, 8),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(pair, timestamp)
+        );
+        CREATE INDEX idx_forex_pair ON forex(pair);
+        CREATE INDEX idx_forex_timestamp ON forex(timestamp);
+    """,
+
+    'commodities': """
+        DROP TABLE IF EXISTS commodities CASCADE;
+        CREATE TABLE commodities (
+            id SERIAL PRIMARY KEY,
+            symbol VARCHAR(50) NOT NULL,
+            name VARCHAR(255),
+            price DECIMAL(15, 4),
+            change DECIMAL(15, 4),
+            change_percent DECIMAL(10, 4),
+            unit VARCHAR(50),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, timestamp)
+        );
+        CREATE INDEX idx_commodities_symbol ON commodities(symbol);
+        CREATE INDEX idx_commodities_timestamp ON commodities(timestamp);
+    """,
+
+    'weather': """
+        DROP TABLE IF EXISTS weather CASCADE;
+        CREATE TABLE weather (
+            id SERIAL PRIMARY KEY,
+            city VARCHAR(100) NOT NULL,
+            country VARCHAR(3),
+            temperature DECIMAL(5, 2),
+            feels_like DECIMAL(5, 2),
+            humidity INT,
+            pressure INT,
+            wind_speed DECIMAL(5, 2),
+            description VARCHAR(255),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(city, timestamp)
+        );
+        CREATE INDEX idx_weather_city ON weather(city);
+        CREATE INDEX idx_weather_timestamp ON weather(timestamp);
+    """,
+
+    'news': """
+        DROP TABLE IF EXISTS news CASCADE;
+        CREATE TABLE news (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500),
+            source VARCHAR(100),
+            url TEXT,
+            description TEXT,
+            published_at TIMESTAMP,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_news_source ON news(source);
+        CREATE INDEX idx_news_timestamp ON news(timestamp);
+    """,
+
+    'space_events': """
+        DROP TABLE IF EXISTS space_events CASCADE;
+        CREATE TABLE space_events (
+            id SERIAL PRIMARY KEY,
+            event_type VARCHAR(50) NOT NULL,
+            name VARCHAR(255),
+            description TEXT,
+            data JSONB,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_space_type ON space_events(event_type);
+        CREATE INDEX idx_space_timestamp ON space_events(timestamp);
+    """,
+
+    'disasters': """
+        DROP TABLE IF EXISTS disasters CASCADE;
+        CREATE TABLE disasters (
+            id SERIAL PRIMARY KEY,
+            disaster_type VARCHAR(50),
+            location VARCHAR(255),
+            magnitude DECIMAL(5, 2),
+            description TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_disasters_type ON disasters(disaster_type);
+        CREATE INDEX idx_disasters_timestamp ON disasters(timestamp);
+    """,
+
+    'economic_indicators': """
+        DROP TABLE IF EXISTS economic_indicators CASCADE;
+        CREATE TABLE economic_indicators (
+            id SERIAL PRIMARY KEY,
+            indicator VARCHAR(50) NOT NULL,
+            country VARCHAR(3) NOT NULL,
+            name VARCHAR(255),
+            value DECIMAL(20, 4),
+            unit VARCHAR(50),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(indicator, country, timestamp)
+        );
+        CREATE INDEX idx_econ_indicator ON economic_indicators(indicator);
+        CREATE INDEX idx_econ_country ON economic_indicators(country);
+        CREATE INDEX idx_econ_timestamp ON economic_indicators(timestamp);
+    """,
+
+    # Legacy tables for dashboard compatibility
     'iss_positions': """
-        CREATE TABLE IF NOT EXISTS iss_positions (
+        DROP TABLE IF EXISTS iss_positions CASCADE;
+        CREATE TABLE iss_positions (
             id SERIAL PRIMARY KEY,
             timestamp TIMESTAMP NOT NULL,
             latitude DECIMAL(10, 6),
             longitude DECIMAL(10, 6),
             altitude DECIMAL(10, 2),
             velocity DECIMAL(10, 2),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(timestamp)
-        )
+        );
+        CREATE INDEX idx_iss_timestamp ON iss_positions(timestamp);
     """,
-    
+
     'near_earth_objects': """
-        CREATE TABLE IF NOT EXISTS near_earth_objects (
+        DROP TABLE IF EXISTS near_earth_objects CASCADE;
+        CREATE TABLE near_earth_objects (
             id SERIAL PRIMARY KEY,
             neo_id VARCHAR(50) NOT NULL,
             name VARCHAR(255),
@@ -56,65 +172,28 @@ SCHEMAS = {
             relative_velocity DECIMAL(15, 2),
             miss_distance DECIMAL(20, 2),
             is_potentially_hazardous BOOLEAN,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(neo_id, date)
-        )
+        );
+        CREATE INDEX idx_neo_date ON near_earth_objects(date);
     """,
-    
+
     'solar_flares': """
-        CREATE TABLE IF NOT EXISTS solar_flares (
+        DROP TABLE IF EXISTS solar_flares CASCADE;
+        CREATE TABLE solar_flares (
             id SERIAL PRIMARY KEY,
-            flare_id VARCHAR(50) NOT NULL,
+            flare_id VARCHAR(50) NOT NULL UNIQUE,
             begin_time TIMESTAMP,
             peak_time TIMESTAMP,
             end_time TIMESTAMP,
             class_type VARCHAR(10),
             source_location VARCHAR(50),
-            active_region_num VARCHAR(20),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(flare_id)
-        )
+            active_region_num VARCHAR(20)
+        );
     """,
-    
-    'weather': """
-        CREATE TABLE IF NOT EXISTS weather (
-            id SERIAL PRIMARY KEY,
-            city VARCHAR(100) NOT NULL,
-            country VARCHAR(10),
-            timestamp TIMESTAMP NOT NULL,
-            temperature DECIMAL(5, 2),
-            feels_like DECIMAL(5, 2),
-            temp_min DECIMAL(5, 2),
-            temp_max DECIMAL(5, 2),
-            pressure INTEGER,
-            humidity INTEGER,
-            description VARCHAR(255),
-            wind_speed DECIMAL(5, 2),
-            clouds INTEGER,
-            latitude DECIMAL(10, 6),
-            longitude DECIMAL(10, 6),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(city, timestamp)
-        )
-    """,
-    
-    'news': """
-        CREATE TABLE IF NOT EXISTS news (
-            id SERIAL PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT,
-            url TEXT,
-            source VARCHAR(255),
-            published_at TIMESTAMP,
-            author VARCHAR(255),
-            category VARCHAR(50),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(title, source)
-        )
-    """,
-    
+
     'countries': """
-        CREATE TABLE IF NOT EXISTS countries (
+        DROP TABLE IF EXISTS countries CASCADE;
+        CREATE TABLE countries (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             code VARCHAR(10) UNIQUE,
@@ -128,154 +207,67 @@ SCHEMAS = {
             timezones TEXT,
             currencies TEXT,
             languages TEXT,
-            flag_url TEXT,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(code)
-        )
-    """,
-    
-    'commodities': """
-        CREATE TABLE IF NOT EXISTS commodities (
-            id SERIAL PRIMARY KEY,
-            symbol VARCHAR(50) NOT NULL,
-            timestamp DATE NOT NULL,
-            price DECIMAL(15, 4),
-            unit VARCHAR(20),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(symbol, timestamp)
-        )
-    """,
-    
-    'forex': """
-        CREATE TABLE IF NOT EXISTS forex (
-            id SERIAL PRIMARY KEY,
-            pair VARCHAR(20) NOT NULL,
-            from_currency VARCHAR(10) NOT NULL,
-            to_currency VARCHAR(10) NOT NULL,
-            exchange_rate DECIMAL(15, 6),
-            timestamp TIMESTAMP NOT NULL,
-            bid_price DECIMAL(15, 6),
-            ask_price DECIMAL(15, 6),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(pair, timestamp)
-        )
-    """,
-    
-    'earthquakes': """
-        CREATE TABLE IF NOT EXISTS earthquakes (
-            id SERIAL PRIMARY KEY,
-            earthquake_id VARCHAR(100) UNIQUE NOT NULL,
-            magnitude DECIMAL(3, 1),
-            place VARCHAR(500),
-            timestamp TIMESTAMP,
-            latitude DECIMAL(10, 6),
-            longitude DECIMAL(10, 6),
-            depth_km DECIMAL(10, 2),
-            magnitude_type VARCHAR(10),
-            event_type VARCHAR(50),
-            tsunami BOOLEAN DEFAULT FALSE,
-            significance INTEGER,
-            url TEXT,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """,
-    
-    'storms': """
-        CREATE TABLE IF NOT EXISTS storms (
-            id SERIAL PRIMARY KEY,
-            storm_id VARCHAR(100) UNIQUE NOT NULL,
-            title VARCHAR(500),
-            timestamp TIMESTAMP,
-            latitude DECIMAL(10, 6),
-            longitude DECIMAL(10, 6),
-            status VARCHAR(50),
-            category VARCHAR(100),
-            source_url TEXT,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """,
-    
-    'wildfires': """
-        CREATE TABLE IF NOT EXISTS wildfires (
-            id SERIAL PRIMARY KEY,
-            fire_id VARCHAR(100) UNIQUE NOT NULL,
-            title VARCHAR(500),
-            timestamp TIMESTAMP,
-            latitude DECIMAL(10, 6),
-            longitude DECIMAL(10, 6),
-            status VARCHAR(50),
-            source_url TEXT,
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """,
-    
-    'economic_indicators': """
-        CREATE TABLE IF NOT EXISTS economic_indicators (
-            id SERIAL PRIMARY KEY,
-            country VARCHAR(100) NOT NULL,
-            indicator_type VARCHAR(100) NOT NULL,
-            indicator_name VARCHAR(200),
-            series_id VARCHAR(100) NOT NULL,
-            timestamp DATE NOT NULL,
-            value DECIMAL(20, 4),
-            unit VARCHAR(100),
-            collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(series_id, timestamp)
-        )
+            flag_url TEXT
+        );
+        CREATE INDEX idx_countries_region ON countries(region);
     """
 }
 
+
 def initialize_database():
-    """Initialize all database tables"""
-    
-    # Get database URL
-    db_url = os.environ.get('DATABASE_URL')
-    if not db_url:
-        logger.error("DATABASE_URL environment variable not set!")
-        sys.exit(1)
-    
+    """Initialize all database tables using the new architecture."""
+
     try:
-        # Connect to database
+        config = Config()
+        db_manager = DatabaseManager(config)
+
         logger.info("Connecting to PostgreSQL database...")
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
-        
+        logger.info(f"Host: {config.DATABASE_HOST}")
+        logger.info(f"Database: {config.DATABASE_NAME}")
+
+        # Test connection
+        if not db_manager.test_connection():
+            logger.error("Failed to connect to database!")
+            return False
+
+        logger.info("Connected successfully!")
+
         # Create each table
-        for table_name, schema in SCHEMAS.items():
-            logger.info(f"Creating table: {table_name}")
-            cur.execute(schema)
-            logger.info(f"✓ Table {table_name} created successfully")
-        
-        # Commit changes
-        conn.commit()
-        logger.info("✓ All tables created successfully!")
-        
+        with db_manager.get_connection() as conn:
+            with conn.cursor() as cur:
+                for table_name, schema in SCHEMAS.items():
+                    logger.info(f"Creating table: {table_name}")
+                    cur.execute(schema)
+                    logger.info(f"  ✓ {table_name} created")
+            conn.commit()
+
+        logger.info("\n✓ All tables created successfully!")
+
         # Show table list
-        cur.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
+        tables = db_manager.execute_query("""
+            SELECT table_name
+            FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name
         """)
-        tables = cur.fetchall()
-        
+
         logger.info("\nExisting tables:")
         for table in tables:
-            logger.info(f"  - {table[0]}")
-        
-        cur.close()
-        conn.close()
-        
+            logger.info(f"  - {table['table_name']}")
+
         return True
-        
+
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
+
 if __name__ == "__main__":
-    logger.info("=== Hermes Database Initialization ===\n")
+    logger.info("=== Hermes Database Initialization (New Schema) ===\n")
     success = initialize_database()
-    
+
     if success:
         logger.info("\n✓ Database initialization complete!")
     else:
