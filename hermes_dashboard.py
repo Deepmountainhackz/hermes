@@ -408,11 +408,17 @@ elif page == "🌍 Geography":
         if countries_df.empty:
             st.warning("No country data. Run: `python services/geography/fetch_country_data.py`")
         else:
+            # Convert numeric columns
+            countries_df['population'] = pd.to_numeric(countries_df['population'], errors='coerce').fillna(0)
+            countries_df['area'] = pd.to_numeric(countries_df['area'], errors='coerce').fillna(0)
+            countries_df['latitude'] = pd.to_numeric(countries_df['latitude'], errors='coerce')
+            countries_df['longitude'] = pd.to_numeric(countries_df['longitude'], errors='coerce')
+
             # Stats
             metrics = [
                 ("🗺️ Countries", f"{len(countries_df):,}", None),
-                ("👥 Total Population", f"{countries_df['population'].sum():,.0f}", None),
-                ("📊 Avg Area", f"{countries_df['area'].mean():,.0f} km²", None),
+                ("👥 Total Population", f"{int(countries_df['population'].sum()):,}", None),
+                ("📊 Avg Area", f"{int(countries_df['area'].mean()):,} km²", None),
                 ("🌍 Regions", f"{countries_df['region'].nunique()}", None)
             ]
             render_metric_row(metrics)
@@ -502,18 +508,25 @@ elif page == "🌦️ Environment":
     st.markdown("---")
     
     weather_df = load_data("SELECT * FROM weather ORDER BY timestamp DESC")
-    
+
     if weather_df.empty:
         st.warning("No weather data")
     else:
+        # Convert numeric columns
+        weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
+        weather_df['feels_like'] = pd.to_numeric(weather_df['feels_like'], errors='coerce')
+        weather_df['humidity'] = pd.to_numeric(weather_df['humidity'], errors='coerce')
+
         # Add coordinates
         weather_df['lat'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat', 0))
         weather_df['lon'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon', 0))
         weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'], errors='coerce', utc=True)
-        
+
         latest = weather_df.groupby('city').first().reset_index()
+        # Filter out rows with missing temperature
+        latest = latest[latest['temperature'].notna()]
         latest['h3'] = latest.apply(
-            lambda row: h3.latlng_to_cell(row['lat'], row['lon'], 4) if row['lat'] != 0 else None, 
+            lambda row: h3.latlng_to_cell(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
             axis=1
         )
         latest = latest[latest['h3'].notna()]
@@ -541,10 +554,13 @@ elif page == "🌦️ Environment":
             for idx, (col, (_, row)) in enumerate(zip(cols * 10, filtered.iterrows())):
                 with col:
                     st.markdown(f"### {row['city']}")
-                    st.metric("Temperature", f"{row['temperature']:.1f}°C")
-                    st.write(f"**Feels like:** {row['feels_like']:.1f}°C")
-                    st.write(f"**Conditions:** {row['description']}")
-                    st.write(f"**Humidity:** {row['humidity']}%")
+                    temp = row['temperature'] if pd.notna(row['temperature']) else 0
+                    feels = row['feels_like'] if pd.notna(row['feels_like']) else 0
+                    humid = row['humidity'] if pd.notna(row['humidity']) else 0
+                    st.metric("Temperature", f"{temp:.1f}°C")
+                    st.write(f"**Feels like:** {feels:.1f}°C")
+                    st.write(f"**Conditions:** {row['description'] or 'N/A'}")
+                    st.write(f"**Humidity:** {humid}%")
             
             st.markdown("---")
             
