@@ -582,8 +582,8 @@ page = st.sidebar.radio(
     ["Overview", "Markets", "Crypto", "Economic Indicators", "Global Development",
      "Energy & Resources", "Agriculture & Food", "Trade & Shipping", "Demographics",
      "Debt & Fiscal", "Country Profile", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
-     "Time Series", "Technical Analysis", "Correlation Analysis", "Portfolio", "Query Builder",
-     "Collection Status", "Alerts & Export"]
+     "Time Series", "Technical Analysis", "Correlation Analysis", "Risk Metrics", "Economic Calendar", "Watchlist",
+     "Bond Markets", "Portfolio", "Query Builder", "Collection Status", "Alerts & Export"]
 )
 
 st.sidebar.markdown("---")
@@ -5749,6 +5749,743 @@ elif page == "Correlation Analysis":
     st.markdown("---")
     st.caption("Correlations are based on historical price movements and can change over time.")
     st.caption("Past correlations do not guarantee future relationships.")
+
+
+# ============================================================================
+# PAGE: RISK METRICS
+# ============================================================================
+
+elif page == "Risk Metrics":
+    st.title("Risk Metrics & Portfolio Analytics")
+    st.markdown("*Value at Risk, volatility analysis, and risk-adjusted returns*")
+    st.markdown("---")
+
+    # Load stock data for risk calculations
+    stocks_df = load_data("""
+        SELECT symbol, price, change_percent, volume, timestamp
+        FROM stocks
+        WHERE timestamp > NOW() - INTERVAL '30 days'
+        ORDER BY symbol, timestamp
+    """)
+
+    # Risk Metrics Tabs
+    risk_tab1, risk_tab2, risk_tab3, risk_tab4, risk_tab5 = st.tabs([
+        "VaR Analysis", "Volatility", "Sharpe Ratios", "Drawdown Analysis", "Risk Dashboard"
+    ])
+
+    with risk_tab1:
+        st.subheader("Value at Risk (VaR)")
+        st.markdown("*Estimated maximum loss at different confidence levels*")
+
+        # VaR data - curated examples
+        VAR_DATA = {
+            'S&P 500': {'daily_vol': 1.2, 'var_95': -1.97, 'var_99': -2.79, 'cvar_95': -2.48},
+            'NASDAQ 100': {'daily_vol': 1.6, 'var_95': -2.63, 'var_99': -3.72, 'cvar_95': -3.31},
+            'Russell 2000': {'daily_vol': 1.8, 'var_95': -2.96, 'var_99': -4.19, 'cvar_95': -3.73},
+            'Bitcoin': {'daily_vol': 4.2, 'var_95': -6.91, 'var_99': -9.77, 'cvar_95': -8.70},
+            'Gold': {'daily_vol': 0.9, 'var_95': -1.48, 'var_99': -2.09, 'cvar_95': -1.86},
+            'Crude Oil': {'daily_vol': 2.5, 'var_95': -4.11, 'var_99': -5.82, 'cvar_95': -5.18},
+            'EUR/USD': {'daily_vol': 0.5, 'var_95': -0.82, 'var_99': -1.16, 'cvar_95': -1.04},
+            '10Y Treasury': {'daily_vol': 0.6, 'var_95': -0.99, 'var_99': -1.40, 'cvar_95': -1.24},
+        }
+
+        var_df = pd.DataFrame([
+            {'Asset': asset, 'Daily Vol %': data['daily_vol'],
+             'VaR 95%': data['var_95'], 'VaR 99%': data['var_99'],
+             'CVaR 95%': data['cvar_95']}
+            for asset, data in VAR_DATA.items()
+        ])
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.dataframe(var_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            fig_var = px.bar(
+                var_df, x='Asset', y=['VaR 95%', 'VaR 99%'],
+                title='Value at Risk by Asset',
+                barmode='group',
+                color_discrete_sequence=['#ff6b6b', '#ee5253']
+            )
+            fig_var.update_layout(yaxis_title='VaR (%)', xaxis_title='')
+            st.plotly_chart(fig_var, use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("Portfolio VaR Calculator")
+
+        port_col1, port_col2 = st.columns(2)
+        with port_col1:
+            portfolio_value = st.number_input("Portfolio Value ($)", value=100000, step=10000)
+            confidence = st.selectbox("Confidence Level", ["95%", "99%"])
+            time_horizon = st.selectbox("Time Horizon", ["1 Day", "1 Week", "1 Month"])
+
+        with port_col2:
+            # Simple portfolio VaR calculation
+            base_var_pct = 1.97 if confidence == "95%" else 2.79
+            horizon_mult = {'1 Day': 1, '1 Week': np.sqrt(5), '1 Month': np.sqrt(21)}
+            adjusted_var = base_var_pct * horizon_mult[time_horizon]
+            var_dollar = portfolio_value * (adjusted_var / 100)
+
+            st.metric("Portfolio VaR", f"${var_dollar:,.0f}", f"-{adjusted_var:.2f}%")
+            st.caption(f"At {confidence} confidence, you could lose up to ${var_dollar:,.0f} over {time_horizon.lower()}")
+
+    with risk_tab2:
+        st.subheader("Volatility Analysis")
+
+        # Historical volatility data
+        VOLATILITY_DATA = {
+            'Asset': ['S&P 500', 'NASDAQ', 'Russell 2000', 'Bitcoin', 'Ethereum',
+                     'Gold', 'Crude Oil', 'EUR/USD', 'VIX'],
+            '1W Vol': [8.5, 12.3, 14.2, 52.1, 61.3, 11.2, 35.8, 6.1, 95.2],
+            '1M Vol': [12.1, 16.8, 18.9, 58.4, 68.9, 13.5, 38.2, 7.3, 102.4],
+            '3M Vol': [14.5, 19.2, 21.3, 62.1, 72.5, 15.1, 41.5, 8.2, 89.6],
+            '1Y Vol': [16.8, 22.1, 24.5, 71.2, 82.3, 14.8, 39.8, 8.9, 85.3],
+        }
+        vol_df = pd.DataFrame(VOLATILITY_DATA)
+
+        st.dataframe(vol_df, use_container_width=True, hide_index=True)
+
+        # Volatility heatmap
+        vol_matrix = vol_df.set_index('Asset')[['1W Vol', '1M Vol', '3M Vol', '1Y Vol']]
+        fig_vol = px.imshow(
+            vol_matrix,
+            labels=dict(color="Volatility %"),
+            color_continuous_scale='YlOrRd',
+            title='Volatility Heatmap (Annualized %)'
+        )
+        fig_vol.update_layout(height=400)
+        st.plotly_chart(fig_vol, use_container_width=True)
+
+        # VIX Term Structure
+        st.markdown("---")
+        st.subheader("VIX Term Structure")
+        vix_term = pd.DataFrame({
+            'Expiry': ['Spot', '1M', '2M', '3M', '4M', '5M', '6M'],
+            'VIX Level': [14.2, 15.8, 16.5, 17.1, 17.4, 17.6, 17.8]
+        })
+        fig_vix = px.line(vix_term, x='Expiry', y='VIX Level',
+                         title='VIX Futures Term Structure',
+                         markers=True)
+        fig_vix.update_traces(line=dict(color='#9b59b6', width=3))
+        st.plotly_chart(fig_vix, use_container_width=True)
+
+    with risk_tab3:
+        st.subheader("Risk-Adjusted Returns")
+
+        SHARPE_DATA = {
+            'Asset': ['S&P 500', 'NASDAQ 100', 'Russell 2000', 'MSCI EM', 'MSCI EAFE',
+                     'US Bonds', 'Gold', 'REITs', '60/40 Portfolio'],
+            'Return %': [12.5, 18.2, 8.9, 6.2, 9.8, 4.2, 8.5, 7.8, 9.2],
+            'Volatility %': [16.8, 22.1, 24.5, 18.9, 17.2, 5.8, 14.8, 19.2, 11.5],
+            'Sharpe': [0.62, 0.73, 0.28, 0.22, 0.46, 0.38, 0.44, 0.31, 0.63],
+            'Sortino': [0.89, 1.05, 0.41, 0.32, 0.67, 0.52, 0.61, 0.45, 0.88],
+            'Max DD %': [-19.8, -28.5, -32.1, '-24.6', -21.2, -8.9, -18.2, -25.8, -14.2],
+        }
+        sharpe_df = pd.DataFrame(SHARPE_DATA)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.dataframe(sharpe_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            fig_sharpe = px.bar(
+                sharpe_df, x='Asset', y='Sharpe',
+                title='Sharpe Ratios by Asset Class',
+                color='Sharpe',
+                color_continuous_scale='RdYlGn'
+            )
+            fig_sharpe.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_sharpe, use_container_width=True)
+
+        # Risk/Return Scatter
+        st.markdown("---")
+        fig_rr = px.scatter(
+            sharpe_df, x='Volatility %', y='Return %',
+            text='Asset', title='Risk-Return Profile',
+            size=[100]*len(sharpe_df),
+            color='Sharpe',
+            color_continuous_scale='RdYlGn'
+        )
+        fig_rr.update_traces(textposition='top center')
+        fig_rr.add_hline(y=4.5, line_dash="dash", annotation_text="Risk-Free Rate")
+        st.plotly_chart(fig_rr, use_container_width=True)
+
+    with risk_tab4:
+        st.subheader("Drawdown Analysis")
+
+        # Maximum drawdown data
+        DRAWDOWN_DATA = {
+            'Asset': ['S&P 500', 'NASDAQ', 'Bitcoin', 'Gold', 'Crude Oil'],
+            'Current DD %': [-2.1, -5.8, -12.4, -1.2, -8.5],
+            'Max DD (1Y) %': [-10.3, '-15.8', -48.2, -8.5, -22.1],
+            'Max DD (5Y) %': [-33.9, '-35.1', -77.2, -21.5, -65.8],
+            'Avg Recovery Days': [45, 62, 180, 38, 95],
+        }
+        dd_df = pd.DataFrame(DRAWDOWN_DATA)
+
+        st.dataframe(dd_df, use_container_width=True, hide_index=True)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Current drawdown gauge
+            fig_dd = px.bar(
+                dd_df, x='Asset', y='Current DD %',
+                title='Current Drawdown from Peak',
+                color='Current DD %',
+                color_continuous_scale='RdYlGn_r'
+            )
+            st.plotly_chart(fig_dd, use_container_width=True)
+
+        with col2:
+            # Recovery time
+            fig_rec = px.bar(
+                dd_df, x='Asset', y='Avg Recovery Days',
+                title='Average Recovery Time (Days)',
+                color='Avg Recovery Days',
+                color_continuous_scale='Blues'
+            )
+            st.plotly_chart(fig_rec, use_container_width=True)
+
+        # Drawdown history simulation
+        st.markdown("---")
+        st.subheader("Simulated Drawdown History (S&P 500)")
+        dates = pd.date_range(end=datetime.now(), periods=252, freq='D')
+        np.random.seed(42)
+        returns = np.random.normal(0.0004, 0.012, 252)
+        prices = 100 * np.cumprod(1 + returns)
+        running_max = np.maximum.accumulate(prices)
+        drawdown = (prices - running_max) / running_max * 100
+
+        dd_history = pd.DataFrame({'Date': dates, 'Drawdown %': drawdown})
+        fig_ddhist = px.area(dd_history, x='Date', y='Drawdown %',
+                            title='Rolling Drawdown (1 Year)',
+                            color_discrete_sequence=['#e74c3c'])
+        fig_ddhist.update_layout(yaxis_title='Drawdown (%)')
+        st.plotly_chart(fig_ddhist, use_container_width=True)
+
+    with risk_tab5:
+        st.subheader("Risk Dashboard Summary")
+
+        # Key risk metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("VIX", "14.2", "-2.1", delta_color="inverse")
+        with col2:
+            st.metric("Put/Call Ratio", "0.82", "-0.05")
+        with col3:
+            st.metric("Fear & Greed", "62", "+8", help="0=Extreme Fear, 100=Extreme Greed")
+        with col4:
+            st.metric("Credit Spreads", "1.24%", "+0.08%", delta_color="inverse")
+
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Risk Regime")
+            risk_regime = pd.DataFrame({
+                'Indicator': ['VIX Level', 'Credit Spreads', 'Yield Curve', 'Momentum', 'Breadth'],
+                'Status': ['Low', 'Normal', 'Inverted', 'Positive', 'Healthy'],
+                'Signal': ['🟢', '🟢', '🔴', '🟢', '🟢']
+            })
+            st.dataframe(risk_regime, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.subheader("Sector Risk Heat")
+            sector_risk = pd.DataFrame({
+                'Sector': ['Technology', 'Financials', 'Healthcare', 'Energy', 'Consumer'],
+                'Beta': [1.25, 1.15, 0.85, 1.35, 0.95],
+                'Vol Rank': ['High', 'Medium', 'Low', 'High', 'Medium']
+            })
+            st.dataframe(sector_risk, use_container_width=True, hide_index=True)
+
+        # Correlation breakdown risk
+        st.markdown("---")
+        st.subheader("Correlation Regime Monitor")
+        st.caption("When correlations spike, diversification benefits decrease")
+
+        corr_regime = pd.DataFrame({
+            'Period': ['Normal', 'Stress (2020)', 'Current'],
+            'Equity-Bond': [-0.25, 0.45, -0.18],
+            'Equity-Gold': [0.05, -0.35, 0.02],
+            'Cross-Equity': [0.65, 0.92, 0.68],
+        })
+        st.dataframe(corr_regime, use_container_width=True, hide_index=True)
+
+
+# ============================================================================
+# PAGE: ECONOMIC CALENDAR
+# ============================================================================
+
+elif page == "Economic Calendar":
+    st.title("Economic Calendar")
+    st.markdown("*Upcoming data releases and market-moving events*")
+    st.markdown("---")
+
+    # Economic Calendar Data (curated upcoming events)
+    CALENDAR_DATA = [
+        # This Week
+        {'date': 'Mon Dec 16', 'time': '08:30', 'event': 'NY Empire State Manufacturing', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '-11.9', 'forecast': '-10.5'},
+        {'date': 'Mon Dec 16', 'time': '09:45', 'event': 'S&P Global Manufacturing PMI', 'country': '🇺🇸', 'importance': 'High', 'previous': '49.7', 'forecast': '49.8'},
+        {'date': 'Tue Dec 17', 'time': '08:30', 'event': 'Retail Sales MoM', 'country': '🇺🇸', 'importance': 'High', 'previous': '0.4%', 'forecast': '0.5%'},
+        {'date': 'Tue Dec 17', 'time': '09:15', 'event': 'Industrial Production', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '-0.3%', 'forecast': '0.1%'},
+        {'date': 'Wed Dec 18', 'time': '10:30', 'event': 'Crude Oil Inventories', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '-1.4M', 'forecast': '-2.0M'},
+        {'date': 'Wed Dec 18', 'time': '14:00', 'event': 'FOMC Rate Decision', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '4.75%', 'forecast': '4.50%'},
+        {'date': 'Wed Dec 18', 'time': '14:30', 'event': 'FOMC Press Conference', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '-', 'forecast': '-'},
+        {'date': 'Thu Dec 19', 'time': '07:00', 'event': 'BoE Interest Rate Decision', 'country': '🇬🇧', 'importance': 'Critical', 'previous': '4.75%', 'forecast': '4.75%'},
+        {'date': 'Thu Dec 19', 'time': '08:30', 'event': 'GDP QoQ Final', 'country': '🇺🇸', 'importance': 'High', 'previous': '2.8%', 'forecast': '2.8%'},
+        {'date': 'Thu Dec 19', 'time': '08:30', 'event': 'Initial Jobless Claims', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '242K', 'forecast': '235K'},
+        {'date': 'Thu Dec 19', 'time': '10:00', 'event': 'Existing Home Sales', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '3.96M', 'forecast': '4.05M'},
+        {'date': 'Fri Dec 20', 'time': '08:30', 'event': 'PCE Price Index MoM', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '0.2%', 'forecast': '0.2%'},
+        {'date': 'Fri Dec 20', 'time': '08:30', 'event': 'Core PCE Price Index YoY', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '2.8%', 'forecast': '2.9%'},
+        {'date': 'Fri Dec 20', 'time': '08:30', 'event': 'Personal Income MoM', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '0.6%', 'forecast': '0.4%'},
+        {'date': 'Fri Dec 20', 'time': '10:00', 'event': 'Consumer Sentiment Final', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '71.8', 'forecast': '74.0'},
+        # Next Week
+        {'date': 'Mon Dec 23', 'time': '08:30', 'event': 'Chicago Fed National Activity', 'country': '🇺🇸', 'importance': 'Low', 'previous': '-0.40', 'forecast': '-0.20'},
+        {'date': 'Tue Dec 24', 'time': '08:30', 'event': 'Durable Goods Orders', 'country': '🇺🇸', 'importance': 'High', 'previous': '0.3%', 'forecast': '-0.2%'},
+        {'date': 'Tue Dec 24', 'time': '10:00', 'event': 'New Home Sales', 'country': '🇺🇸', 'importance': 'Medium', 'previous': '610K', 'forecast': '640K'},
+        {'date': 'Thu Dec 26', 'time': '-', 'event': 'US Markets Closed (Christmas)', 'country': '🇺🇸', 'importance': 'Holiday', 'previous': '-', 'forecast': '-'},
+        # Upcoming Major Events
+        {'date': 'Fri Jan 3', 'time': '10:00', 'event': 'ISM Manufacturing PMI', 'country': '🇺🇸', 'importance': 'High', 'previous': '48.4', 'forecast': '48.8'},
+        {'date': 'Fri Jan 10', 'time': '08:30', 'event': 'Nonfarm Payrolls', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '227K', 'forecast': '180K'},
+        {'date': 'Wed Jan 15', 'time': '08:30', 'event': 'CPI MoM', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '0.3%', 'forecast': '0.2%'},
+        {'date': 'Wed Jan 29', 'time': '14:00', 'event': 'FOMC Rate Decision', 'country': '🇺🇸', 'importance': 'Critical', 'previous': '4.50%', 'forecast': '4.50%'},
+    ]
+
+    # Filter options
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        importance_filter = st.multiselect(
+            "Filter by Importance",
+            ['Critical', 'High', 'Medium', 'Low', 'Holiday'],
+            default=['Critical', 'High']
+        )
+    with col2:
+        country_filter = st.multiselect(
+            "Filter by Country",
+            ['🇺🇸', '🇬🇧', '🇪🇺', '🇯🇵', '🇨🇳'],
+            default=['🇺🇸', '🇬🇧']
+        )
+    with col3:
+        st.caption("Times shown in ET")
+
+    st.markdown("---")
+
+    # Display calendar
+    filtered_events = [e for e in CALENDAR_DATA
+                      if e['importance'] in importance_filter
+                      and e['country'] in country_filter]
+
+    if filtered_events:
+        for event in filtered_events:
+            imp = event['importance']
+            if imp == 'Critical':
+                color = '#e74c3c'
+                icon = '🔴'
+            elif imp == 'High':
+                color = '#f39c12'
+                icon = '🟠'
+            elif imp == 'Holiday':
+                color = '#9b59b6'
+                icon = '📅'
+            else:
+                color = '#3498db'
+                icon = '🔵'
+
+            col1, col2, col3, col4, col5 = st.columns([2, 1, 4, 1.5, 1.5])
+            with col1:
+                st.markdown(f"**{event['date']}** {event['time']}")
+            with col2:
+                st.markdown(event['country'])
+            with col3:
+                st.markdown(f"{icon} {event['event']}")
+            with col4:
+                st.caption(f"Prev: {event['previous']}")
+            with col5:
+                st.caption(f"Fcst: {event['forecast']}")
+
+    else:
+        st.info("No events match your filters")
+
+    st.markdown("---")
+
+    # Central Bank Calendar
+    st.subheader("Central Bank Meeting Schedule 2025")
+
+    cb_schedule = pd.DataFrame({
+        'Central Bank': ['Federal Reserve', 'Federal Reserve', 'ECB', 'ECB', 'Bank of England', 'Bank of Japan'],
+        'Meeting Date': ['Jan 28-29', 'Mar 18-19', 'Jan 30', 'Mar 6', 'Feb 6', 'Jan 23-24'],
+        'Current Rate': ['4.50%', '4.50%', '3.00%', '3.00%', '4.75%', '0.25%'],
+        'Market Expects': ['Hold', 'Cut 25bp', 'Cut 25bp', 'Cut 25bp', 'Hold', 'Hold'],
+    })
+    st.dataframe(cb_schedule, use_container_width=True, hide_index=True)
+
+    # Earnings Calendar Preview
+    st.markdown("---")
+    st.subheader("Upcoming Earnings (Major Companies)")
+
+    earnings = pd.DataFrame({
+        'Company': ['Nike', 'FedEx', 'Micron', 'Carnival', 'Apple', 'Tesla', 'Netflix'],
+        'Ticker': ['NKE', 'FDX', 'MU', 'CCL', 'AAPL', 'TSLA', 'NFLX'],
+        'Report Date': ['Dec 19', 'Dec 19', 'Dec 18', 'Dec 20', 'Jan 30', 'Jan 29', 'Jan 21'],
+        'EPS Est': ['$0.63', '$3.88', '$1.76', '$0.05', '$2.35', '$0.73', '$4.20'],
+        'Rev Est': ['$12.1B', '$22.0B', '$8.7B', '$5.9B', '$124B', '$25.6B', '$10.1B'],
+    })
+    st.dataframe(earnings, use_container_width=True, hide_index=True)
+
+
+# ============================================================================
+# PAGE: WATCHLIST
+# ============================================================================
+
+elif page == "Watchlist":
+    st.title("Watchlist")
+    st.markdown("*Track your favorite assets and set price alerts*")
+    st.markdown("---")
+
+    # Initialize session state for watchlist
+    if 'watchlist' not in st.session_state:
+        st.session_state.watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'BTC', 'ETH', 'SPY', 'QQQ']
+
+    if 'alerts' not in st.session_state:
+        st.session_state.alerts = []
+
+    # Add to watchlist
+    col1, col2, col3 = st.columns([3, 1, 1])
+    with col1:
+        new_symbol = st.text_input("Add Symbol", placeholder="Enter ticker symbol...").upper()
+    with col2:
+        if st.button("Add", type="primary") and new_symbol:
+            if new_symbol not in st.session_state.watchlist:
+                st.session_state.watchlist.append(new_symbol)
+                st.success(f"Added {new_symbol}")
+            else:
+                st.warning(f"{new_symbol} already in watchlist")
+    with col3:
+        if st.button("Clear All"):
+            st.session_state.watchlist = []
+            st.rerun()
+
+    st.markdown("---")
+
+    # Load current data for watchlist items
+    if st.session_state.watchlist:
+        watchlist_str = "', '".join(st.session_state.watchlist)
+
+        # Load stock data
+        stocks_wl = load_data(f"""
+            SELECT DISTINCT ON (symbol) symbol, price, change_percent, volume, timestamp
+            FROM stocks
+            WHERE symbol IN ('{watchlist_str}')
+            ORDER BY symbol, timestamp DESC
+        """)
+
+        # Load crypto data
+        crypto_wl = load_data(f"""
+            SELECT DISTINCT ON (symbol) symbol, price, change_24h as change_percent, volume_24h as volume, timestamp
+            FROM crypto
+            WHERE symbol IN ('{watchlist_str}')
+            ORDER BY symbol, timestamp DESC
+        """)
+
+        # Combine data
+        all_data = pd.concat([stocks_wl, crypto_wl], ignore_index=True) if not stocks_wl.empty or not crypto_wl.empty else pd.DataFrame()
+
+        if not all_data.empty:
+            st.subheader("Your Watchlist")
+
+            for symbol in st.session_state.watchlist:
+                symbol_data = all_data[all_data['symbol'] == symbol]
+
+                col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+
+                with col1:
+                    st.markdown(f"**{symbol}**")
+
+                if not symbol_data.empty:
+                    row = symbol_data.iloc[0]
+                    price = float(row['price']) if row['price'] else 0
+                    change = float(row['change_percent']) if row['change_percent'] else 0
+
+                    with col2:
+                        st.metric("Price", f"${price:,.2f}")
+
+                    with col3:
+                        delta_color = "normal" if change >= 0 else "inverse"
+                        st.metric("Change", f"{change:+.2f}%", delta_color=delta_color)
+
+                    with col4:
+                        if row['timestamp']:
+                            ts = pd.to_datetime(row['timestamp'])
+                            st.caption(f"Updated: {ts.strftime('%H:%M')}")
+                else:
+                    with col2:
+                        st.caption("No data")
+                    with col3:
+                        st.caption("-")
+                    with col4:
+                        st.caption("-")
+
+                with col5:
+                    if st.button("🗑️", key=f"remove_{symbol}"):
+                        st.session_state.watchlist.remove(symbol)
+                        st.rerun()
+
+        else:
+            st.info("No data available for watchlist symbols")
+
+    else:
+        st.info("Your watchlist is empty. Add symbols above to get started.")
+
+    st.markdown("---")
+
+    # Price Alerts Section
+    st.subheader("Price Alerts")
+
+    alert_col1, alert_col2, alert_col3, alert_col4 = st.columns([2, 2, 2, 1])
+    with alert_col1:
+        alert_symbol = st.selectbox("Symbol", options=st.session_state.watchlist if st.session_state.watchlist else [''])
+    with alert_col2:
+        alert_type = st.selectbox("Alert Type", ["Above", "Below"])
+    with alert_col3:
+        alert_price = st.number_input("Price", min_value=0.0, step=1.0)
+    with alert_col4:
+        if st.button("Set Alert", type="secondary"):
+            if alert_symbol and alert_price > 0:
+                st.session_state.alerts.append({
+                    'symbol': alert_symbol,
+                    'type': alert_type,
+                    'price': alert_price,
+                    'created': datetime.now().strftime('%Y-%m-%d %H:%M')
+                })
+                st.success(f"Alert set: {alert_symbol} {alert_type.lower()} ${alert_price:,.2f}")
+
+    if st.session_state.alerts:
+        st.markdown("---")
+        st.subheader("Active Alerts")
+
+        for i, alert in enumerate(st.session_state.alerts):
+            col1, col2, col3, col4 = st.columns([2, 3, 2, 1])
+            with col1:
+                st.markdown(f"**{alert['symbol']}**")
+            with col2:
+                icon = "📈" if alert['type'] == "Above" else "📉"
+                st.markdown(f"{icon} {alert['type']} ${alert['price']:,.2f}")
+            with col3:
+                st.caption(f"Set: {alert['created']}")
+            with col4:
+                if st.button("❌", key=f"del_alert_{i}"):
+                    st.session_state.alerts.pop(i)
+                    st.rerun()
+
+    # Quick Stats
+    st.markdown("---")
+    st.subheader("Watchlist Summary")
+
+    if not all_data.empty:
+        col1, col2, col3, col4 = st.columns(4)
+
+        gainers = all_data[all_data['change_percent'] > 0]
+        losers = all_data[all_data['change_percent'] < 0]
+
+        with col1:
+            st.metric("Total Items", len(st.session_state.watchlist))
+        with col2:
+            st.metric("Gainers", len(gainers), delta_color="normal")
+        with col3:
+            st.metric("Losers", len(losers), delta_color="inverse")
+        with col4:
+            avg_change = all_data['change_percent'].mean() if not all_data.empty else 0
+            st.metric("Avg Change", f"{avg_change:+.2f}%")
+
+
+# ============================================================================
+# PAGE: BOND MARKETS
+# ============================================================================
+
+elif page == "Bond Markets":
+    st.title("Bond Markets & Fixed Income")
+    st.markdown("*Treasury yields, credit spreads, and global sovereign debt*")
+    st.markdown("---")
+
+    bond_tab1, bond_tab2, bond_tab3, bond_tab4 = st.tabs([
+        "US Treasuries", "Yield Curves", "Credit Markets", "Global Sovereigns"
+    ])
+
+    with bond_tab1:
+        st.subheader("US Treasury Yields")
+
+        # Current Treasury yields
+        TREASURY_DATA = {
+            'Maturity': ['1 Month', '3 Month', '6 Month', '1 Year', '2 Year',
+                        '3 Year', '5 Year', '7 Year', '10 Year', '20 Year', '30 Year'],
+            'Yield %': [4.58, 4.52, 4.45, 4.28, 4.18, 4.12, 4.08, 4.12, 4.22, 4.51, 4.42],
+            'Change': [+0.02, -0.01, -0.03, -0.05, -0.08, -0.06, -0.04, -0.02, +0.01, +0.03, +0.02],
+            '1W Ago': [4.52, 4.50, 4.48, 4.35, 4.28, 4.20, 4.15, 4.18, 4.25, 4.52, 4.43],
+            '1M Ago': [4.45, 4.42, 4.38, 4.22, 4.08, 4.02, 3.98, 4.05, 4.18, 4.48, 4.38],
+        }
+        treasury_df = pd.DataFrame(TREASURY_DATA)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.dataframe(treasury_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            fig_tsy = px.line(treasury_df, x='Maturity', y='Yield %',
+                             title='Treasury Yield Curve',
+                             markers=True)
+            fig_tsy.update_traces(line=dict(color='#3498db', width=3))
+            st.plotly_chart(fig_tsy, use_container_width=True)
+
+        # Key spreads
+        st.markdown("---")
+        st.subheader("Key Spreads")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            spread_2_10 = 4.22 - 4.18
+            st.metric("2Y-10Y Spread", f"{spread_2_10*100:.0f} bp", "+3 bp")
+        with col2:
+            spread_3m_10 = 4.22 - 4.52
+            st.metric("3M-10Y Spread", f"{spread_3m_10*100:.0f} bp", "-5 bp", delta_color="inverse")
+        with col3:
+            st.metric("Real 10Y Yield", "1.92%", "+0.05%")
+        with col4:
+            st.metric("10Y TIPS Breakeven", "2.30%", "-0.02%")
+
+    with bond_tab2:
+        st.subheader("Yield Curve Analysis")
+
+        # Historical yield curve comparison
+        maturities = ['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
+        yields_today = [4.52, 4.45, 4.28, 4.18, 4.08, 4.22, 4.42]
+        yields_1m = [4.42, 4.38, 4.22, 4.08, 3.98, 4.18, 4.38]
+        yields_1y = [5.48, 5.42, 5.18, 4.88, 4.42, 4.58, 4.72]
+
+        curve_df = pd.DataFrame({
+            'Maturity': maturities * 3,
+            'Yield': yields_today + yields_1m + yields_1y,
+            'Period': ['Current']*7 + ['1 Month Ago']*7 + ['1 Year Ago']*7
+        })
+
+        fig_curve = px.line(curve_df, x='Maturity', y='Yield', color='Period',
+                           title='Yield Curve Evolution',
+                           markers=True)
+        st.plotly_chart(fig_curve, use_container_width=True)
+
+        # Yield curve shape indicator
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Curve Shape Indicators")
+            shape_data = pd.DataFrame({
+                'Indicator': ['2s10s Spread', '3m10y Spread', 'Curve Slope', 'Curvature'],
+                'Value': ['+4 bp', '-30 bp', 'Inverted', 'Steepening'],
+                'Signal': ['🟡 Flat', '🔴 Inverted', '🔴 Recession Risk', '🟢 Normalizing']
+            })
+            st.dataframe(shape_data, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.subheader("Historical Context")
+            st.markdown("""
+            - **Inverted curve** (3M > 10Y): Often precedes recessions
+            - **Current state**: Curve normalizing from deep inversion
+            - **Fed policy**: Rate cuts expected to steepen curve
+            - **Watch**: Credit spreads for stress signals
+            """)
+
+    with bond_tab3:
+        st.subheader("Credit Markets")
+
+        # Credit spreads data
+        CREDIT_SPREADS = {
+            'Index': ['IG Corporate', 'High Yield', 'BBB Spread', 'CCC Spread',
+                     'EM Sovereign', 'MBS Spread'],
+            'Spread (bp)': [92, 298, 124, 892, 342, 145],
+            'Change': [-3, +8, -2, +25, +12, -5],
+            '52W Low': [82, 268, 108, 712, 298, 125],
+            '52W High': [145, 485, 182, 1250, 498, 215],
+        }
+        credit_df = pd.DataFrame(CREDIT_SPREADS)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.dataframe(credit_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            fig_credit = px.bar(credit_df, x='Index', y='Spread (bp)',
+                               title='Credit Spreads Over Treasuries',
+                               color='Spread (bp)',
+                               color_continuous_scale='RdYlGn_r')
+            fig_credit.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_credit, use_container_width=True)
+
+        # Corporate bond yields
+        st.markdown("---")
+        st.subheader("Corporate Bond Yields")
+
+        corp_yields = pd.DataFrame({
+            'Rating': ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC'],
+            'Yield %': [4.85, 5.02, 5.28, 5.52, 6.42, 7.85, 13.12],
+            'Spread bp': [42, 58, 85, 108, 198, 342, 868],
+        })
+
+        fig_corp = px.bar(corp_yields, x='Rating', y='Yield %',
+                         title='Corporate Bond Yields by Rating',
+                         color='Yield %',
+                         color_continuous_scale='Reds')
+        st.plotly_chart(fig_corp, use_container_width=True)
+
+    with bond_tab4:
+        st.subheader("Global Sovereign Yields")
+
+        SOVEREIGN_DATA = {
+            'Country': ['🇺🇸 United States', '🇩🇪 Germany', '🇯🇵 Japan', '🇬🇧 United Kingdom',
+                       '🇫🇷 France', '🇮🇹 Italy', '🇪🇸 Spain', '🇨🇦 Canada',
+                       '🇦🇺 Australia', '🇨🇭 Switzerland', '🇨🇳 China', '🇮🇳 India'],
+            '2Y Yield': [4.18, 2.05, 0.58, 4.22, 2.42, 2.68, 2.45, 3.12, 3.85, 0.42, 1.42, 6.85],
+            '10Y Yield': [4.22, 2.18, 1.05, 4.42, 2.95, 3.42, 2.88, 3.25, 4.28, 0.38, 2.12, 6.92],
+            'Spread to UST': [0, -204, -317, +20, -127, -80, -134, -97, +6, -384, -210, +270],
+        }
+        sov_df = pd.DataFrame(SOVEREIGN_DATA)
+
+        st.dataframe(sov_df, use_container_width=True, hide_index=True)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_sov = px.bar(sov_df, x='Country', y='10Y Yield',
+                            title='10-Year Government Bond Yields',
+                            color='10Y Yield',
+                            color_continuous_scale='RdYlGn_r')
+            fig_sov.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_sov, use_container_width=True)
+
+        with col2:
+            fig_spread = px.bar(sov_df, x='Country', y='Spread to UST',
+                               title='Spread vs US Treasury (bp)',
+                               color='Spread to UST',
+                               color_continuous_scale='RdBu_r')
+            fig_spread.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_spread, use_container_width=True)
+
+        # EM Sovereign Focus
+        st.markdown("---")
+        st.subheader("Emerging Market Sovereigns")
+
+        em_data = pd.DataFrame({
+            'Country': ['🇧🇷 Brazil', '🇲🇽 Mexico', '🇿🇦 South Africa', '🇹🇷 Turkey',
+                       '🇮🇩 Indonesia', '🇵🇱 Poland'],
+            '10Y Yield': [12.85, 9.42, 10.25, 28.50, 6.85, 5.65],
+            'Rating': ['BB', 'BBB', 'BB', 'B', 'BBB', 'A'],
+            'CDS 5Y': [152, 98, 215, 385, 82, 48],
+        })
+        st.dataframe(em_data, use_container_width=True, hide_index=True)
 
 
 # ============================================================================
