@@ -603,7 +603,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.4 - Global Market Hours")
+st.sidebar.caption("v5.5 - Pro Features")
 
 
 # ============================================================================
@@ -1320,6 +1320,101 @@ elif page == "Markets":
 
     st.markdown("---")
 
+    # ========== EARNINGS CALENDAR ==========
+    with st.expander("📅 Upcoming Earnings", expanded=False):
+        from datetime import datetime, timedelta
+
+        # Major company earnings (approximate dates - Q4 2024 / Q1 2025 season)
+        def get_earnings_calendar():
+            """Generate upcoming earnings for tracked stocks."""
+            today = datetime.now()
+            earnings = []
+
+            # Q4 2024 / Q1 2025 earnings dates (approximate - check actual calendars)
+            # Format: symbol, company, date, time (BMO=Before Market Open, AMC=After Market Close)
+            earnings_schedule = [
+                # Tech Giants (typically late Jan / early Feb for Q4)
+                ('AAPL', 'Apple Inc.', datetime(2025, 1, 30), 'AMC'),
+                ('MSFT', 'Microsoft', datetime(2025, 1, 29), 'AMC'),
+                ('GOOGL', 'Alphabet', datetime(2025, 2, 4), 'AMC'),
+                ('AMZN', 'Amazon', datetime(2025, 2, 6), 'AMC'),
+                ('META', 'Meta Platforms', datetime(2025, 2, 5), 'AMC'),
+                ('NVDA', 'NVIDIA', datetime(2025, 2, 26), 'AMC'),
+                ('TSLA', 'Tesla', datetime(2025, 1, 29), 'AMC'),
+                # Finance
+                ('JPM', 'JPMorgan Chase', datetime(2025, 1, 15), 'BMO'),
+                ('BAC', 'Bank of America', datetime(2025, 1, 16), 'BMO'),
+                ('V', 'Visa', datetime(2025, 1, 30), 'AMC'),
+                ('MA', 'Mastercard', datetime(2025, 1, 30), 'BMO'),
+                # Healthcare
+                ('JNJ', 'Johnson & Johnson', datetime(2025, 1, 22), 'BMO'),
+                ('PFE', 'Pfizer', datetime(2025, 2, 4), 'BMO'),
+                # Consumer
+                ('WMT', 'Walmart', datetime(2025, 2, 20), 'BMO'),
+                ('PG', 'Procter & Gamble', datetime(2025, 1, 22), 'BMO'),
+                ('HD', 'Home Depot', datetime(2025, 2, 25), 'BMO'),
+                ('DIS', 'Walt Disney', datetime(2025, 2, 5), 'AMC'),
+                ('KO', 'Coca-Cola', datetime(2025, 2, 11), 'BMO'),
+                # Energy
+                ('XOM', 'Exxon Mobil', datetime(2025, 1, 31), 'BMO'),
+                # Tech
+                ('CSCO', 'Cisco Systems', datetime(2025, 2, 12), 'AMC'),
+            ]
+
+            for symbol, company, date, timing in earnings_schedule:
+                if date >= today - timedelta(days=7):  # Show past week too
+                    earnings.append({
+                        'symbol': symbol,
+                        'company': company,
+                        'date': date,
+                        'timing': timing
+                    })
+
+            # Sort by date
+            earnings.sort(key=lambda x: x['date'])
+            return earnings[:15]
+
+        earnings_events = get_earnings_calendar()
+
+        if earnings_events:
+            earn_cols = st.columns([1, 2, 2, 1, 1])
+            earn_cols[0].markdown("**Symbol**")
+            earn_cols[1].markdown("**Company**")
+            earn_cols[2].markdown("**Date**")
+            earn_cols[3].markdown("**Time**")
+            earn_cols[4].markdown("**Status**")
+
+            for event in earnings_events:
+                days_until = (event['date'] - datetime.now()).days
+
+                if days_until < 0:
+                    status = "✅ Reported"
+                    status_color = "#888"
+                elif days_until == 0:
+                    status = "🔴 TODAY"
+                    status_color = "#d32f2f"
+                elif days_until <= 7:
+                    status = f"⏰ {days_until}d"
+                    status_color = "#f57c00"
+                else:
+                    status = f"📅 {days_until}d"
+                    status_color = "#1976d2"
+
+                timing_str = "Pre-Market" if event['timing'] == 'BMO' else "After-Hours"
+
+                earn_cols = st.columns([1, 2, 2, 1, 1])
+                earn_cols[0].markdown(f"**{event['symbol']}**")
+                earn_cols[1].markdown(event['company'])
+                earn_cols[2].markdown(event['date'].strftime('%a, %b %d'))
+                earn_cols[3].markdown(timing_str)
+                earn_cols[4].markdown(f"<span style='color:{status_color}'>{status}</span>", unsafe_allow_html=True)
+
+            st.caption("*Dates are approximate. Check official investor relations for confirmed dates.*")
+        else:
+            st.info("No upcoming earnings in the next 30 days.")
+
+    st.markdown("---")
+
     tab1, tab2, tab3 = st.tabs(["Stocks", "Commodities", "Forex"])
 
     with tab1:
@@ -1466,6 +1561,90 @@ elif page == "Markets":
         if latest_forex.empty:
             st.warning("No forex data. Run: `python scheduler.py --collector forex`")
         else:
+            # ========== CURRENCY STRENGTH METER ==========
+            st.markdown("### 💪 Currency Strength Meter")
+
+            # Calculate relative strength based on pair movements
+            # For each currency, check how it performs against others
+            def calculate_currency_strength(forex_df):
+                """Calculate relative strength of major currencies."""
+                currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'CNY']
+                strength = {c: 0 for c in currencies}
+                pair_count = {c: 0 for c in currencies}
+
+                # Base rates (approximate baseline for comparison)
+                baseline_rates = {
+                    'EUR/USD': 1.10, 'GBP/USD': 1.27, 'USD/JPY': 150.0,
+                    'USD/CHF': 0.88, 'AUD/USD': 0.65, 'USD/CAD': 1.36, 'USD/CNY': 7.25
+                }
+
+                for _, row in forex_df.iterrows():
+                    pair = row['pair']
+                    rate = row['rate']
+
+                    if pair in baseline_rates and rate:
+                        baseline = baseline_rates[pair]
+                        pct_change = ((rate - baseline) / baseline) * 100
+
+                        # Parse currencies from pair
+                        parts = pair.split('/')
+                        if len(parts) == 2:
+                            base_curr, quote_curr = parts
+
+                            # If pair went up (base strengthened vs quote)
+                            if base_curr in strength:
+                                strength[base_curr] += pct_change
+                                pair_count[base_curr] += 1
+                            if quote_curr in strength:
+                                strength[quote_curr] -= pct_change
+                                pair_count[quote_curr] += 1
+
+                # Normalize scores
+                for curr in currencies:
+                    if pair_count[curr] > 0:
+                        strength[curr] = strength[curr] / pair_count[curr]
+
+                return strength
+
+            strength_scores = calculate_currency_strength(latest_forex)
+
+            # Sort by strength
+            sorted_strength = sorted(strength_scores.items(), key=lambda x: x[1], reverse=True)
+
+            # Display as horizontal bar chart
+            strength_df = pd.DataFrame(sorted_strength, columns=['Currency', 'Strength'])
+
+            # Color map
+            def get_strength_color(val):
+                if val > 2:
+                    return '#00a86b'  # Strong
+                elif val > 0:
+                    return '#4caf50'  # Bullish
+                elif val > -2:
+                    return '#ff9800'  # Weak
+                else:
+                    return '#f44336'  # Very Weak
+
+            currency_flags = {'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵',
+                            'CHF': '🇨🇭', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CNY': '🇨🇳'}
+
+            str_cols = st.columns(len(sorted_strength))
+            for i, (curr, score) in enumerate(sorted_strength):
+                with str_cols[i]:
+                    color = get_strength_color(score)
+                    flag = currency_flags.get(curr, '')
+                    status = "Strong" if score > 1 else "Weak" if score < -1 else "Neutral"
+                    st.markdown(
+                        f"""<div style="text-align:center; padding:10px; background-color:#1e1e1e; border-radius:5px; border-top:4px solid {color};">
+                        <div style="font-size:1.5em;">{flag}</div>
+                        <b>{curr}</b><br>
+                        <span style="color:{color}; font-size:1.2em;">{score:+.1f}</span><br>
+                        <small>{status}</small>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+
+            st.markdown("---")
 
             # Major pairs
             major_pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD']
@@ -1646,6 +1825,176 @@ elif page == "Economic Indicators":
     st.title("Economic Indicators")
     st.markdown("---")
 
+    # ========== ECONOMIC CALENDAR SECTION ==========
+    st.subheader("📅 Economic Calendar")
+
+    from datetime import datetime, timedelta
+    import calendar
+
+    # Define major economic events (recurring schedules)
+    def get_economic_calendar():
+        """Generate upcoming economic events based on typical schedules."""
+        today = datetime.now()
+        events = []
+
+        # FOMC Meetings (8 per year, roughly every 6 weeks)
+        # 2024-2025 FOMC dates (approximate - check Fed calendar)
+        fomc_dates = [
+            datetime(2025, 1, 29), datetime(2025, 3, 19), datetime(2025, 5, 7),
+            datetime(2025, 6, 18), datetime(2025, 7, 30), datetime(2025, 9, 17),
+            datetime(2025, 11, 5), datetime(2025, 12, 17)
+        ]
+        for d in fomc_dates:
+            if d >= today - timedelta(days=1):
+                events.append({'date': d, 'event': 'FOMC Meeting', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Central Bank'})
+
+        # US Jobs Report (First Friday of each month)
+        for month_offset in range(6):
+            target_month = today.month + month_offset
+            target_year = today.year
+            if target_month > 12:
+                target_month -= 12
+                target_year += 1
+            # Find first Friday
+            cal = calendar.monthcalendar(target_year, target_month)
+            first_friday = [week[4] for week in cal if week[4] != 0][0]
+            jobs_date = datetime(target_year, target_month, first_friday)
+            if jobs_date >= today - timedelta(days=1):
+                events.append({'date': jobs_date, 'event': 'US Jobs Report (NFP)', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Employment'})
+
+        # US CPI (Usually mid-month, ~12th-15th)
+        for month_offset in range(6):
+            target_month = today.month + month_offset
+            target_year = today.year
+            if target_month > 12:
+                target_month -= 12
+                target_year += 1
+            cpi_date = datetime(target_year, target_month, 13)
+            if cpi_date >= today - timedelta(days=1):
+                events.append({'date': cpi_date, 'event': 'US CPI Inflation', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Inflation'})
+
+        # US GDP (End of month, quarterly)
+        gdp_months = [1, 4, 7, 10]  # Quarterly releases
+        for month in gdp_months:
+            gdp_year = today.year if month >= today.month else today.year + 1
+            gdp_date = datetime(gdp_year, month, 28)
+            if gdp_date >= today - timedelta(days=1):
+                events.append({'date': gdp_date, 'event': 'US GDP Release', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Growth'})
+
+        # ECB Meetings (every 6 weeks approximately)
+        ecb_dates = [
+            datetime(2025, 1, 30), datetime(2025, 3, 6), datetime(2025, 4, 17),
+            datetime(2025, 6, 5), datetime(2025, 7, 17), datetime(2025, 9, 11),
+            datetime(2025, 10, 30), datetime(2025, 12, 18)
+        ]
+        for d in ecb_dates:
+            if d >= today - timedelta(days=1):
+                events.append({'date': d, 'event': 'ECB Rate Decision', 'country': '🇪🇺 EU', 'importance': 'HIGH', 'category': 'Central Bank'})
+
+        # Bank of England
+        boe_dates = [
+            datetime(2025, 2, 6), datetime(2025, 3, 20), datetime(2025, 5, 8),
+            datetime(2025, 6, 19), datetime(2025, 8, 7), datetime(2025, 9, 18),
+            datetime(2025, 11, 6), datetime(2025, 12, 18)
+        ]
+        for d in boe_dates:
+            if d >= today - timedelta(days=1):
+                events.append({'date': d, 'event': 'BoE Rate Decision', 'country': '🇬🇧 UK', 'importance': 'HIGH', 'category': 'Central Bank'})
+
+        # Bank of Japan
+        boj_dates = [
+            datetime(2025, 1, 24), datetime(2025, 3, 14), datetime(2025, 4, 25),
+            datetime(2025, 6, 13), datetime(2025, 7, 31), datetime(2025, 9, 19),
+            datetime(2025, 10, 31), datetime(2025, 12, 19)
+        ]
+        for d in boj_dates:
+            if d >= today - timedelta(days=1):
+                events.append({'date': d, 'event': 'BoJ Rate Decision', 'country': '🇯🇵 Japan', 'importance': 'HIGH', 'category': 'Central Bank'})
+
+        # US Retail Sales (mid-month)
+        for month_offset in range(4):
+            target_month = today.month + month_offset
+            target_year = today.year
+            if target_month > 12:
+                target_month -= 12
+                target_year += 1
+            retail_date = datetime(target_year, target_month, 16)
+            if retail_date >= today - timedelta(days=1):
+                events.append({'date': retail_date, 'event': 'US Retail Sales', 'country': '🇺🇸 USA', 'importance': 'MEDIUM', 'category': 'Consumer'})
+
+        # ISM Manufacturing PMI (First business day of month)
+        for month_offset in range(4):
+            target_month = today.month + month_offset
+            target_year = today.year
+            if target_month > 12:
+                target_month -= 12
+                target_year += 1
+            ism_date = datetime(target_year, target_month, 1)
+            # Adjust for weekend
+            while ism_date.weekday() >= 5:
+                ism_date += timedelta(days=1)
+            if ism_date >= today - timedelta(days=1):
+                events.append({'date': ism_date, 'event': 'ISM Manufacturing PMI', 'country': '🇺🇸 USA', 'importance': 'MEDIUM', 'category': 'Manufacturing'})
+
+        # Sort by date
+        events.sort(key=lambda x: x['date'])
+        return events[:20]  # Return next 20 events
+
+    calendar_events = get_economic_calendar()
+
+    if calendar_events:
+        # Display as expandable sections by week
+        cal_col1, cal_col2 = st.columns([3, 1])
+
+        with cal_col1:
+            for event in calendar_events[:12]:  # Show next 12 events
+                days_until = (event['date'] - datetime.now()).days
+                if days_until < 0:
+                    time_str = "Today" if days_until == -1 else f"{abs(days_until)}d ago"
+                    bg_color = "#4a4a4a"
+                elif days_until == 0:
+                    time_str = "TODAY"
+                    bg_color = "#d32f2f"
+                elif days_until <= 7:
+                    time_str = f"In {days_until}d"
+                    bg_color = "#f57c00"
+                else:
+                    time_str = f"In {days_until}d"
+                    bg_color = "#1976d2"
+
+                importance_color = "#d32f2f" if event['importance'] == 'HIGH' else "#ff9800"
+
+                st.markdown(
+                    f"""<div style="background-color:#1e1e1e; padding:10px; border-radius:5px; margin:5px 0; border-left:4px solid {importance_color};">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <b>{event['country']}</b> {event['event']}<br>
+                            <small style="color:#888;">{event['category']} | {event['date'].strftime('%a, %b %d, %Y')}</small>
+                        </div>
+                        <div style="background-color:{bg_color}; padding:5px 10px; border-radius:3px;">
+                            <b>{time_str}</b>
+                        </div>
+                    </div>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+        with cal_col2:
+            st.markdown("**Legend**")
+            st.markdown("🔴 HIGH Impact")
+            st.markdown("🟠 MEDIUM Impact")
+            st.markdown("---")
+            st.markdown("**Categories**")
+            st.caption("• Central Bank")
+            st.caption("• Employment")
+            st.caption("• Inflation")
+            st.caption("• Growth")
+            st.caption("• Consumer")
+            st.caption("• Manufacturing")
+
+    st.markdown("---")
+
+    # ========== EXISTING ECONOMIC INDICATORS ==========
     econ_df = load_data("""
         SELECT indicator, country, name, value, unit, timestamp
         FROM economic_indicators ORDER BY timestamp DESC, country, indicator
@@ -2714,6 +3063,105 @@ elif page == "Time Series":
 
     st.markdown("---")
 
+    # ========== CORRELATION MATRIX SECTION ==========
+    with st.expander("📊 Asset Correlation Matrix", expanded=False):
+        st.markdown("*Cross-asset correlations help identify diversification opportunities*")
+
+        # Get latest prices for key assets
+        corr_stocks = load_data(f"""
+            SELECT 'SPY' as asset, timestamp, price FROM stocks
+            WHERE symbol = 'SPY' AND timestamp >= '{start_date.strftime('%Y-%m-%d')}'
+            UNION ALL
+            SELECT 'QQQ' as asset, timestamp, price FROM stocks
+            WHERE symbol = 'QQQ' AND timestamp >= '{start_date.strftime('%Y-%m-%d')}'
+        """)
+
+        corr_crypto = load_data(f"""
+            SELECT symbol as asset, timestamp, price FROM crypto
+            WHERE symbol IN ('BTC', 'ETH') AND timestamp >= '{start_date.strftime('%Y-%m-%d')}'
+        """)
+
+        corr_commodities = load_data(f"""
+            SELECT symbol as asset, timestamp, price FROM commodities
+            WHERE symbol IN ('GOLD', 'WTI') AND timestamp >= '{start_date.strftime('%Y-%m-%d')}'
+        """)
+
+        # Combine all data
+        all_corr_data = pd.concat([corr_stocks, corr_crypto, corr_commodities], ignore_index=True)
+
+        if not all_corr_data.empty:
+            all_corr_data['timestamp'] = pd.to_datetime(all_corr_data['timestamp'])
+
+            # Pivot to get assets as columns
+            pivot_df = all_corr_data.pivot_table(
+                index='timestamp',
+                columns='asset',
+                values='price',
+                aggfunc='mean'
+            )
+
+            # Resample to daily to align timestamps
+            pivot_df = pivot_df.resample('D').mean().dropna()
+
+            if len(pivot_df) >= 5 and len(pivot_df.columns) >= 2:
+                # Calculate returns
+                returns_df = pivot_df.pct_change().dropna()
+
+                # Calculate correlation matrix
+                corr_matrix = returns_df.corr()
+
+                # Display as heatmap
+                import plotly.figure_factory as ff
+
+                # Create annotation text
+                z_text = [[f'{val:.2f}' for val in row] for row in corr_matrix.values]
+
+                fig = ff.create_annotated_heatmap(
+                    z=corr_matrix.values,
+                    x=list(corr_matrix.columns),
+                    y=list(corr_matrix.index),
+                    annotation_text=z_text,
+                    colorscale='RdBu',
+                    showscale=True,
+                    zmid=0
+                )
+
+                fig.update_layout(
+                    title="Asset Return Correlations",
+                    height=400,
+                    xaxis_title="",
+                    yaxis_title="",
+                    yaxis=dict(autorange='reversed')
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Interpretation
+                st.markdown("**Interpretation:**")
+                col_int1, col_int2, col_int3 = st.columns(3)
+                with col_int1:
+                    st.markdown("🔵 **+1.0**: Perfect positive correlation")
+                with col_int2:
+                    st.markdown("⚪ **0.0**: No correlation")
+                with col_int3:
+                    st.markdown("🔴 **-1.0**: Perfect negative correlation")
+
+                # Find notable correlations
+                st.markdown("**Notable Pairs:**")
+                for i in range(len(corr_matrix.columns)):
+                    for j in range(i+1, len(corr_matrix.columns)):
+                        asset1, asset2 = corr_matrix.columns[i], corr_matrix.columns[j]
+                        corr_val = corr_matrix.iloc[i, j]
+                        if abs(corr_val) > 0.7:
+                            rel = "strongly correlated" if corr_val > 0 else "inversely correlated"
+                            st.caption(f"• {asset1} & {asset2}: {corr_val:.2f} ({rel})")
+            else:
+                st.info("Need more data points to calculate correlations. Try a longer date range.")
+        else:
+            st.info("No data available for correlation analysis. Run collectors first.")
+
+    st.markdown("---")
+
     analysis_type = st.selectbox("Select Data Type", ["Stocks", "Crypto", "Commodities", "Forex", "Economic Indicators", "Weather"])
 
     if analysis_type == "Stocks":
@@ -3095,183 +3543,366 @@ elif page == "Time Series":
 # ============================================================================
 
 elif page == "Portfolio":
-    st.title("Portfolio Correlation Analysis")
+    st.title("Portfolio & Watchlist")
+    st.markdown("*Track holdings, monitor watchlist, analyze correlations*")
     st.markdown("---")
 
-    st.markdown("""
-    Build a custom portfolio and analyze correlations between your holdings.
-    Select assets from stocks, crypto, and commodities to see how they move together.
-    """)
+    port_tab1, port_tab2, port_tab3 = st.tabs(["💼 Holdings Tracker", "👁️ Watchlist", "📊 Correlation Analysis"])
 
-    # Portfolio builder
-    st.subheader("Build Your Portfolio")
+    # ========== TAB 1: HOLDINGS TRACKER ==========
+    with port_tab1:
+        st.subheader("Portfolio Holdings")
+        st.markdown("*Enter your positions to track performance*")
 
-    col1, col2, col3 = st.columns(3)
+        # Initialize session state for portfolio
+        if 'portfolio_holdings' not in st.session_state:
+            st.session_state.portfolio_holdings = []
 
-    # Get available assets
-    stocks_list = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
-    crypto_list = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
-    commodities_list = load_data("SELECT DISTINCT symbol FROM commodities ORDER BY symbol")
+        # Add new holding
+        with st.expander("➕ Add New Holding", expanded=len(st.session_state.portfolio_holdings) == 0):
+            add_col1, add_col2, add_col3, add_col4 = st.columns(4)
 
-    with col1:
-        st.markdown("##### Stocks")
-        stock_symbols = stocks_list['symbol'].tolist() if not stocks_list.empty else []
-        stock_defaults = [s for s in ['AAPL', 'MSFT'] if s in stock_symbols]
-        selected_stocks = st.multiselect(
-            "Select stocks",
-            stock_symbols,
-            default=stock_defaults if stock_defaults else stock_symbols[:2] if len(stock_symbols) >= 2 else stock_symbols
-        )
+            # Get available symbols
+            all_stocks = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+            all_crypto = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
 
-    with col2:
-        st.markdown("##### Crypto")
-        crypto_symbols = crypto_list['symbol'].tolist() if not crypto_list.empty else []
-        crypto_defaults = [s for s in ['BTC', 'ETH'] if s in crypto_symbols]
-        selected_crypto = st.multiselect(
-            "Select crypto",
-            crypto_symbols,
-            default=crypto_defaults if crypto_defaults else crypto_symbols[:2] if len(crypto_symbols) >= 2 else crypto_symbols
-        )
+            stock_symbols = all_stocks['symbol'].tolist() if not all_stocks.empty else []
+            crypto_symbols = all_crypto['symbol'].tolist() if not all_crypto.empty else []
+            all_symbols = stock_symbols + crypto_symbols
 
-    with col3:
-        st.markdown("##### Commodities")
-        selected_commodities = st.multiselect(
-            "Select commodities",
-            commodities_list['symbol'].tolist() if not commodities_list.empty else [],
-            default=[]
-        )
+            with add_col1:
+                new_symbol = st.selectbox("Symbol", all_symbols, key="new_holding_symbol")
+            with add_col2:
+                new_shares = st.number_input("Shares/Units", min_value=0.0001, value=1.0, step=0.1, key="new_holding_shares")
+            with add_col3:
+                new_cost = st.number_input("Avg Cost ($)", min_value=0.01, value=100.0, step=1.0, key="new_holding_cost")
+            with add_col4:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Add to Portfolio", key="add_holding_btn"):
+                    st.session_state.portfolio_holdings.append({
+                        'symbol': new_symbol,
+                        'shares': new_shares,
+                        'cost_basis': new_cost
+                    })
+                    st.rerun()
 
-    all_selected = selected_stocks + selected_crypto + selected_commodities
+        # Display current holdings with live prices
+        if st.session_state.portfolio_holdings:
+            total_value = 0
+            total_cost = 0
+            total_pnl = 0
 
-    if len(all_selected) >= 2:
-        st.markdown("---")
-        st.subheader("Portfolio Correlation Matrix")
+            st.markdown("### Current Holdings")
 
-        # Build portfolio data
-        portfolio_data = {}
+            # Headers
+            h_cols = st.columns([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 0.5])
+            h_cols[0].markdown("**Symbol**")
+            h_cols[1].markdown("**Shares**")
+            h_cols[2].markdown("**Avg Cost**")
+            h_cols[3].markdown("**Current**")
+            h_cols[4].markdown("**Value**")
+            h_cols[5].markdown("**P&L**")
+            h_cols[6].markdown("**Del**")
 
-        # Load stock prices
-        if selected_stocks:
-            stocks_df = load_data(f"""
-                SELECT symbol, price, timestamp FROM stocks
-                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_stocks])})
-                ORDER BY timestamp
-            """)
-            if not stocks_df.empty:
-                stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp']).dt.date
-                for symbol in selected_stocks:
-                    sym_data = stocks_df[stocks_df['symbol'] == symbol]
-                    if not sym_data.empty:
-                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+            holdings_to_remove = []
 
-        # Load crypto prices
-        if selected_crypto:
-            crypto_df = load_data(f"""
-                SELECT symbol, price, timestamp FROM crypto
-                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_crypto])})
-                ORDER BY timestamp
-            """)
-            if not crypto_df.empty:
-                crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp']).dt.date
-                for symbol in selected_crypto:
-                    sym_data = crypto_df[crypto_df['symbol'] == symbol]
-                    if not sym_data.empty:
-                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+            for i, holding in enumerate(st.session_state.portfolio_holdings):
+                symbol = holding['symbol']
+                shares = holding['shares']
+                cost_basis = holding['cost_basis']
 
-        # Load commodity prices
-        if selected_commodities:
-            commodities_df = load_data(f"""
-                SELECT symbol, price, timestamp FROM commodities
-                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_commodities])})
-                ORDER BY timestamp
-            """)
-            if not commodities_df.empty:
-                commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp']).dt.date
-                for symbol in selected_commodities:
-                    sym_data = commodities_df[commodities_df['symbol'] == symbol]
-                    if not sym_data.empty:
-                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+                # Get current price
+                price_df = load_realtime_data(f"""
+                    SELECT price FROM stocks WHERE symbol = '{symbol}'
+                    UNION ALL
+                    SELECT price FROM crypto WHERE symbol = '{symbol}'
+                    ORDER BY 1 DESC LIMIT 1
+                """)
 
-        if len(portfolio_data) >= 2:
-            # Calculate correlations
-            portfolio_df = pd.DataFrame(portfolio_data)
-            returns_df = portfolio_df.pct_change().dropna()
+                current_price = price_df['price'].iloc[0] if not price_df.empty else cost_basis
+                current_price = float(current_price)
 
-            if len(returns_df) >= 5:
-                corr_matrix = returns_df.corr()
+                position_value = shares * current_price
+                position_cost = shares * cost_basis
+                position_pnl = position_value - position_cost
+                pnl_pct = ((current_price - cost_basis) / cost_basis) * 100 if cost_basis > 0 else 0
 
-                # Correlation heatmap
-                fig = px.imshow(
-                    corr_matrix,
-                    text_auto='.2f',
-                    color_continuous_scale='RdYlGn',
-                    zmin=-1, zmax=1,
-                    title="Portfolio Correlation Matrix (Daily Returns)"
-                )
-                fig.update_layout(**get_clean_plotly_layout(), height=500)
-                st.plotly_chart(fig, use_container_width=True)
+                total_value += position_value
+                total_cost += position_cost
+                total_pnl += position_pnl
 
-                # Portfolio statistics
-                st.markdown("---")
-                st.subheader("Portfolio Statistics")
+                # Display row
+                row_cols = st.columns([1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 0.5])
+                row_cols[0].markdown(f"**{symbol}**")
+                row_cols[1].markdown(f"{shares:,.4f}")
+                row_cols[2].markdown(f"${cost_basis:,.2f}")
+                row_cols[3].markdown(f"${current_price:,.2f}")
+                row_cols[4].markdown(f"${position_value:,.2f}")
 
-                col1, col2, col3 = st.columns(3)
+                pnl_color = "#00a86b" if position_pnl >= 0 else "#f44336"
+                row_cols[5].markdown(f"<span style='color:{pnl_color}'>${position_pnl:+,.2f} ({pnl_pct:+.1f}%)</span>", unsafe_allow_html=True)
 
-                with col1:
-                    avg_corr = corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean()
-                    st.metric("Average Correlation", f"{avg_corr:.2f}")
-                    if avg_corr > 0.7:
-                        st.warning("High correlation - limited diversification")
-                    elif avg_corr < 0.3:
-                        st.success("Low correlation - good diversification")
+                if row_cols[6].button("🗑️", key=f"del_{i}"):
+                    holdings_to_remove.append(i)
 
-                with col2:
-                    # Find highest correlation pair
-                    mask = np.triu(np.ones_like(corr_matrix, dtype=bool), k=1)
-                    max_corr_idx = np.unravel_index(np.argmax(corr_matrix.where(mask).values), corr_matrix.shape)
-                    max_corr = corr_matrix.iloc[max_corr_idx]
-                    pair_names = f"{corr_matrix.index[max_corr_idx[0]]} & {corr_matrix.columns[max_corr_idx[1]]}"
-                    st.metric("Highest Correlation", f"{max_corr:.2f}")
-                    st.caption(pair_names)
+            # Remove holdings marked for deletion
+            for idx in sorted(holdings_to_remove, reverse=True):
+                st.session_state.portfolio_holdings.pop(idx)
+            if holdings_to_remove:
+                st.rerun()
 
-                with col3:
-                    # Find lowest correlation pair
-                    min_corr_idx = np.unravel_index(np.argmin(corr_matrix.where(mask).values), corr_matrix.shape)
-                    min_corr = corr_matrix.iloc[min_corr_idx]
-                    pair_names = f"{corr_matrix.index[min_corr_idx[0]]} & {corr_matrix.columns[min_corr_idx[1]]}"
-                    st.metric("Lowest Correlation", f"{min_corr:.2f}")
-                    st.caption(pair_names)
+            # Portfolio totals
+            st.markdown("---")
+            tot_cols = st.columns(4)
+            tot_cols[0].metric("Total Value", f"${total_value:,.2f}")
+            tot_cols[1].metric("Total Cost", f"${total_cost:,.2f}")
+            pnl_pct_total = ((total_value - total_cost) / total_cost * 100) if total_cost > 0 else 0
+            tot_cols[2].metric("Total P&L", f"${total_pnl:+,.2f}", f"{pnl_pct_total:+.1f}%")
+            tot_cols[3].metric("Positions", len(st.session_state.portfolio_holdings))
 
-                # Price performance chart
-                st.markdown("---")
-                st.subheader("Normalized Price Performance")
-
-                normalized_df = portfolio_df.div(portfolio_df.iloc[0]) * 100
-
-                fig = go.Figure()
-                colors = px.colors.qualitative.Set2
-                for i, col in enumerate(normalized_df.columns):
-                    fig.add_trace(go.Scatter(
-                        x=normalized_df.index,
-                        y=normalized_df[col],
-                        mode='lines',
-                        name=col,
-                        line=dict(color=colors[i % len(colors)], width=2)
-                    ))
-
-                fig.update_layout(
-                    title="Portfolio Performance (Indexed to 100)",
-                    yaxis_title="Value (Base = 100)",
-                    **get_clean_plotly_layout(),
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("Need at least 5 data points for correlation analysis. Run collectors to gather more data.")
         else:
-            st.warning("Need price data for at least 2 assets. Run collectors first.")
-    else:
-        st.info("Select at least 2 assets to analyze portfolio correlations.")
+            st.info("No holdings yet. Add positions above to track your portfolio.")
+
+    # ========== TAB 2: WATCHLIST ==========
+    with port_tab2:
+        st.subheader("Watchlist")
+        st.markdown("*Monitor symbols without owning them*")
+
+        # Initialize watchlist
+        if 'watchlist' not in st.session_state:
+            st.session_state.watchlist = ['AAPL', 'MSFT', 'GOOGL', 'BTC', 'ETH']
+
+        # Add to watchlist
+        watch_col1, watch_col2 = st.columns([3, 1])
+        with watch_col1:
+            all_stocks = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+            all_crypto = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
+            stock_symbols = all_stocks['symbol'].tolist() if not all_stocks.empty else []
+            crypto_symbols = all_crypto['symbol'].tolist() if not all_crypto.empty else []
+            available_symbols = [s for s in stock_symbols + crypto_symbols if s not in st.session_state.watchlist]
+            new_watch = st.selectbox("Add to Watchlist", available_symbols, key="watchlist_add")
+        with watch_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("➕ Add", key="add_watch_btn"):
+                if new_watch and new_watch not in st.session_state.watchlist:
+                    st.session_state.watchlist.append(new_watch)
+                    st.rerun()
+
+        st.markdown("---")
+
+        # Display watchlist with prices
+        if st.session_state.watchlist:
+            watch_to_remove = []
+
+            for symbol in st.session_state.watchlist:
+                # Get price and change
+                price_df = load_realtime_data(f"""
+                    SELECT symbol, price, change_percent FROM stocks WHERE symbol = '{symbol}'
+                    UNION ALL
+                    SELECT symbol, price, change_percent_24h as change_percent FROM crypto WHERE symbol = '{symbol}'
+                    ORDER BY price DESC LIMIT 1
+                """)
+
+                if not price_df.empty:
+                    price = float(price_df['price'].iloc[0])
+                    change = float(price_df['change_percent'].iloc[0] or 0)
+                    change_color = "#00a86b" if change >= 0 else "#f44336"
+
+                    w_cols = st.columns([2, 2, 2, 1])
+                    w_cols[0].markdown(f"**{symbol}**")
+                    w_cols[1].markdown(f"${price:,.2f}")
+                    w_cols[2].markdown(f"<span style='color:{change_color}'>{change:+.2f}%</span>", unsafe_allow_html=True)
+                    if w_cols[3].button("❌", key=f"remove_watch_{symbol}"):
+                        watch_to_remove.append(symbol)
+                else:
+                    w_cols = st.columns([2, 2, 2, 1])
+                    w_cols[0].markdown(f"**{symbol}**")
+                    w_cols[1].markdown("N/A")
+                    w_cols[2].markdown("-")
+                    if w_cols[3].button("❌", key=f"remove_watch_{symbol}"):
+                        watch_to_remove.append(symbol)
+
+            for sym in watch_to_remove:
+                st.session_state.watchlist.remove(sym)
+            if watch_to_remove:
+                st.rerun()
+        else:
+            st.info("Watchlist is empty. Add symbols above.")
+
+    # ========== TAB 3: CORRELATION ANALYSIS ==========
+    with port_tab3:
+        st.subheader("Portfolio Correlation Analysis")
+        st.markdown("*Select assets to analyze correlations*")
+
+        col1, col2, col3 = st.columns(3)
+
+        # Get available assets
+        stocks_list = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+        crypto_list = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
+        commodities_list = load_data("SELECT DISTINCT symbol FROM commodities ORDER BY symbol")
+
+        with col1:
+            st.markdown("##### Stocks")
+            stock_symbols = stocks_list['symbol'].tolist() if not stocks_list.empty else []
+            stock_defaults = [s for s in ['AAPL', 'MSFT'] if s in stock_symbols]
+            selected_stocks = st.multiselect(
+                "Select stocks",
+                stock_symbols,
+                default=stock_defaults if stock_defaults else stock_symbols[:2] if len(stock_symbols) >= 2 else stock_symbols,
+                key="corr_stocks"
+            )
+
+        with col2:
+            st.markdown("##### Crypto")
+            crypto_symbols = crypto_list['symbol'].tolist() if not crypto_list.empty else []
+            crypto_defaults = [s for s in ['BTC', 'ETH'] if s in crypto_symbols]
+            selected_crypto = st.multiselect(
+                "Select crypto",
+                crypto_symbols,
+                default=crypto_defaults if crypto_defaults else crypto_symbols[:2] if len(crypto_symbols) >= 2 else crypto_symbols,
+                key="corr_crypto"
+            )
+
+        with col3:
+            st.markdown("##### Commodities")
+            selected_commodities = st.multiselect(
+                "Select commodities",
+                commodities_list['symbol'].tolist() if not commodities_list.empty else [],
+                default=[],
+                key="corr_commodities"
+            )
+
+        all_selected = selected_stocks + selected_crypto + selected_commodities
+
+        if len(all_selected) >= 2:
+            st.markdown("---")
+            st.subheader("Portfolio Correlation Matrix")
+
+            # Build portfolio data
+            portfolio_data = {}
+
+            # Load stock prices
+            if selected_stocks:
+                stocks_df = load_data(f"""
+                    SELECT symbol, price, timestamp FROM stocks
+                    WHERE symbol IN ({','.join([f"'{s}'" for s in selected_stocks])})
+                    ORDER BY timestamp
+                """)
+                if not stocks_df.empty:
+                    stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp']).dt.date
+                    for symbol in selected_stocks:
+                        sym_data = stocks_df[stocks_df['symbol'] == symbol]
+                        if not sym_data.empty:
+                            portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+            # Load crypto prices
+            if selected_crypto:
+                crypto_df = load_data(f"""
+                    SELECT symbol, price, timestamp FROM crypto
+                    WHERE symbol IN ({','.join([f"'{s}'" for s in selected_crypto])})
+                    ORDER BY timestamp
+                """)
+                if not crypto_df.empty:
+                    crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp']).dt.date
+                    for symbol in selected_crypto:
+                        sym_data = crypto_df[crypto_df['symbol'] == symbol]
+                        if not sym_data.empty:
+                            portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+            # Load commodity prices
+            if selected_commodities:
+                commodities_df = load_data(f"""
+                    SELECT symbol, price, timestamp FROM commodities
+                    WHERE symbol IN ({','.join([f"'{s}'" for s in selected_commodities])})
+                    ORDER BY timestamp
+                """)
+                if not commodities_df.empty:
+                    commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp']).dt.date
+                    for symbol in selected_commodities:
+                        sym_data = commodities_df[commodities_df['symbol'] == symbol]
+                        if not sym_data.empty:
+                            portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+            if len(portfolio_data) >= 2:
+                # Calculate correlations
+                portfolio_df = pd.DataFrame(portfolio_data)
+                returns_df = portfolio_df.pct_change().dropna()
+
+                if len(returns_df) >= 5:
+                    corr_matrix = returns_df.corr()
+
+                    # Correlation heatmap
+                    fig = px.imshow(
+                        corr_matrix,
+                        text_auto='.2f',
+                        color_continuous_scale='RdYlGn',
+                        zmin=-1, zmax=1,
+                        title="Portfolio Correlation Matrix (Daily Returns)"
+                    )
+                    fig.update_layout(**get_clean_plotly_layout(), height=500)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Portfolio statistics
+                    st.markdown("---")
+                    st.subheader("Portfolio Statistics")
+
+                    stat_col1, stat_col2, stat_col3 = st.columns(3)
+
+                    with stat_col1:
+                        avg_corr = corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean()
+                        st.metric("Average Correlation", f"{avg_corr:.2f}")
+                        if avg_corr > 0.7:
+                            st.warning("High correlation - limited diversification")
+                        elif avg_corr < 0.3:
+                            st.success("Low correlation - good diversification")
+
+                    with stat_col2:
+                        # Find highest correlation pair
+                        mask = np.triu(np.ones_like(corr_matrix, dtype=bool), k=1)
+                        max_corr_idx = np.unravel_index(np.argmax(corr_matrix.where(mask).values), corr_matrix.shape)
+                        max_corr = corr_matrix.iloc[max_corr_idx]
+                        pair_names = f"{corr_matrix.index[max_corr_idx[0]]} & {corr_matrix.columns[max_corr_idx[1]]}"
+                        st.metric("Highest Correlation", f"{max_corr:.2f}")
+                        st.caption(pair_names)
+
+                    with stat_col3:
+                        # Find lowest correlation pair
+                        min_corr_idx = np.unravel_index(np.argmin(corr_matrix.where(mask).values), corr_matrix.shape)
+                        min_corr = corr_matrix.iloc[min_corr_idx]
+                        pair_names = f"{corr_matrix.index[min_corr_idx[0]]} & {corr_matrix.columns[min_corr_idx[1]]}"
+                        st.metric("Lowest Correlation", f"{min_corr:.2f}")
+                        st.caption(pair_names)
+
+                    # Price performance chart
+                    st.markdown("---")
+                    st.subheader("Normalized Price Performance")
+
+                    normalized_df = portfolio_df.div(portfolio_df.iloc[0]) * 100
+
+                    fig = go.Figure()
+                    colors = px.colors.qualitative.Set2
+                    for i, col in enumerate(normalized_df.columns):
+                        fig.add_trace(go.Scatter(
+                            x=normalized_df.index,
+                            y=normalized_df[col],
+                            mode='lines',
+                            name=col,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    fig.update_layout(
+                        title="Portfolio Performance (Indexed to 100)",
+                        yaxis_title="Value (Base = 100)",
+                        **get_clean_plotly_layout(),
+                        height=400
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("Need at least 5 data points for correlation analysis. Run collectors to gather more data.")
+            else:
+                st.warning("Need price data for at least 2 assets. Run collectors first.")
+        else:
+            st.info("Select at least 2 assets to analyze portfolio correlations.")
 
 
 # ============================================================================
