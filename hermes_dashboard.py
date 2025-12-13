@@ -1,6 +1,7 @@
 """
-Hermes Intelligence Platform Dashboard v4.4
-World Bank global development data, 20+ economic indicators for G20 countries
+Hermes Intelligence Platform Dashboard v4.5
+World Bank global development data: 36+ indicators across Economy, Health, Education,
+Demographics, Trade, Labor, Social, Energy, and Environment for G20 countries.
 """
 
 import streamlit as st
@@ -986,195 +987,200 @@ elif page == "Global Development":
         else:
             # Get latest year for each indicator/country
             wb_df['year'] = pd.to_numeric(wb_df['year'], errors='coerce')
-            latest_wb = wb_df.loc[wb_df.groupby(['indicator_code', 'country_code'])['year'].idxmax()]
+            # Filter out rows with NaN years before grouping
+            wb_df_valid = wb_df[wb_df['year'].notna()].copy()
+            if wb_df_valid.empty:
+                st.warning("No valid World Bank data with year information.")
+            else:
+                latest_wb = wb_df_valid.loc[wb_df_valid.groupby(['indicator_code', 'country_code'])['year'].idxmax()]
 
-            # Summary metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Countries", latest_wb['country_code'].nunique())
-            with col2:
-                st.metric("Indicators", latest_wb['indicator_code'].nunique())
-            with col3:
-                st.metric("Categories", latest_wb['category'].nunique())
-            with col4:
-                latest_year = int(latest_wb['year'].max()) if not pd.isna(latest_wb['year'].max()) else 'N/A'
-                st.metric("Latest Year", latest_year)
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Countries", latest_wb['country_code'].nunique())
+                with col2:
+                    st.metric("Indicators", latest_wb['indicator_code'].nunique())
+                with col3:
+                    st.metric("Categories", latest_wb['category'].nunique())
+                with col4:
+                    latest_year = int(latest_wb['year'].max()) if not pd.isna(latest_wb['year'].max()) else 'N/A'
+                    st.metric("Latest Year", latest_year)
 
-            st.markdown("---")
+                st.markdown("---")
 
-            # View tabs
-            tab1, tab2, tab3, tab4 = st.tabs(["By Country", "By Indicator", "Comparison", "Rankings"])
+                # View tabs
+                tab1, tab2, tab3, tab4 = st.tabs(["By Country", "By Indicator", "Comparison", "Rankings"])
 
-            with tab1:
-                st.subheader("Country Profile")
-                countries = sorted(latest_wb['country_name'].dropna().unique().tolist())
-                selected_country = st.selectbox("Select Country", countries, key="wb_country")
+                with tab1:
+                    st.subheader("Country Profile")
+                    countries = sorted(latest_wb['country_name'].dropna().unique().tolist())
+                    selected_country = st.selectbox("Select Country", countries, key="wb_country")
 
-                if selected_country:
-                    country_data = latest_wb[latest_wb['country_name'] == selected_country]
+                    if selected_country:
+                        country_data = latest_wb[latest_wb['country_name'] == selected_country]
 
-                    # Group by category
-                    categories = country_data['category'].unique().tolist()
+                        # Group by category
+                        categories = country_data['category'].unique().tolist()
 
-                    for category in categories:
-                        st.markdown(f"##### {category}")
-                        cat_data = country_data[country_data['category'] == category]
+                        for category in categories:
+                            st.markdown(f"##### {category}")
+                            cat_data = country_data[country_data['category'] == category]
 
-                        cols = st.columns(min(4, len(cat_data)))
-                        for idx, (_, row) in enumerate(cat_data.iterrows()):
-                            with cols[idx % len(cols)]:
-                                value = row['value']
-                                if pd.notna(value):
-                                    # Format based on magnitude
-                                    if abs(value) >= 1e12:
-                                        display_val = f"${value/1e12:.1f}T"
-                                    elif abs(value) >= 1e9:
-                                        display_val = f"${value/1e9:.1f}B"
-                                    elif abs(value) >= 1e6:
-                                        display_val = f"{value/1e6:.1f}M"
-                                    elif abs(value) < 100:
-                                        display_val = f"{value:.2f}"
+                            cols = st.columns(min(4, len(cat_data)))
+                            for idx, (_, row) in enumerate(cat_data.iterrows()):
+                                with cols[idx % len(cols)]:
+                                    value = row['value']
+                                    if pd.notna(value):
+                                        # Format based on magnitude
+                                        if abs(value) >= 1e12:
+                                            display_val = f"${value/1e12:.1f}T"
+                                        elif abs(value) >= 1e9:
+                                            display_val = f"${value/1e9:.1f}B"
+                                        elif abs(value) >= 1e6:
+                                            display_val = f"{value/1e6:.1f}M"
+                                        elif abs(value) < 100:
+                                            display_val = f"{value:.2f}"
+                                        else:
+                                            display_val = f"{value:,.0f}"
                                     else:
-                                        display_val = f"{value:,.0f}"
-                                else:
-                                    display_val = "N/A"
+                                        display_val = "N/A"
 
-                                st.metric(
-                                    label=row['indicator_name'][:30],
-                                    value=display_val,
-                                    help=f"Year: {int(row['year']) if pd.notna(row['year']) else 'N/A'}"
-                                )
+                                    st.metric(
+                                        label=row['indicator_name'][:30],
+                                        value=display_val,
+                                        help=f"Year: {int(row['year']) if pd.notna(row['year']) else 'N/A'}"
+                                    )
 
-            with tab2:
-                st.subheader("Indicator Analysis")
-                indicators = sorted(latest_wb['indicator_name'].dropna().unique().tolist())
-                selected_indicator = st.selectbox("Select Indicator", indicators, key="wb_indicator")
+                with tab2:
+                    st.subheader("Indicator Analysis")
+                    indicators = sorted(latest_wb['indicator_name'].dropna().unique().tolist())
+                    selected_indicator = st.selectbox("Select Indicator", indicators, key="wb_indicator")
 
-                if selected_indicator:
-                    ind_data = latest_wb[latest_wb['indicator_name'] == selected_indicator].copy()
-                    ind_data = ind_data.sort_values('value', ascending=False)
+                    if selected_indicator:
+                        ind_data = latest_wb[latest_wb['indicator_name'] == selected_indicator].copy()
+                        ind_data = ind_data.sort_values('value', ascending=False)
 
-                    # Bar chart of all countries
-                    fig = px.bar(
-                        ind_data,
-                        x='country_name',
-                        y='value',
-                        title=f"{selected_indicator} by Country",
-                        color='value',
-                        color_continuous_scale='Viridis'
-                    )
-                    fig.update_layout(**get_clean_plotly_layout(), height=500)
-                    fig.update_xaxes(tickangle=45)
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    # Data table
-                    st.dataframe(
-                        ind_data[['country_name', 'value', 'year']].rename(
-                            columns={'country_name': 'Country', 'value': 'Value', 'year': 'Year'}
-                        ),
-                        use_container_width=True,
-                        hide_index=True
-                    )
-
-            with tab3:
-                st.subheader("Multi-Country Comparison")
-
-                # Select multiple countries
-                compare_countries = st.multiselect(
-                    "Select Countries to Compare",
-                    countries,
-                    default=countries[:5] if len(countries) >= 5 else countries,
-                    key="wb_compare"
-                )
-
-                if len(compare_countries) >= 2:
-                    # Select indicators to compare
-                    compare_indicators = st.multiselect(
-                        "Select Indicators",
-                        indicators,
-                        default=indicators[:3] if len(indicators) >= 3 else indicators,
-                        key="wb_indicators_compare"
-                    )
-
-                    if compare_indicators:
-                        compare_data = latest_wb[
-                            (latest_wb['country_name'].isin(compare_countries)) &
-                            (latest_wb['indicator_name'].isin(compare_indicators))
-                        ]
-
-                        # Pivot for heatmap
-                        pivot_df = compare_data.pivot_table(
-                            index='country_name',
-                            columns='indicator_name',
-                            values='value',
-                            aggfunc='first'
-                        )
-
-                        if not pivot_df.empty:
-                            # Normalize for comparison
-                            normalized = pivot_df.apply(lambda x: (x - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5)
-
-                            fig = px.imshow(
-                                normalized,
-                                labels=dict(x="Indicator", y="Country", color="Normalized Value"),
-                                color_continuous_scale='RdYlGn',
-                                title="Normalized Comparison (0=Lowest, 1=Highest)"
-                            )
-                            fig.update_layout(**get_clean_plotly_layout(), height=400)
-                            st.plotly_chart(fig, use_container_width=True)
-
-                            # Raw values table
-                            st.markdown("**Raw Values:**")
-                            st.dataframe(pivot_df.round(2), use_container_width=True)
-                else:
-                    st.info("Select at least 2 countries to compare")
-
-            with tab4:
-                st.subheader("Global Rankings")
-
-                rank_indicator = st.selectbox(
-                    "Select Indicator for Ranking",
-                    indicators,
-                    key="wb_ranking"
-                )
-
-                if rank_indicator:
-                    rank_data = latest_wb[latest_wb['indicator_name'] == rank_indicator].copy()
-                    rank_data = rank_data.sort_values('value', ascending=False).reset_index(drop=True)
-                    rank_data['Rank'] = range(1, len(rank_data) + 1)
-
-                    col1, col2 = st.columns([2, 1])
-
-                    with col1:
-                        # Top 10 bar chart
-                        top_10 = rank_data.head(10)
+                        # Bar chart of all countries
                         fig = px.bar(
-                            top_10,
-                            x='value',
-                            y='country_name',
-                            orientation='h',
-                            title=f"Top 10 - {rank_indicator}",
+                            ind_data,
+                            x='country_name',
+                            y='value',
+                            title=f"{selected_indicator} by Country",
                             color='value',
-                            color_continuous_scale='Greens'
+                            color_continuous_scale='Viridis'
                         )
-                        fig.update_layout(**get_clean_plotly_layout(), height=400)
-                        fig.update_yaxes(autorange='reversed')
+                        fig.update_layout(**get_clean_plotly_layout(), height=500)
+                        fig.update_xaxes(tickangle=45)
                         st.plotly_chart(fig, use_container_width=True)
 
-                    with col2:
-                        st.markdown("**Full Rankings:**")
+                        # Data table
                         st.dataframe(
-                            rank_data[['Rank', 'country_name', 'value', 'year']].rename(
+                            ind_data[['country_name', 'value', 'year']].rename(
                                 columns={'country_name': 'Country', 'value': 'Value', 'year': 'Year'}
                             ),
                             use_container_width=True,
-                            hide_index=True,
-                            height=400
+                            hide_index=True
                         )
 
-            # Export
-            st.markdown("---")
-            export_csv(latest_wb, "worldbank_indicators")
+                with tab3:
+                    st.subheader("Multi-Country Comparison")
+
+                    # Select multiple countries
+                    compare_countries = st.multiselect(
+                        "Select Countries to Compare",
+                        countries,
+                        default=countries[:5] if len(countries) >= 5 else countries,
+                        key="wb_compare"
+                    )
+
+                    if len(compare_countries) >= 2:
+                        # Select indicators to compare
+                        compare_indicators = st.multiselect(
+                            "Select Indicators",
+                            indicators,
+                            default=indicators[:3] if len(indicators) >= 3 else indicators,
+                            key="wb_indicators_compare"
+                        )
+
+                        if compare_indicators:
+                            compare_data = latest_wb[
+                                (latest_wb['country_name'].isin(compare_countries)) &
+                                (latest_wb['indicator_name'].isin(compare_indicators))
+                            ]
+
+                            # Pivot for heatmap
+                            pivot_df = compare_data.pivot_table(
+                                index='country_name',
+                                columns='indicator_name',
+                                values='value',
+                                aggfunc='first'
+                            )
+
+                            if not pivot_df.empty:
+                                # Normalize for comparison
+                                normalized = pivot_df.apply(lambda x: (x - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5)
+
+                                fig = px.imshow(
+                                    normalized,
+                                    labels=dict(x="Indicator", y="Country", color="Normalized Value"),
+                                    color_continuous_scale='RdYlGn',
+                                    title="Normalized Comparison (0=Lowest, 1=Highest)"
+                                )
+                                fig.update_layout(**get_clean_plotly_layout(), height=400)
+                                st.plotly_chart(fig, use_container_width=True)
+
+                                # Raw values table
+                                st.markdown("**Raw Values:**")
+                                st.dataframe(pivot_df.round(2), use_container_width=True)
+                    else:
+                        st.info("Select at least 2 countries to compare")
+
+                with tab4:
+                    st.subheader("Global Rankings")
+
+                    rank_indicator = st.selectbox(
+                        "Select Indicator for Ranking",
+                        indicators,
+                        key="wb_ranking"
+                    )
+
+                    if rank_indicator:
+                        rank_data = latest_wb[latest_wb['indicator_name'] == rank_indicator].copy()
+                        rank_data = rank_data.sort_values('value', ascending=False).reset_index(drop=True)
+                        rank_data['Rank'] = range(1, len(rank_data) + 1)
+
+                        col1, col2 = st.columns([2, 1])
+
+                        with col1:
+                            # Top 10 bar chart
+                            top_10 = rank_data.head(10)
+                            fig = px.bar(
+                                top_10,
+                                x='value',
+                                y='country_name',
+                                orientation='h',
+                                title=f"Top 10 - {rank_indicator}",
+                                color='value',
+                                color_continuous_scale='Greens'
+                            )
+                            fig.update_layout(**get_clean_plotly_layout(), height=400)
+                            fig.update_yaxes(autorange='reversed')
+                            st.plotly_chart(fig, use_container_width=True)
+
+                        with col2:
+                            st.markdown("**Full Rankings:**")
+                            st.dataframe(
+                                rank_data[['Rank', 'country_name', 'value', 'year']].rename(
+                                    columns={'country_name': 'Country', 'value': 'Value', 'year': 'Year'}
+                                ),
+                                use_container_width=True,
+                                hide_index=True,
+                                height=400
+                            )
+
+                # Export
+                st.markdown("---")
+                export_csv(latest_wb, "worldbank_indicators")
 
 
 # ============================================================================
@@ -1835,7 +1841,7 @@ elif page == "Time Series":
                 # Statistics
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Current", f"${symbol_data['price'].iloc[0]:.2f}")
+                    st.metric("Current", f"${symbol_data['price'].iloc[-1]:.2f}")
                 with col2:
                     st.metric("High", f"${symbol_data['price'].max():.2f}")
                 with col3:
@@ -1971,18 +1977,22 @@ elif page == "Portfolio":
 
     with col1:
         st.markdown("##### Stocks")
+        stock_symbols = stocks_list['symbol'].tolist() if not stocks_list.empty else []
+        stock_defaults = [s for s in ['AAPL', 'MSFT'] if s in stock_symbols]
         selected_stocks = st.multiselect(
             "Select stocks",
-            stocks_list['symbol'].tolist() if not stocks_list.empty else [],
-            default=['AAPL', 'MSFT'] if not stocks_list.empty else []
+            stock_symbols,
+            default=stock_defaults if stock_defaults else stock_symbols[:2] if len(stock_symbols) >= 2 else stock_symbols
         )
 
     with col2:
         st.markdown("##### Crypto")
+        crypto_symbols = crypto_list['symbol'].tolist() if not crypto_list.empty else []
+        crypto_defaults = [s for s in ['BTC', 'ETH'] if s in crypto_symbols]
         selected_crypto = st.multiselect(
             "Select crypto",
-            crypto_list['symbol'].tolist() if not crypto_list.empty else [],
-            default=['BTC', 'ETH'] if not crypto_list.empty else []
+            crypto_symbols,
+            default=crypto_defaults if crypto_defaults else crypto_symbols[:2] if len(crypto_symbols) >= 2 else crypto_symbols
         )
 
     with col3:
