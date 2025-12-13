@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.14
+Hermes Intelligence Platform Dashboard v6.15
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -133,7 +133,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling - Modern Dashboard Design v6.14
+# Custom CSS for styling - Modern Dashboard Design v6.15
 CUSTOM_CSS = """
 <style>
     /* ========================================
@@ -676,6 +676,108 @@ COMMODITY_ICONS = {
     'default': '\U0001F4E6',
 }
 
+# Country flags - for international data display
+COUNTRY_FLAGS = {
+    # North America
+    'usa': '\U0001F1FA\U0001F1F8', 'us': '\U0001F1FA\U0001F1F8', 'united states': '\U0001F1FA\U0001F1F8', 'america': '\U0001F1FA\U0001F1F8',
+    'canada': '\U0001F1E8\U0001F1E6', 'ca': '\U0001F1E8\U0001F1E6', 'can': '\U0001F1E8\U0001F1E6',
+    'mexico': '\U0001F1F2\U0001F1FD', 'mx': '\U0001F1F2\U0001F1FD', 'mex': '\U0001F1F2\U0001F1FD',
+    # Europe
+    'uk': '\U0001F1EC\U0001F1E7', 'gb': '\U0001F1EC\U0001F1E7', 'united kingdom': '\U0001F1EC\U0001F1E7', 'britain': '\U0001F1EC\U0001F1E7', 'great britain': '\U0001F1EC\U0001F1E7',
+    'germany': '\U0001F1E9\U0001F1EA', 'de': '\U0001F1E9\U0001F1EA', 'deu': '\U0001F1E9\U0001F1EA',
+    'france': '\U0001F1EB\U0001F1F7', 'fr': '\U0001F1EB\U0001F1F7', 'fra': '\U0001F1EB\U0001F1F7',
+    'italy': '\U0001F1EE\U0001F1F9', 'it': '\U0001F1EE\U0001F1F9', 'ita': '\U0001F1EE\U0001F1F9',
+    'spain': '\U0001F1EA\U0001F1F8', 'es': '\U0001F1EA\U0001F1F8', 'esp': '\U0001F1EA\U0001F1F8',
+    'netherlands': '\U0001F1F3\U0001F1F1', 'nl': '\U0001F1F3\U0001F1F1', 'nld': '\U0001F1F3\U0001F1F1', 'holland': '\U0001F1F3\U0001F1F1',
+    'belgium': '\U0001F1E7\U0001F1EA', 'be': '\U0001F1E7\U0001F1EA', 'bel': '\U0001F1E7\U0001F1EA',
+    'switzerland': '\U0001F1E8\U0001F1ED', 'ch': '\U0001F1E8\U0001F1ED', 'che': '\U0001F1E8\U0001F1ED', 'swiss': '\U0001F1E8\U0001F1ED',
+    'austria': '\U0001F1E6\U0001F1F9', 'at': '\U0001F1E6\U0001F1F9', 'aut': '\U0001F1E6\U0001F1F9',
+    'sweden': '\U0001F1F8\U0001F1EA', 'se': '\U0001F1F8\U0001F1EA', 'swe': '\U0001F1F8\U0001F1EA',
+    'norway': '\U0001F1F3\U0001F1F4', 'no': '\U0001F1F3\U0001F1F4', 'nor': '\U0001F1F3\U0001F1F4',
+    'denmark': '\U0001F1E9\U0001F1F0', 'dk': '\U0001F1E9\U0001F1F0', 'dnk': '\U0001F1E9\U0001F1F0',
+    'finland': '\U0001F1EB\U0001F1EE', 'fi': '\U0001F1EB\U0001F1EE', 'fin': '\U0001F1EB\U0001F1EE',
+    'ireland': '\U0001F1EE\U0001F1EA', 'ie': '\U0001F1EE\U0001F1EA', 'irl': '\U0001F1EE\U0001F1EA',
+    'portugal': '\U0001F1F5\U0001F1F9', 'pt': '\U0001F1F5\U0001F1F9', 'prt': '\U0001F1F5\U0001F1F9',
+    'greece': '\U0001F1EC\U0001F1F7', 'gr': '\U0001F1EC\U0001F1F7', 'grc': '\U0001F1EC\U0001F1F7',
+    'poland': '\U0001F1F5\U0001F1F1', 'pl': '\U0001F1F5\U0001F1F1', 'pol': '\U0001F1F5\U0001F1F1',
+    'czech': '\U0001F1E8\U0001F1FF', 'cz': '\U0001F1E8\U0001F1FF', 'czechia': '\U0001F1E8\U0001F1FF', 'czech republic': '\U0001F1E8\U0001F1FF',
+    'hungary': '\U0001F1ED\U0001F1FA', 'hu': '\U0001F1ED\U0001F1FA', 'hun': '\U0001F1ED\U0001F1FA',
+    'romania': '\U0001F1F7\U0001F1F4', 'ro': '\U0001F1F7\U0001F1F4', 'rou': '\U0001F1F7\U0001F1F4',
+    'russia': '\U0001F1F7\U0001F1FA', 'ru': '\U0001F1F7\U0001F1FA', 'rus': '\U0001F1F7\U0001F1FA',
+    'ukraine': '\U0001F1FA\U0001F1E6', 'ua': '\U0001F1FA\U0001F1E6', 'ukr': '\U0001F1FA\U0001F1E6',
+    'turkey': '\U0001F1F9\U0001F1F7', 'tr': '\U0001F1F9\U0001F1F7', 'tur': '\U0001F1F9\U0001F1F7', 'turkiye': '\U0001F1F9\U0001F1F7',
+    # European Union
+    'eu': '\U0001F1EA\U0001F1FA', 'european union': '\U0001F1EA\U0001F1FA', 'europe': '\U0001F1EA\U0001F1FA', 'eurozone': '\U0001F1EA\U0001F1FA',
+    # Asia Pacific
+    'japan': '\U0001F1EF\U0001F1F5', 'jp': '\U0001F1EF\U0001F1F5', 'jpn': '\U0001F1EF\U0001F1F5',
+    'china': '\U0001F1E8\U0001F1F3', 'cn': '\U0001F1E8\U0001F1F3', 'chn': '\U0001F1E8\U0001F1F3', 'prc': '\U0001F1E8\U0001F1F3',
+    'south korea': '\U0001F1F0\U0001F1F7', 'korea': '\U0001F1F0\U0001F1F7', 'kr': '\U0001F1F0\U0001F1F7', 'kor': '\U0001F1F0\U0001F1F7',
+    'india': '\U0001F1EE\U0001F1F3', 'in': '\U0001F1EE\U0001F1F3', 'ind': '\U0001F1EE\U0001F1F3',
+    'australia': '\U0001F1E6\U0001F1FA', 'au': '\U0001F1E6\U0001F1FA', 'aus': '\U0001F1E6\U0001F1FA',
+    'new zealand': '\U0001F1F3\U0001F1FF', 'nz': '\U0001F1F3\U0001F1FF', 'nzl': '\U0001F1F3\U0001F1FF',
+    'singapore': '\U0001F1F8\U0001F1EC', 'sg': '\U0001F1F8\U0001F1EC', 'sgp': '\U0001F1F8\U0001F1EC',
+    'hong kong': '\U0001F1ED\U0001F1F0', 'hk': '\U0001F1ED\U0001F1F0', 'hkg': '\U0001F1ED\U0001F1F0',
+    'taiwan': '\U0001F1F9\U0001F1FC', 'tw': '\U0001F1F9\U0001F1FC', 'twn': '\U0001F1F9\U0001F1FC',
+    'indonesia': '\U0001F1EE\U0001F1E9', 'id': '\U0001F1EE\U0001F1E9', 'idn': '\U0001F1EE\U0001F1E9',
+    'malaysia': '\U0001F1F2\U0001F1FE', 'my': '\U0001F1F2\U0001F1FE', 'mys': '\U0001F1F2\U0001F1FE',
+    'thailand': '\U0001F1F9\U0001F1ED', 'th': '\U0001F1F9\U0001F1ED', 'tha': '\U0001F1F9\U0001F1ED',
+    'vietnam': '\U0001F1FB\U0001F1F3', 'vn': '\U0001F1FB\U0001F1F3', 'vnm': '\U0001F1FB\U0001F1F3',
+    'philippines': '\U0001F1F5\U0001F1ED', 'ph': '\U0001F1F5\U0001F1ED', 'phl': '\U0001F1F5\U0001F1ED',
+    'pakistan': '\U0001F1F5\U0001F1F0', 'pk': '\U0001F1F5\U0001F1F0', 'pak': '\U0001F1F5\U0001F1F0',
+    'bangladesh': '\U0001F1E7\U0001F1E9', 'bd': '\U0001F1E7\U0001F1E9', 'bgd': '\U0001F1E7\U0001F1E9',
+    # Middle East
+    'saudi arabia': '\U0001F1F8\U0001F1E6', 'sa': '\U0001F1F8\U0001F1E6', 'sau': '\U0001F1F8\U0001F1E6', 'saudi': '\U0001F1F8\U0001F1E6',
+    'uae': '\U0001F1E6\U0001F1EA', 'united arab emirates': '\U0001F1E6\U0001F1EA', 'emirates': '\U0001F1E6\U0001F1EA', 'dubai': '\U0001F1E6\U0001F1EA',
+    'israel': '\U0001F1EE\U0001F1F1', 'il': '\U0001F1EE\U0001F1F1', 'isr': '\U0001F1EE\U0001F1F1',
+    'iran': '\U0001F1EE\U0001F1F7', 'ir': '\U0001F1EE\U0001F1F7', 'irn': '\U0001F1EE\U0001F1F7',
+    'iraq': '\U0001F1EE\U0001F1F6', 'iq': '\U0001F1EE\U0001F1F6', 'irq': '\U0001F1EE\U0001F1F6',
+    'qatar': '\U0001F1F6\U0001F1E6', 'qa': '\U0001F1F6\U0001F1E6', 'qat': '\U0001F1F6\U0001F1E6',
+    'kuwait': '\U0001F1F0\U0001F1FC', 'kw': '\U0001F1F0\U0001F1FC', 'kwt': '\U0001F1F0\U0001F1FC',
+    # Africa
+    'south africa': '\U0001F1FF\U0001F1E6', 'za': '\U0001F1FF\U0001F1E6', 'zaf': '\U0001F1FF\U0001F1E6',
+    'nigeria': '\U0001F1F3\U0001F1EC', 'ng': '\U0001F1F3\U0001F1EC', 'nga': '\U0001F1F3\U0001F1EC',
+    'egypt': '\U0001F1EA\U0001F1EC', 'eg': '\U0001F1EA\U0001F1EC', 'egy': '\U0001F1EA\U0001F1EC',
+    'kenya': '\U0001F1F0\U0001F1EA', 'ke': '\U0001F1F0\U0001F1EA', 'ken': '\U0001F1F0\U0001F1EA',
+    'morocco': '\U0001F1F2\U0001F1E6', 'ma': '\U0001F1F2\U0001F1E6', 'mar': '\U0001F1F2\U0001F1E6',
+    'ethiopia': '\U0001F1EA\U0001F1F9', 'et': '\U0001F1EA\U0001F1F9', 'eth': '\U0001F1EA\U0001F1F9',
+    'ghana': '\U0001F1EC\U0001F1ED', 'gh': '\U0001F1EC\U0001F1ED', 'gha': '\U0001F1EC\U0001F1ED',
+    'tanzania': '\U0001F1F9\U0001F1FF', 'tz': '\U0001F1F9\U0001F1FF', 'tza': '\U0001F1F9\U0001F1FF',
+    # South America
+    'brazil': '\U0001F1E7\U0001F1F7', 'br': '\U0001F1E7\U0001F1F7', 'bra': '\U0001F1E7\U0001F1F7',
+    'argentina': '\U0001F1E6\U0001F1F7', 'ar': '\U0001F1E6\U0001F1F7', 'arg': '\U0001F1E6\U0001F1F7',
+    'chile': '\U0001F1E8\U0001F1F1', 'cl': '\U0001F1E8\U0001F1F1', 'chl': '\U0001F1E8\U0001F1F1',
+    'colombia': '\U0001F1E8\U0001F1F4', 'co': '\U0001F1E8\U0001F1F4', 'col': '\U0001F1E8\U0001F1F4',
+    'peru': '\U0001F1F5\U0001F1EA', 'pe': '\U0001F1F5\U0001F1EA', 'per': '\U0001F1F5\U0001F1EA',
+    'venezuela': '\U0001F1FB\U0001F1EA', 've': '\U0001F1FB\U0001F1EA', 'ven': '\U0001F1FB\U0001F1EA',
+    'ecuador': '\U0001F1EA\U0001F1E8', 'ec': '\U0001F1EA\U0001F1E8', 'ecu': '\U0001F1EA\U0001F1E8',
+    # Currency codes (for forex)
+    'usd': '\U0001F1FA\U0001F1F8', 'eur': '\U0001F1EA\U0001F1FA', 'gbp': '\U0001F1EC\U0001F1E7',
+    'jpy': '\U0001F1EF\U0001F1F5', 'chf': '\U0001F1E8\U0001F1ED', 'aud': '\U0001F1E6\U0001F1FA',
+    'cad': '\U0001F1E8\U0001F1E6', 'nzd': '\U0001F1F3\U0001F1FF', 'cny': '\U0001F1E8\U0001F1F3',
+    'hkd': '\U0001F1ED\U0001F1F0', 'sgd': '\U0001F1F8\U0001F1EC', 'krw': '\U0001F1F0\U0001F1F7',
+    'inr': '\U0001F1EE\U0001F1F3', 'mxn': '\U0001F1F2\U0001F1FD', 'brl': '\U0001F1E7\U0001F1F7',
+    'zar': '\U0001F1FF\U0001F1E6', 'rub': '\U0001F1F7\U0001F1FA', 'try': '\U0001F1F9\U0001F1F7',
+    'sek': '\U0001F1F8\U0001F1EA', 'nok': '\U0001F1F3\U0001F1F4', 'dkk': '\U0001F1E9\U0001F1F0',
+    'pln': '\U0001F1F5\U0001F1F1', 'thb': '\U0001F1F9\U0001F1ED', 'idr': '\U0001F1EE\U0001F1E9',
+    'myr': '\U0001F1F2\U0001F1FE', 'php': '\U0001F1F5\U0001F1ED', 'twd': '\U0001F1F9\U0001F1FC',
+    # Default
+    'default': '\U0001F30D',
+}
+
+def get_country_flag(name):
+    """Get a flag emoji for a country or currency based on its name/code."""
+    if not name:
+        return COUNTRY_FLAGS['default']
+    name_lower = name.lower().strip()
+    # Direct lookup first
+    if name_lower in COUNTRY_FLAGS:
+        return COUNTRY_FLAGS[name_lower]
+    # Partial match
+    for key, flag in COUNTRY_FLAGS.items():
+        if key in name_lower or name_lower in key:
+            return flag
+    return COUNTRY_FLAGS['default']
+
 def get_commodity_icon(name):
     """Get an icon for a commodity based on its name."""
     if not name:
@@ -685,6 +787,17 @@ def get_commodity_icon(name):
         if key in name_lower:
             return icon
     return COMMODITY_ICONS['default']
+
+def format_forex_pair(pair):
+    """Format a forex pair with flags for both currencies."""
+    if not pair or '/' not in pair:
+        return pair
+    parts = pair.split('/')
+    if len(parts) == 2:
+        base_flag = get_country_flag(parts[0])
+        quote_flag = get_country_flag(parts[1])
+        return f"{base_flag} {parts[0]}/{parts[1]} {quote_flag}"
+    return pair
 
 # Page to category mapping
 PAGE_CATEGORIES = {
@@ -1186,7 +1299,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.14 - Commodity Icons")
+st.sidebar.caption("v6.15 - Country Flags")
 
 
 # ============================================================================
@@ -2311,21 +2424,18 @@ elif page == "Markets":
                 else:
                     return '#f44336'  # Very Weak
 
-            currency_flags = {'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵',
-                            'CHF': '🇨🇭', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CNY': '🇨🇳'}
-
             str_cols = st.columns(len(sorted_strength))
             for i, (curr, score) in enumerate(sorted_strength):
                 with str_cols[i]:
                     color = get_strength_color(score)
-                    flag = currency_flags.get(curr, '')
+                    flag = get_country_flag(curr)
                     status = "Strong" if score > 1 else "Weak" if score < -1 else "Neutral"
                     st.markdown(
-                        f"""<div style="text-align:center; padding:10px; background-color:#1e1e1e; border-radius:5px; border-top:4px solid {color};">
+                        f"""<div style="text-align:center; padding:10px; background-color:#f8fafc; border-radius:8px; border-top:4px solid {color}; border:1px solid #e2e8f0;">
                         <div style="font-size:1.5em;">{flag}</div>
                         <b>{curr}</b><br>
                         <span style="color:{color}; font-size:1.2em;">{score:+.1f}</span><br>
-                        <small>{status}</small>
+                        <small style="color:#64748b;">{status}</small>
                         </div>""",
                         unsafe_allow_html=True
                     )
@@ -2340,16 +2450,17 @@ elif page == "Markets":
             with col1:
                 st.markdown("**Major Pairs**")
                 for _, row in latest_forex[latest_forex['pair'].isin(major_pairs)].iterrows():
-                    st.metric(row['pair'], f"{row['rate']:.4f}")
+                    st.metric(format_forex_pair(row['pair']), f"{row['rate']:.4f}")
 
             with col2:
                 st.markdown("**Other Pairs**")
                 for _, row in latest_forex[~latest_forex['pair'].isin(major_pairs)].iterrows():
-                    st.metric(row['pair'], f"{row['rate']:.4f}")
+                    st.metric(format_forex_pair(row['pair']), f"{row['rate']:.4f}")
 
             st.markdown("---")
             st.subheader("All Rates")
             display_forex = latest_forex[['pair', 'rate', 'bid', 'ask']].copy()
+            display_forex['pair'] = display_forex['pair'].apply(format_forex_pair)
             display_forex['rate'] = display_forex['rate'].apply(lambda x: f"{x:.4f}" if x else "N/A")
             display_forex['bid'] = display_forex['bid'].apply(lambda x: f"{x:.4f}" if x else "N/A")
             display_forex['ask'] = display_forex['ask'].apply(lambda x: f"{x:.4f}" if x else "N/A")
@@ -2853,14 +2964,23 @@ elif page == "Economic Indicators":
         econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
         countries = sorted(econ_df['country'].unique().tolist())
 
-        selected_country = st.selectbox("Select Country", countries)
+        # Create display options with flags
+        country_display = [f"{get_country_flag(c)} {c}" for c in countries]
+        selected_idx = st.selectbox(
+            "Select Country",
+            range(len(countries)),
+            format_func=lambda i: country_display[i],
+            key="econ_country_select"
+        )
+        selected_country = countries[selected_idx]
 
         if selected_country:
             country_data = econ_df[econ_df['country'] == selected_country]
             latest_country = country_data.groupby('indicator').first().reset_index()
 
             st.markdown("---")
-            st.subheader(f"{selected_country} Economic Indicators")
+            flag = get_country_flag(selected_country)
+            st.subheader(f"{flag} {selected_country} Economic Indicators")
 
             if latest_country.empty:
                 st.info("No indicators available for this country")
@@ -2888,10 +3008,15 @@ elif page == "Economic Indicators":
             latest_comparison = comparison_data.groupby('country').first().reset_index()
 
             if not latest_comparison.empty:
-                fig = px.bar(latest_comparison, x='country', y='value',
+                # Add flags to country names for display
+                latest_comparison['country_display'] = latest_comparison['country'].apply(
+                    lambda c: f"{get_country_flag(c)} {c}"
+                )
+                fig = px.bar(latest_comparison, x='country_display', y='value',
                             title=f"{selected_indicator} by Country",
                             color='value', color_continuous_scale='Blues')
                 fig.update_layout(**get_clean_plotly_layout(), height=400)
+                fig.update_xaxes(title_text="Country")
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -2953,10 +3078,20 @@ elif page == "Global Development":
                 with tab1:
                     st.subheader("Country Profile")
                     countries = sorted(latest_wb['country_name'].dropna().unique().tolist())
-                    selected_country = st.selectbox("Select Country", countries, key="wb_country")
+                    # Create display options with flags
+                    country_display = [f"{get_country_flag(c)} {c}" for c in countries]
+                    selected_idx = st.selectbox(
+                        "Select Country",
+                        range(len(countries)),
+                        format_func=lambda i: country_display[i],
+                        key="wb_country"
+                    )
+                    selected_country = countries[selected_idx]
 
                     if selected_country:
                         country_data = latest_wb[latest_wb['country_name'] == selected_country]
+                        flag = get_country_flag(selected_country)
+                        st.markdown(f"### {flag} {selected_country}")
 
                         # Group by category
                         categories = country_data['category'].unique().tolist()
@@ -3000,17 +3135,22 @@ elif page == "Global Development":
                     if selected_indicator:
                         ind_data = latest_wb[latest_wb['indicator_name'] == selected_indicator].copy()
                         ind_data = ind_data.sort_values('value', ascending=False)
+                        # Add flags to country names
+                        ind_data['country_display'] = ind_data['country_name'].apply(
+                            lambda c: f"{get_country_flag(c)} {c}"
+                        )
 
                         # Bar chart of all countries
                         fig = px.bar(
                             ind_data,
-                            x='country_name',
+                            x='country_display',
                             y='value',
                             title=f"{selected_indicator} by Country",
                             color='value',
                             color_continuous_scale='Viridis'
                         )
                         fig.update_layout(**get_clean_plotly_layout(), height=500)
+                        fig.update_xaxes(title_text="Country")
                         fig.update_xaxes(tickangle=45)
                         st.plotly_chart(fig, use_container_width=True)
 
@@ -5093,24 +5233,26 @@ elif page == "Trade & Shipping":
         )
 
         trade_df = pd.DataFrame(TOP_TRADERS[trade_type], columns=['Country', 'Value (T$)', 'Share %'])
+        # Add flags to country names for display
+        trade_df['Country Display'] = trade_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_trade = px.bar(
             trade_df,
             x='Value (T$)',
-            y='Country',
+            y='Country Display',
             orientation='h',
             title=f'{trade_type} by Country (Trillion USD)',
             color='Share %',
             color_continuous_scale='Blues'
         )
         fig_trade.update_layout(**get_clean_plotly_layout(), height=400)
-        fig_trade.update_yaxes(categoryorder='total ascending')
+        fig_trade.update_yaxes(categoryorder='total ascending', title_text='Country')
         st.plotly_chart(fig_trade, use_container_width=True)
 
         fig_pie = px.pie(
             trade_df,
             values='Value (T$)',
-            names='Country',
+            names='Country Display',
             title=f'{trade_type} - Market Share'
         )
         fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
@@ -5122,17 +5264,20 @@ elif page == "Trade & Shipping":
 
         balance_df = pd.DataFrame(TRADE_BALANCES, columns=['Country', 'Balance ($B)', 'Type'])
         balance_df['Color'] = balance_df['Type'].map({'surplus': '#2ecc71', 'deficit': '#e74c3c'})
+        # Add flags
+        balance_df['Country Display'] = balance_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_balance = px.bar(
             balance_df.sort_values('Balance ($B)'),
             x='Balance ($B)',
-            y='Country',
+            y='Country Display',
             orientation='h',
             title='Trade Balance by Country (Billion USD)',
             color='Type',
             color_discrete_map={'surplus': '#2ecc71', 'deficit': '#e74c3c'}
         )
         fig_balance.update_layout(**get_clean_plotly_layout(), height=450)
+        fig_balance.update_yaxes(title_text='Country')
         st.plotly_chart(fig_balance, use_container_width=True)
 
         col1, col2 = st.columns(2)
@@ -5140,13 +5285,15 @@ elif page == "Trade & Shipping":
             st.markdown("##### Largest Surpluses")
             surplus_df = balance_df[balance_df['Type'] == 'surplus'].sort_values('Balance ($B)', ascending=False)
             for _, row in surplus_df.iterrows():
-                st.markdown(f"- **{row['Country']}**: +${row['Balance ($B)']:,}B")
+                flag = get_country_flag(row['Country'])
+                st.markdown(f"- {flag} **{row['Country']}**: +${row['Balance ($B)']:,}B")
 
         with col2:
             st.markdown("##### Largest Deficits")
             deficit_df = balance_df[balance_df['Type'] == 'deficit'].sort_values('Balance ($B)')
             for _, row in deficit_df.iterrows():
-                st.markdown(f"- **{row['Country']}**: ${row['Balance ($B)']:,}B")
+                flag = get_country_flag(row['Country'])
+                st.markdown(f"- {flag} **{row['Country']}**: ${row['Balance ($B)']:,}B")
 
     with trade_tabs[3]:
         st.subheader("Container Shipping Rates")
@@ -5185,27 +5332,31 @@ elif page == "Trade & Shipping":
         st.markdown("*Container throughput in million TEU (Twenty-foot Equivalent Units)*")
 
         ports_df = pd.DataFrame(TOP_PORTS, columns=['Port', 'TEU (M)', 'Country'])
+        # Add flags
+        ports_df['Port Display'] = ports_df.apply(lambda r: f"{get_country_flag(r['Country'])} {r['Port']}", axis=1)
+        ports_df['Country Display'] = ports_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_ports = px.bar(
             ports_df,
             x='TEU (M)',
-            y='Port',
+            y='Port Display',
             orientation='h',
             title='Top Container Ports by Volume (Million TEU)',
-            color='Country',
+            color='Country Display',
         )
         fig_ports.update_layout(**get_clean_plotly_layout(), height=450)
-        fig_ports.update_yaxes(categoryorder='total ascending')
+        fig_ports.update_yaxes(categoryorder='total ascending', title_text='Port')
         st.plotly_chart(fig_ports, use_container_width=True)
 
         # Port distribution by country
         country_ports = ports_df.groupby('Country')['TEU (M)'].sum().reset_index()
         country_ports = country_ports.sort_values('TEU (M)', ascending=False)
+        country_ports['Country Display'] = country_ports['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_country = px.pie(
             country_ports,
             values='TEU (M)',
-            names='Country',
+            names='Country Display',
             title='Container Traffic by Country'
         )
         fig_country.update_layout(**get_clean_plotly_layout(), height=350)
@@ -5729,35 +5880,37 @@ elif page == "Debt & Fiscal":
         with col1:
             st.markdown("##### Highest Debt-to-GDP")
             high_df = pd.DataFrame(DEBT_TO_GDP['Highest'], columns=['Country', 'Debt/GDP %'])
+            high_df['Country Display'] = high_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_high = px.bar(
                 high_df,
                 x='Debt/GDP %',
-                y='Country',
+                y='Country Display',
                 orientation='h',
                 title='Highest Debt-to-GDP Ratios',
                 color='Debt/GDP %',
                 color_continuous_scale='Reds'
             )
             fig_high.update_layout(**get_clean_plotly_layout(), height=500)
-            fig_high.update_yaxes(categoryorder='total ascending')
+            fig_high.update_yaxes(categoryorder='total ascending', title_text='Country')
             st.plotly_chart(fig_high, use_container_width=True)
 
         with col2:
             st.markdown("##### Lowest Debt-to-GDP")
             low_df = pd.DataFrame(DEBT_TO_GDP['Lowest'], columns=['Country', 'Debt/GDP %'])
+            low_df['Country Display'] = low_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_low = px.bar(
                 low_df,
                 x='Debt/GDP %',
-                y='Country',
+                y='Country Display',
                 orientation='h',
                 title='Lowest Debt-to-GDP Ratios',
                 color='Debt/GDP %',
                 color_continuous_scale='Greens'
             )
             fig_low.update_layout(**get_clean_plotly_layout(), height=500)
-            fig_low.update_yaxes(categoryorder='total descending')
+            fig_low.update_yaxes(categoryorder='total descending', title_text='Country')
             st.plotly_chart(fig_low, use_container_width=True)
 
     with debt_tabs[2]:
@@ -5765,21 +5918,24 @@ elif page == "Debt & Fiscal":
         st.markdown("*Absolute debt in trillion USD*")
 
         debt_df = pd.DataFrame(NATIONAL_DEBT, columns=['Country', 'Debt (T$)', 'Debt/GDP %'])
+        debt_df['Country Display'] = debt_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_debt = px.bar(
             debt_df,
             x='Debt (T$)',
-            y='Country',
+            y='Country Display',
             orientation='h',
             title='National Debt by Country (Trillion USD)',
             color='Debt/GDP %',
             color_continuous_scale='RdYlGn_r'
         )
         fig_debt.update_layout(**get_clean_plotly_layout(), height=450)
-        fig_debt.update_yaxes(categoryorder='total ascending')
+        fig_debt.update_yaxes(categoryorder='total ascending', title_text='Country')
         st.plotly_chart(fig_debt, use_container_width=True)
 
-        st.dataframe(debt_df, use_container_width=True, hide_index=True)
+        # Display with flags
+        display_debt_df = debt_df[['Country Display', 'Debt (T$)', 'Debt/GDP %']].rename(columns={'Country Display': 'Country'})
+        st.dataframe(display_debt_df, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         st.info("**Note:** High absolute debt doesn't always mean crisis - it depends on GDP, growth rate, and interest costs. Japan has 264% debt/GDP but very low interest rates.")
@@ -5793,35 +5949,37 @@ elif page == "Debt & Fiscal":
         with col1:
             st.markdown("##### Largest Deficits")
             deficit_df = pd.DataFrame(BUDGET_BALANCE['Largest Deficits'], columns=['Country', 'Balance %'])
+            deficit_df['Country Display'] = deficit_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_deficit = px.bar(
                 deficit_df,
                 x='Balance %',
-                y='Country',
+                y='Country Display',
                 orientation='h',
                 title='Largest Budget Deficits (% of GDP)',
                 color='Balance %',
                 color_continuous_scale='Reds'
             )
             fig_deficit.update_layout(**get_clean_plotly_layout(), height=400)
-            fig_deficit.update_yaxes(categoryorder='total descending')
+            fig_deficit.update_yaxes(categoryorder='total descending', title_text='Country')
             st.plotly_chart(fig_deficit, use_container_width=True)
 
         with col2:
             st.markdown("##### Largest Surpluses")
             surplus_df = pd.DataFrame(BUDGET_BALANCE['Largest Surpluses'], columns=['Country', 'Balance %'])
+            surplus_df['Country Display'] = surplus_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_surplus = px.bar(
                 surplus_df,
                 x='Balance %',
-                y='Country',
+                y='Country Display',
                 orientation='h',
                 title='Largest Budget Surpluses (% of GDP)',
                 color='Balance %',
                 color_continuous_scale='Greens'
             )
             fig_surplus.update_layout(**get_clean_plotly_layout(), height=400)
-            fig_surplus.update_yaxes(categoryorder='total ascending')
+            fig_surplus.update_yaxes(categoryorder='total ascending', title_text='Country')
             st.plotly_chart(fig_surplus, use_container_width=True)
 
     with debt_tabs[4]:
@@ -5840,7 +5998,9 @@ elif page == "Debt & Fiscal":
             else:
                 color = '🔴'
 
-            st.markdown(f"**{color} {rating}:** {', '.join(countries)}")
+            # Add flags to country names
+            countries_with_flags = [f"{get_country_flag(c)} {c}" for c in countries]
+            st.markdown(f"**{color} {rating}:** {', '.join(countries_with_flags)}")
 
         st.markdown("---")
         st.markdown("""
@@ -8831,14 +8991,16 @@ elif page == "Weather & Globe":
         with col2:
             if not latest_weather.empty:
                 hottest = latest_weather.loc[latest_weather['temperature'].idxmax()]
-                st.metric("Hottest", f"{hottest['city']}", f"{hottest['temperature']:.1f}C")
+                hottest_flag = get_country_flag(hottest.get('country', ''))
+                st.metric(f"Hottest {hottest_flag}", f"{hottest['city']}", f"{hottest['temperature']:.1f}°C")
         with col3:
             if not latest_weather.empty:
                 coldest = latest_weather.loc[latest_weather['temperature'].idxmin()]
-                st.metric("Coldest", f"{coldest['city']}", f"{coldest['temperature']:.1f}C")
+                coldest_flag = get_country_flag(coldest.get('country', ''))
+                st.metric(f"Coldest {coldest_flag}", f"{coldest['city']}", f"{coldest['temperature']:.1f}°C")
         with col4:
             avg_temp = latest_weather['temperature'].mean()
-            st.metric("Global Average", f"{avg_temp:.1f}C")
+            st.metric("Global Average", f"{avg_temp:.1f}°C")
 
         st.markdown("---")
 
@@ -8864,10 +9026,14 @@ elif page == "Weather & Globe":
             # Calculate marker sizes as a list (not Series) to avoid Plotly errors
             marker_sizes = [max(abs(t) / 3 + 8, 6) for t in map_data['temperature'].tolist()]
 
+            # Add flag to hover text
+            map_data['hover_text'] = map_data.apply(
+                lambda r: f"{get_country_flag(r.get('country', ''))} <b>{r['city']}</b><br>Temp: {r['temperature']:.1f}°C<br>{r['description']}", axis=1
+            )
             fig.add_trace(go.Scattergeo(
                 lon=map_data['lon'].tolist(),
                 lat=map_data['lat'].tolist(),
-                text=map_data.apply(lambda r: f"<b>{r['city']}</b><br>Temp: {r['temperature']:.1f}C<br>{r['description']}", axis=1).tolist(),
+                text=map_data['hover_text'].tolist(),
                 mode='markers',
                 marker=dict(
                     size=marker_sizes,
