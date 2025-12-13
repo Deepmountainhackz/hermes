@@ -1,7 +1,7 @@
 """
-Hermes Intelligence Platform Dashboard v4.5
-World Bank global development data: 36+ indicators across Economy, Health, Education,
-Demographics, Trade, Labor, Social, Energy, and Environment for G20 countries.
+Hermes Intelligence Platform Dashboard v5.0
+Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
+Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 """
 
 import streamlit as st
@@ -502,7 +502,8 @@ page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators", "Global Development",
      "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
-     "Time Series", "Portfolio", "Query Builder", "Alerts & Export"]
+     "Time Series", "Technical Analysis", "Portfolio", "Query Builder",
+     "Collection Status", "Alerts & Export"]
 )
 
 st.sidebar.markdown("---")
@@ -523,7 +524,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v4.5 - World Bank Data")
+st.sidebar.caption("v5.0 - Technical Analysis & Automation")
 
 
 # ============================================================================
@@ -2414,6 +2415,420 @@ elif page == "Alerts & Export":
                     st.dataframe(export_df.head(10), use_container_width=True)
                 else:
                     st.warning("No data available for export")
+
+
+# ============================================================================
+# PAGE: TECHNICAL ANALYSIS
+# ============================================================================
+
+elif page == "Technical Analysis":
+    st.title("Technical Analysis")
+    st.markdown("*RSI, MACD, Moving Averages, Bollinger Bands*")
+    st.markdown("---")
+
+    # Asset type selector
+    asset_type = st.selectbox("Select Asset Type", ["Stocks", "Crypto"])
+
+    if asset_type == "Stocks":
+        symbols_df = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+        price_table = "stocks"
+        price_col = "price"
+    else:
+        symbols_df = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
+        price_table = "crypto"
+        price_col = "price"
+
+    if symbols_df.empty:
+        st.warning(f"No {asset_type.lower()} data available. Run the collector first.")
+    else:
+        symbols = symbols_df['symbol'].tolist()
+        selected_symbol = st.selectbox("Select Symbol", symbols)
+
+        if selected_symbol:
+            # Load price history
+            price_df = load_data(f"""
+                SELECT {price_col} as close, timestamp
+                FROM {price_table}
+                WHERE symbol = '{selected_symbol}'
+                ORDER BY timestamp ASC
+            """)
+
+            if len(price_df) < 20:
+                st.warning(f"Need at least 20 data points for technical analysis. Currently have {len(price_df)}.")
+            else:
+                price_df['timestamp'] = pd.to_datetime(price_df['timestamp'])
+                price_df = price_df.set_index('timestamp')
+
+                # Calculate indicators manually (inline to avoid import issues)
+                close = price_df['close']
+
+                # SMA
+                sma_20 = close.rolling(window=20).mean()
+                sma_50 = close.rolling(window=50).mean()
+
+                # EMA
+                ema_12 = close.ewm(span=12, adjust=False).mean()
+                ema_26 = close.ewm(span=26, adjust=False).mean()
+
+                # RSI
+                delta = close.diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                rsi = 100 - (100 / (1 + rs))
+
+                # MACD
+                macd_line = ema_12 - ema_26
+                signal_line = macd_line.ewm(span=9, adjust=False).mean()
+                histogram = macd_line - signal_line
+
+                # Bollinger Bands
+                bb_middle = sma_20
+                bb_std = close.rolling(window=20).std()
+                bb_upper = bb_middle + (bb_std * 2)
+                bb_lower = bb_middle - (bb_std * 2)
+
+                # Latest values
+                latest_price = close.iloc[-1]
+                latest_rsi = rsi.iloc[-1]
+                latest_macd = macd_line.iloc[-1]
+                latest_signal = signal_line.iloc[-1]
+
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Price", f"${latest_price:,.2f}")
+                with col2:
+                    rsi_status = "Overbought" if latest_rsi > 70 else "Oversold" if latest_rsi < 30 else "Neutral"
+                    st.metric("RSI (14)", f"{latest_rsi:.1f}", rsi_status)
+                with col3:
+                    macd_status = "Bullish" if latest_macd > latest_signal else "Bearish"
+                    st.metric("MACD", f"{latest_macd:.4f}", macd_status)
+                with col4:
+                    ma_status = "Above" if latest_price > sma_20.iloc[-1] else "Below"
+                    st.metric("vs SMA20", ma_status)
+
+                st.markdown("---")
+
+                # Price chart with MAs and Bollinger Bands
+                st.subheader("Price with Moving Averages & Bollinger Bands")
+                fig = go.Figure()
+
+                # Bollinger Bands (as filled area)
+                fig.add_trace(go.Scatter(
+                    x=close.index, y=bb_upper,
+                    mode='lines', name='BB Upper',
+                    line=dict(color='rgba(128,128,128,0.3)', width=1)
+                ))
+                fig.add_trace(go.Scatter(
+                    x=close.index, y=bb_lower,
+                    mode='lines', name='BB Lower',
+                    line=dict(color='rgba(128,128,128,0.3)', width=1),
+                    fill='tonexty', fillcolor='rgba(128,128,128,0.1)'
+                ))
+
+                # Price
+                fig.add_trace(go.Scatter(
+                    x=close.index, y=close,
+                    mode='lines', name='Price',
+                    line=dict(color='#2196F3', width=2)
+                ))
+
+                # Moving averages
+                fig.add_trace(go.Scatter(
+                    x=close.index, y=sma_20,
+                    mode='lines', name='SMA 20',
+                    line=dict(color='#FF9800', width=1)
+                ))
+                if len(close) >= 50:
+                    fig.add_trace(go.Scatter(
+                        x=close.index, y=sma_50,
+                        mode='lines', name='SMA 50',
+                        line=dict(color='#9C27B0', width=1)
+                    ))
+
+                fig.update_layout(**get_clean_plotly_layout(), height=400)
+                st.plotly_chart(fig, use_container_width=True)
+
+                # RSI Chart
+                st.subheader("RSI (14)")
+                fig_rsi = go.Figure()
+                fig_rsi.add_trace(go.Scatter(
+                    x=rsi.index, y=rsi,
+                    mode='lines', name='RSI',
+                    line=dict(color='#673AB7', width=2)
+                ))
+                fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Overbought")
+                fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Oversold")
+                fig_rsi.add_hline(y=50, line_dash="dot", line_color="gray")
+                fig_rsi.update_layout(**get_clean_plotly_layout(), height=250, yaxis_range=[0, 100])
+                st.plotly_chart(fig_rsi, use_container_width=True)
+
+                # MACD Chart
+                st.subheader("MACD (12, 26, 9)")
+                fig_macd = go.Figure()
+
+                # Histogram
+                colors = ['green' if h >= 0 else 'red' for h in histogram]
+                fig_macd.add_trace(go.Bar(
+                    x=histogram.index, y=histogram,
+                    name='Histogram',
+                    marker_color=colors
+                ))
+
+                # MACD and Signal lines
+                fig_macd.add_trace(go.Scatter(
+                    x=macd_line.index, y=macd_line,
+                    mode='lines', name='MACD',
+                    line=dict(color='#2196F3', width=2)
+                ))
+                fig_macd.add_trace(go.Scatter(
+                    x=signal_line.index, y=signal_line,
+                    mode='lines', name='Signal',
+                    line=dict(color='#FF5722', width=2)
+                ))
+
+                fig_macd.update_layout(**get_clean_plotly_layout(), height=250)
+                st.plotly_chart(fig_macd, use_container_width=True)
+
+                # Signal Summary
+                st.markdown("---")
+                st.subheader("Signal Summary")
+
+                signals = []
+                # RSI Signal
+                if latest_rsi > 70:
+                    signals.append(("RSI", "Bearish", f"Overbought at {latest_rsi:.1f}"))
+                elif latest_rsi < 30:
+                    signals.append(("RSI", "Bullish", f"Oversold at {latest_rsi:.1f}"))
+                else:
+                    signals.append(("RSI", "Neutral", f"At {latest_rsi:.1f}"))
+
+                # MACD Signal
+                if latest_macd > latest_signal:
+                    signals.append(("MACD", "Bullish", "MACD above signal line"))
+                else:
+                    signals.append(("MACD", "Bearish", "MACD below signal line"))
+
+                # MA Signal
+                if latest_price > sma_20.iloc[-1]:
+                    signals.append(("SMA 20", "Bullish", "Price above SMA 20"))
+                else:
+                    signals.append(("SMA 20", "Bearish", "Price below SMA 20"))
+
+                # BB Signal
+                if latest_price >= bb_upper.iloc[-1]:
+                    signals.append(("Bollinger", "Bearish", "At upper band"))
+                elif latest_price <= bb_lower.iloc[-1]:
+                    signals.append(("Bollinger", "Bullish", "At lower band"))
+                else:
+                    signals.append(("Bollinger", "Neutral", "Within bands"))
+
+                signal_df = pd.DataFrame(signals, columns=['Indicator', 'Signal', 'Description'])
+                st.dataframe(signal_df, use_container_width=True, hide_index=True)
+
+                # Overall
+                bullish = sum(1 for s in signals if s[1] == "Bullish")
+                bearish = sum(1 for s in signals if s[1] == "Bearish")
+                if bullish > bearish:
+                    overall = "BULLISH"
+                    overall_color = "positive"
+                elif bearish > bullish:
+                    overall = "BEARISH"
+                    overall_color = "negative"
+                else:
+                    overall = "NEUTRAL"
+                    overall_color = "neutral"
+
+                st.markdown(f"**Overall Signal:** <span class='{overall_color}'>{overall}</span> ({bullish} bullish, {bearish} bearish)",
+                           unsafe_allow_html=True)
+
+
+# ============================================================================
+# PAGE: COLLECTION STATUS
+# ============================================================================
+
+elif page == "Collection Status":
+    st.title("Data Collection Status")
+    st.markdown("*Monitor collector health and run manual collections*")
+    st.markdown("---")
+
+    # Load collection metadata
+    metadata_df = load_data("""
+        SELECT collector_name, last_run, last_success, last_duration_seconds,
+               records_collected, status, error_message, run_count
+        FROM collection_metadata
+        ORDER BY collector_name
+    """)
+
+    # Check all tables for freshness
+    all_tables = ['stocks', 'crypto', 'forex', 'commodities', 'weather', 'news',
+                  'economic_indicators', 'gdelt_events', 'worldbank_indicators',
+                  'iss_positions', 'near_earth_objects', 'earthquakes']
+
+    if metadata_df.empty:
+        st.info("No collection data yet. Run the scheduler or collectors to populate this page.")
+        st.markdown("---")
+        st.markdown("### Quick Start")
+        st.code("""
+# Run scheduler (continuous collection)
+python scheduler.py
+
+# Run all collectors once
+python scheduler.py --run-once
+
+# Run specific collector
+python scheduler.py --collector crypto
+        """)
+    else:
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            total = len(metadata_df)
+            st.metric("Total Collectors", total)
+        with col2:
+            success = len(metadata_df[metadata_df['status'] == 'success'])
+            st.metric("Successful", success)
+        with col3:
+            failed = len(metadata_df[metadata_df['status'] == 'failed'])
+            st.metric("Failed", failed, delta=f"-{failed}" if failed > 0 else None,
+                     delta_color="inverse")
+        with col4:
+            total_records = metadata_df['records_collected'].sum()
+            st.metric("Total Records", f"{int(total_records):,}" if pd.notna(total_records) else "0")
+
+        st.markdown("---")
+
+        # Collector status cards
+        st.subheader("Collector Status")
+
+        for _, row in metadata_df.iterrows():
+            col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
+
+            status = row['status']
+            if status == 'success':
+                icon = "🟢"
+                status_class = "positive"
+            elif status == 'failed':
+                icon = "🔴"
+                status_class = "negative"
+            elif status == 'running':
+                icon = "🔵"
+                status_class = "neutral"
+            else:
+                icon = "⚪"
+                status_class = "neutral"
+
+            with col1:
+                st.markdown(f"**{icon} {row['collector_name'].title()}**")
+
+            with col2:
+                last_run = row['last_run']
+                if pd.notna(last_run):
+                    age = datetime.now() - pd.to_datetime(last_run).replace(tzinfo=None)
+                    hours = age.total_seconds() / 3600
+                    if hours < 1:
+                        age_str = f"{int(age.total_seconds() / 60)}m ago"
+                    elif hours < 24:
+                        age_str = f"{hours:.1f}h ago"
+                    else:
+                        age_str = f"{hours / 24:.1f}d ago"
+                    st.caption(f"Last run: {age_str}")
+                else:
+                    st.caption("Never run")
+
+            with col3:
+                duration = row['last_duration_seconds']
+                records = row['records_collected']
+                if pd.notna(duration):
+                    st.caption(f"{duration:.1f}s | {int(records) if pd.notna(records) else 0} records")
+                else:
+                    st.caption("No data")
+
+            with col4:
+                st.caption(f"Runs: {row['run_count'] or 0}")
+
+            with col5:
+                st.markdown(f"<span class='{status_class}'>{status.upper()}</span>",
+                           unsafe_allow_html=True)
+
+            # Show error if failed
+            if status == 'failed' and row['error_message']:
+                st.error(f"Error: {row['error_message'][:200]}...")
+
+            st.markdown("---")
+
+    # Data freshness by table
+    st.subheader("Data Freshness by Table")
+
+    freshness_data = []
+    for table in all_tables:
+        try:
+            count_result = load_data(f"SELECT COUNT(*) as cnt FROM {table}")
+            count = count_result['cnt'].iloc[0] if not count_result.empty else 0
+
+            if count > 0:
+                ts_col = 'published_at' if table == 'news' else 'date' if table == 'near_earth_objects' else 'timestamp'
+                latest_result = load_data(f"SELECT MAX({ts_col}) as latest FROM {table}")
+                latest = latest_result['latest'].iloc[0] if not latest_result.empty else None
+
+                if latest:
+                    age = datetime.now() - pd.to_datetime(latest).replace(tzinfo=None)
+                    hours = age.total_seconds() / 3600
+                    if hours < 1:
+                        age_str = f"{int(age.total_seconds() / 60)}m"
+                    elif hours < 24:
+                        age_str = f"{hours:.1f}h"
+                    else:
+                        age_str = f"{hours / 24:.1f}d"
+
+                    status = "🟢" if hours < 6 else "🟡" if hours < 24 else "🔴"
+                else:
+                    age_str = "N/A"
+                    status = "⚪"
+            else:
+                age_str = "Empty"
+                status = "⚪"
+                count = 0
+
+            freshness_data.append({
+                'Status': status,
+                'Table': table,
+                'Records': f"{count:,}",
+                'Age': age_str
+            })
+        except Exception:
+            freshness_data.append({
+                'Status': "❌",
+                'Table': table,
+                'Records': "Error",
+                'Age': "N/A"
+            })
+
+    freshness_df = pd.DataFrame(freshness_data)
+    st.dataframe(freshness_df, use_container_width=True, hide_index=True)
+
+    # Scheduler commands
+    st.markdown("---")
+    st.subheader("Scheduler Commands")
+    st.code("""
+# Start continuous scheduler
+python scheduler.py
+
+# Run all collectors once
+python scheduler.py --run-once
+
+# Run specific collector
+python scheduler.py --collector [name]
+# Available: markets, crypto, forex, commodities, weather, news,
+#           economics, space, disasters, gdelt, worldbank
+
+# Check status
+python scheduler.py --status
+
+# Skip initial collection
+python scheduler.py --no-initial
+    """)
 
 
 # ============================================================================

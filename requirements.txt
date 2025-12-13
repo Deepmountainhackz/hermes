@@ -31,6 +31,9 @@ tenacity>=8.2.3
 # NEW - Logging
 structlog>=24.1.0
 
+# NEW - Scheduler
+apscheduler>=3.10.4
+
 # Development (optional but recommended)
 pytest>=8.0.0
 pytest-cov>=4.1.0

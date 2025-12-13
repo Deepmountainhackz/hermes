@@ -210,6 +210,121 @@ SCHEMAS = {
             flag_url TEXT
         );
         CREATE INDEX idx_countries_region ON countries(region);
+    """,
+
+    'crypto': """
+        DROP TABLE IF EXISTS crypto CASCADE;
+        CREATE TABLE crypto (
+            id SERIAL PRIMARY KEY,
+            symbol VARCHAR(20) NOT NULL,
+            name VARCHAR(255),
+            price DECIMAL(20, 8),
+            change_24h DECIMAL(20, 8),
+            change_percent_24h DECIMAL(10, 4),
+            market_cap DECIMAL(30, 2),
+            volume_24h DECIMAL(30, 2),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, timestamp)
+        );
+        CREATE INDEX idx_crypto_symbol ON crypto(symbol);
+        CREATE INDEX idx_crypto_timestamp ON crypto(timestamp);
+    """,
+
+    'gdelt_events': """
+        DROP TABLE IF EXISTS gdelt_events CASCADE;
+        CREATE TABLE gdelt_events (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            url TEXT,
+            source VARCHAR(255),
+            country VARCHAR(100),
+            event_type VARCHAR(50),
+            tone DECIMAL(10, 4),
+            published_at TIMESTAMP,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_gdelt_country ON gdelt_events(country);
+        CREATE INDEX idx_gdelt_event_type ON gdelt_events(event_type);
+        CREATE INDEX idx_gdelt_timestamp ON gdelt_events(timestamp);
+    """,
+
+    'worldbank_indicators': """
+        DROP TABLE IF EXISTS worldbank_indicators CASCADE;
+        CREATE TABLE worldbank_indicators (
+            id SERIAL PRIMARY KEY,
+            indicator_code VARCHAR(50) NOT NULL,
+            indicator_name VARCHAR(255),
+            category VARCHAR(100),
+            country_code VARCHAR(10) NOT NULL,
+            country_name VARCHAR(255),
+            year INTEGER,
+            value DECIMAL(30, 6),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(indicator_code, country_code, year)
+        );
+        CREATE INDEX idx_wb_indicator ON worldbank_indicators(indicator_code);
+        CREATE INDEX idx_wb_country ON worldbank_indicators(country_code);
+        CREATE INDEX idx_wb_year ON worldbank_indicators(year);
+    """,
+
+    'earthquakes': """
+        DROP TABLE IF EXISTS earthquakes CASCADE;
+        CREATE TABLE earthquakes (
+            id SERIAL PRIMARY KEY,
+            location VARCHAR(255),
+            magnitude DECIMAL(4, 2),
+            depth DECIMAL(10, 2),
+            latitude DECIMAL(10, 6),
+            longitude DECIMAL(10, 6),
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_earthquakes_magnitude ON earthquakes(magnitude);
+        CREATE INDEX idx_earthquakes_timestamp ON earthquakes(timestamp);
+    """,
+
+    'collection_metadata': """
+        DROP TABLE IF EXISTS collection_metadata CASCADE;
+        CREATE TABLE collection_metadata (
+            id SERIAL PRIMARY KEY,
+            collector_name VARCHAR(50) UNIQUE NOT NULL,
+            last_run TIMESTAMP,
+            last_success TIMESTAMP,
+            last_duration_seconds DECIMAL(10, 3),
+            records_collected INTEGER DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'idle',
+            error_message TEXT,
+            run_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_collection_status ON collection_metadata(status);
+    """,
+
+    'user_alerts': """
+        DROP TABLE IF EXISTS user_alerts CASCADE;
+        CREATE TABLE user_alerts (
+            id SERIAL PRIMARY KEY,
+            alert_type VARCHAR(50) NOT NULL,
+            symbol VARCHAR(50),
+            condition VARCHAR(20) NOT NULL,
+            threshold DECIMAL(20, 8),
+            is_active BOOLEAN DEFAULT TRUE,
+            triggered_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_alerts_active ON user_alerts(is_active);
+        CREATE INDEX idx_alerts_symbol ON user_alerts(symbol);
+    """,
+
+    'alert_history': """
+        DROP TABLE IF EXISTS alert_history CASCADE;
+        CREATE TABLE alert_history (
+            id SERIAL PRIMARY KEY,
+            alert_id INTEGER REFERENCES user_alerts(id),
+            triggered_value DECIMAL(20, 8),
+            message TEXT,
+            triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_alert_history_time ON alert_history(triggered_at);
     """
 }
 
