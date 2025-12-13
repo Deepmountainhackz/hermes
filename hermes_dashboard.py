@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.17
+Hermes Intelligence Platform Dashboard v6.18
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -826,6 +826,65 @@ def get_country_flag(name):
         if key in name_lower or name_lower in key:
             return flag
     return COUNTRY_FLAGS['default']
+
+# ISO country codes for flag images (maps country names to ISO 2-letter codes)
+COUNTRY_ISO_CODES = {
+    'usa': 'us', 'united states': 'us', 'america': 'us',
+    'canada': 'ca', 'mexico': 'mx',
+    'uk': 'gb', 'united kingdom': 'gb', 'britain': 'gb', 'great britain': 'gb',
+    'germany': 'de', 'france': 'fr', 'italy': 'it', 'spain': 'es',
+    'netherlands': 'nl', 'holland': 'nl', 'belgium': 'be',
+    'switzerland': 'ch', 'swiss': 'ch', 'austria': 'at',
+    'sweden': 'se', 'norway': 'no', 'denmark': 'dk', 'finland': 'fi',
+    'ireland': 'ie', 'portugal': 'pt', 'greece': 'gr',
+    'poland': 'pl', 'czech': 'cz', 'czechia': 'cz', 'czech republic': 'cz',
+    'hungary': 'hu', 'romania': 'ro', 'russia': 'ru', 'ukraine': 'ua',
+    'turkey': 'tr', 'turkiye': 'tr',
+    'eu': 'eu', 'european union': 'eu', 'europe': 'eu', 'eurozone': 'eu',
+    'japan': 'jp', 'china': 'cn', 'prc': 'cn',
+    'south korea': 'kr', 'korea': 'kr', 'india': 'in',
+    'australia': 'au', 'new zealand': 'nz',
+    'singapore': 'sg', 'hong kong': 'hk', 'taiwan': 'tw',
+    'indonesia': 'id', 'malaysia': 'my', 'thailand': 'th',
+    'vietnam': 'vn', 'philippines': 'ph', 'pakistan': 'pk', 'bangladesh': 'bd',
+    'saudi arabia': 'sa', 'saudi': 'sa', 'uae': 'ae', 'united arab emirates': 'ae',
+    'emirates': 'ae', 'dubai': 'ae', 'israel': 'il', 'iran': 'ir',
+    'iraq': 'iq', 'qatar': 'qa', 'kuwait': 'kw',
+    'south africa': 'za', 'nigeria': 'ng', 'egypt': 'eg',
+    'kenya': 'ke', 'morocco': 'ma', 'ethiopia': 'et', 'ghana': 'gh', 'tanzania': 'tz',
+    'brazil': 'br', 'argentina': 'ar', 'chile': 'cl', 'colombia': 'co',
+    'peru': 'pe', 'venezuela': 've', 'ecuador': 'ec',
+    # Currency codes
+    'usd': 'us', 'eur': 'eu', 'gbp': 'gb', 'jpy': 'jp', 'chf': 'ch',
+    'aud': 'au', 'cad': 'ca', 'nzd': 'nz', 'cny': 'cn', 'hkd': 'hk',
+    'sgd': 'sg', 'krw': 'kr', 'inr': 'in', 'mxn': 'mx', 'brl': 'br',
+    'zar': 'za', 'rub': 'ru', 'try': 'tr', 'sek': 'se', 'nok': 'no',
+    'dkk': 'dk', 'pln': 'pl', 'thb': 'th', 'idr': 'id', 'myr': 'my',
+    'php': 'ph', 'twd': 'tw',
+}
+
+def get_country_iso(name):
+    """Get ISO 2-letter country code for flag images."""
+    if not name:
+        return None
+    name_lower = name.lower().strip()
+    if name_lower in COUNTRY_ISO_CODES:
+        return COUNTRY_ISO_CODES[name_lower]
+    # Check if already a 2-letter code
+    if len(name_lower) == 2 and name_lower.isalpha():
+        return name_lower
+    # Partial match
+    for key, code in COUNTRY_ISO_CODES.items():
+        if key in name_lower or name_lower in key:
+            return code
+    return None
+
+def get_flag_html(name, size=20):
+    """Get an HTML img tag for a country flag from CDN."""
+    iso_code = get_country_iso(name)
+    if iso_code:
+        return f'<img src="https://flagcdn.com/{size}x{int(size*0.75)}/{iso_code}.png" style="vertical-align:middle; margin-right:6px;" alt="{iso_code}">'
+    return ''
 
 def get_commodity_icon(name):
     """Get an icon for a commodity based on its name."""
@@ -2480,21 +2539,15 @@ elif page == "Markets":
                 else:
                     return '#f44336'  # Very Weak
 
-            # Currency to flag mapping
-            currency_flags = {
-                'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵',
-                'CHF': '🇨🇭', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CNY': '🇨🇳',
-            }
-
             str_cols = st.columns(len(sorted_strength))
             for i, (curr, score) in enumerate(sorted_strength):
                 with str_cols[i]:
                     color = get_strength_color(score)
-                    flag_emoji = currency_flags.get(curr, '🌍')
+                    flag_img = get_flag_html(curr, size=48)
                     status = "Strong" if score > 1 else "Weak" if score < -1 else "Neutral"
                     st.markdown(
                         f"""<div style="text-align:center; padding:12px; background-color:#f8fafc; border-radius:8px; border-top:4px solid {color}; border:1px solid #e2e8f0;">
-                        <div style="font-size:2.5em; line-height:1.2;">{flag_emoji}</div>
+                        <div style="line-height:1.2; margin-bottom:8px;">{flag_img}</div>
                         <b>{curr}</b><br>
                         <span style="color:{color}; font-size:1.2em; font-weight:600;">{score:+.1f}</span><br>
                         <small style="color:#64748b;">{status}</small>
@@ -3041,8 +3094,8 @@ elif page == "Economic Indicators":
             latest_country = country_data.groupby('indicator').first().reset_index()
 
             st.markdown("---")
-            flag = get_country_flag(selected_country)
-            st.subheader(f"{flag} {selected_country} Economic Indicators")
+            flag_html = get_flag_html(selected_country, size=24)
+            st.markdown(f"### {flag_html}{selected_country} Economic Indicators", unsafe_allow_html=True)
 
             if latest_country.empty:
                 st.info("No indicators available for this country")
@@ -3070,15 +3123,15 @@ elif page == "Economic Indicators":
             latest_comparison = comparison_data.groupby('country').first().reset_index()
 
             if not latest_comparison.empty:
-                # Add flags to country names for display
-                latest_comparison['country_display'] = latest_comparison['country'].apply(
-                    lambda c: f"{get_country_flag(c)} {c}"
-                )
-                fig = px.bar(latest_comparison, x='country_display', y='value',
+                # Use country names only (no emoji flags - they don't render in Plotly)
+                fig = px.bar(latest_comparison, x='country', y='value',
                             title=f"{selected_indicator} by Country",
-                            color='value', color_continuous_scale='Blues')
+                            color='value', color_continuous_scale='Blues',
+                            text='value')
                 fig.update_layout(**get_clean_plotly_layout(), height=400)
                 fig.update_xaxes(title_text="Country")
+                # Show values on bars
+                fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
                 st.plotly_chart(fig, use_container_width=True)
 
 
