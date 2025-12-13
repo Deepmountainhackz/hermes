@@ -583,13 +583,13 @@ if 'current_page' not in st.session_state:
 
 # Navigation structure with categories
 NAV_STRUCTURE = {
-    "📊 Markets": ["Overview", "Markets", "Crypto", "Bond Markets"],
-    "📈 Analytics": ["Technical Analysis", "Correlation Analysis", "Risk Metrics", "Time Series"],
-    "🌍 Economics": ["Economic Indicators", "Economic Calendar", "Global Development", "Country Profile"],
+    "📊 Markets": ["Overview", "Markets", "Crypto", "Bond Markets", "Sector Analysis"],
+    "📈 Analytics": ["Technical Analysis", "Correlation Analysis", "Risk Metrics", "Time Series", "Options Flow"],
+    "🌍 Economics": ["Economic Indicators", "Economic Calendar", "Earnings Dashboard", "Global Development", "Country Profile"],
     "🏭 Commodities": ["Energy & Resources", "Agriculture & Food", "Trade & Shipping"],
     "🌐 Global": ["Demographics", "Debt & Fiscal", "Weather & Globe", "Space"],
     "📰 News & Events": ["News", "Market Sentiment", "Global Events"],
-    "🛠️ Tools": ["Portfolio", "Watchlist", "Calculators", "Query Builder", "Alerts & Export", "Collection Status"],
+    "🛠️ Tools": ["Portfolio", "Watchlist", "Calculators", "Currency Converter", "Query Builder", "Alerts & Export", "Collection Status"],
 }
 
 # Helper function to create navigation button
@@ -6310,6 +6310,233 @@ elif page == "Economic Calendar":
 
 
 # ============================================================================
+# PAGE: EARNINGS DASHBOARD
+# ============================================================================
+
+elif page == "Earnings Dashboard":
+    st.title("Earnings Dashboard")
+    st.markdown("*Corporate earnings, EPS surprises, and revenue trends*")
+    st.markdown("---")
+
+    earn_tab1, earn_tab2, earn_tab3, earn_tab4 = st.tabs([
+        "Upcoming Earnings", "Recent Results", "Earnings Surprises", "Sector Earnings"
+    ])
+
+    with earn_tab1:
+        st.subheader("Earnings Calendar - Next 2 Weeks")
+
+        # Upcoming earnings data
+        UPCOMING_EARNINGS = [
+            {'date': 'Dec 16 (Mon)', 'pre': [], 'post': ['HEICO (HEI)']},
+            {'date': 'Dec 17 (Tue)', 'pre': ['ABM Industries (ABM)'], 'post': ['Worthington Steel (WS)']},
+            {'date': 'Dec 18 (Wed)', 'pre': ['General Mills (GIS)', 'Birkenstock (BIRK)'], 'post': ['Micron (MU)', 'Lennar (LEN)', 'Jabil (JBL)']},
+            {'date': 'Dec 19 (Thu)', 'pre': ['Accenture (ACN)', 'Darden (DRI)', 'Paychex (PAYX)', 'FactSet (FDS)'], 'post': ['Nike (NKE)', 'FedEx (FDX)', 'Cintas (CTAS)']},
+            {'date': 'Dec 20 (Fri)', 'pre': ['Carnival (CCL)'], 'post': []},
+            {'date': 'Dec 23 (Mon)', 'pre': [], 'post': []},
+            {'date': 'Jan 6 (Mon)', 'pre': [], 'post': ['Cal-Maine Foods (CALM)']},
+            {'date': 'Jan 8 (Wed)', 'pre': [], 'post': ['Jefferies (JEF)']},
+            {'date': 'Jan 13 (Mon)', 'pre': [], 'post': []},
+            {'date': 'Jan 14 (Tue)', 'pre': ['KB Home (KBH)'], 'post': []},
+            {'date': 'Jan 15 (Wed)', 'pre': ['JPMorgan (JPM)', 'Wells Fargo (WFC)', 'Goldman Sachs (GS)', 'Citigroup (C)', 'BlackRock (BLK)'], 'post': []},
+            {'date': 'Jan 16 (Thu)', 'pre': ['Bank of America (BAC)', 'Morgan Stanley (MS)', 'UnitedHealth (UNH)'], 'post': []},
+        ]
+
+        for day in UPCOMING_EARNINGS:
+            if day['pre'] or day['post']:
+                st.markdown(f"**{day['date']}**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if day['pre']:
+                        st.caption("🌅 Before Market")
+                        for co in day['pre']:
+                            st.markdown(f"  • {co}")
+                    else:
+                        st.caption("🌅 Before Market: None scheduled")
+                with col2:
+                    if day['post']:
+                        st.caption("🌙 After Market")
+                        for co in day['post']:
+                            st.markdown(f"  • {co}")
+                    else:
+                        st.caption("🌙 After Market: None scheduled")
+                st.markdown("---")
+
+        # High-profile upcoming earnings
+        st.subheader("Mega-Cap Earnings Watch")
+        mega_earnings = pd.DataFrame({
+            'Company': ['Apple', 'Microsoft', 'Amazon', 'Alphabet', 'Meta', 'NVIDIA', 'Tesla', 'Netflix'],
+            'Ticker': ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'NVDA', 'TSLA', 'NFLX'],
+            'Expected Date': ['Jan 30', 'Jan 28', 'Feb 6', 'Feb 4', 'Feb 5', 'Feb 26', 'Jan 29', 'Jan 21'],
+            'EPS Est': ['$2.35', '$3.10', '$1.48', '$2.05', '$6.75', '$0.85', '$0.73', '$4.20'],
+            'Rev Est': ['$124B', '$68.5B', '$187B', '$96B', '$46.5B', '$37.5B', '$25.6B', '$10.1B'],
+            'Options IV': ['28%', '25%', '32%', '28%', '35%', '55%', '58%', '42%'],
+        })
+        st.dataframe(mega_earnings, use_container_width=True, hide_index=True)
+
+    with earn_tab2:
+        st.subheader("Recent Earnings Results")
+
+        # Recent earnings with beat/miss
+        RECENT_RESULTS = {
+            'Company': ['Broadcom', 'Costco', 'Adobe', 'Oracle', 'Salesforce', 'Lululemon', 'MongoDB', 'GameStop'],
+            'Ticker': ['AVGO', 'COST', 'ADBE', 'ORCL', 'CRM', 'LULU', 'MDB', 'GME'],
+            'Report Date': ['Dec 12', 'Dec 12', 'Dec 11', 'Dec 9', 'Dec 3', 'Dec 5', 'Dec 9', 'Dec 10'],
+            'EPS Actual': ['$1.42', '$4.04', '$4.81', '$1.47', '$2.41', '$2.87', '-$0.19', '$0.06'],
+            'EPS Est': ['$1.39', '$3.82', '$4.66', '$1.48', '$2.44', '$2.71', '-$0.67', '-$0.02'],
+            'Surprise %': ['+2.2%', '+5.8%', '+3.2%', '-0.7%', '-1.2%', '+5.9%', '+71.6%', 'Beat'],
+            'Rev Actual': ['$14.1B', '$62.2B', '$5.61B', '$14.1B', '$9.44B', '$2.40B', '$529M', '$1.08B'],
+            'Stock Move': ['+24.4%', '+0.8%', '-13.7%', '+8.2%', '+11.0%', '+15.9%', '+14.8%', '+5.2%'],
+        }
+        results_df = pd.DataFrame(RECENT_RESULTS)
+
+        # Style the surprise column
+        def color_surprise(val):
+            if '+' in str(val):
+                return 'color: #00c853'
+            elif '-' in str(val):
+                return 'color: #ff1744'
+            return 'color: #00c853' if 'Beat' in str(val) else ''
+
+        styled_results = results_df.style.applymap(
+            color_surprise, subset=['Surprise %', 'Stock Move']
+        )
+        st.dataframe(styled_results, use_container_width=True, hide_index=True)
+
+        # Earnings movers chart
+        st.markdown("---")
+        st.subheader("Post-Earnings Stock Moves")
+
+        # Parse stock move for chart
+        moves_data = results_df.copy()
+        moves_data['Move %'] = moves_data['Stock Move'].str.replace('%', '').str.replace('+', '').astype(float)
+
+        fig_moves = px.bar(moves_data.sort_values('Move %'),
+                          x='Move %', y='Company',
+                          orientation='h',
+                          title='Stock Price Change After Earnings',
+                          color='Move %',
+                          color_continuous_scale='RdYlGn',
+                          color_continuous_midpoint=0)
+        fig_moves.update_layout(height=400)
+        st.plotly_chart(fig_moves, use_container_width=True)
+
+    with earn_tab3:
+        st.subheader("Earnings Surprise Trends")
+
+        # S&P 500 earnings stats
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Q3 2024 Beat Rate", "79%", "+2% vs Q2")
+        with col2:
+            st.metric("Avg EPS Surprise", "+4.2%", "vs +3.8% Q2")
+        with col3:
+            st.metric("Revenue Beat Rate", "61%", "-3% vs Q2")
+        with col4:
+            st.metric("S&P 500 EPS Growth", "+5.8%", "YoY")
+
+        st.markdown("---")
+
+        # Historical beat rates by sector
+        st.subheader("EPS Beat Rates by Sector (Q3 2024)")
+
+        sector_beats = pd.DataFrame({
+            'Sector': ['Technology', 'Healthcare', 'Financials', 'Consumer Disc.', 'Communication',
+                      'Industrials', 'Consumer Staples', 'Energy', 'Utilities', 'Materials', 'Real Estate'],
+            'Beat Rate': [88, 82, 85, 78, 75, 72, 70, 68, 65, 62, 58],
+            'Avg Surprise': [8.5, 5.2, 6.8, 4.2, 3.8, 3.5, 2.8, -2.5, 1.5, 0.8, -1.2],
+            'YoY Growth': [15.2, 8.5, 12.8, 6.2, 18.5, 4.2, 2.8, -15.2, 5.8, -2.5, 3.2],
+        })
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_beats = px.bar(sector_beats.sort_values('Beat Rate'),
+                              x='Beat Rate', y='Sector',
+                              orientation='h',
+                              title='EPS Beat Rate by Sector (%)',
+                              color='Beat Rate',
+                              color_continuous_scale='Greens')
+            st.plotly_chart(fig_beats, use_container_width=True)
+
+        with col2:
+            fig_growth = px.bar(sector_beats.sort_values('YoY Growth'),
+                               x='YoY Growth', y='Sector',
+                               orientation='h',
+                               title='YoY Earnings Growth by Sector (%)',
+                               color='YoY Growth',
+                               color_continuous_scale='RdYlGn',
+                               color_continuous_midpoint=0)
+            st.plotly_chart(fig_growth, use_container_width=True)
+
+        # Quarterly EPS trend
+        st.markdown("---")
+        st.subheader("S&P 500 Quarterly EPS Trend")
+
+        quarters = ['Q1 22', 'Q2 22', 'Q3 22', 'Q4 22', 'Q1 23', 'Q2 23', 'Q3 23', 'Q4 23', 'Q1 24', 'Q2 24', 'Q3 24', 'Q4 24E']
+        eps_values = [55.12, 56.85, 54.32, 54.58, 52.15, 55.48, 58.12, 55.85, 54.82, 59.35, 61.25, 62.50]
+
+        eps_trend = pd.DataFrame({'Quarter': quarters, 'EPS': eps_values})
+        fig_eps = px.line(eps_trend, x='Quarter', y='EPS',
+                         title='S&P 500 Operating EPS ($/share)',
+                         markers=True)
+        fig_eps.add_hline(y=60, line_dash="dash", line_color="gray",
+                         annotation_text="Analyst Target")
+        fig_eps.update_traces(line=dict(color='#1976d2', width=3))
+        st.plotly_chart(fig_eps, use_container_width=True)
+
+    with earn_tab4:
+        st.subheader("Sector Earnings Breakdown")
+
+        # Sector contribution to earnings
+        SECTOR_EARNINGS = {
+            'Sector': ['Technology', 'Financials', 'Healthcare', 'Consumer Disc.', 'Communication',
+                      'Industrials', 'Consumer Staples', 'Energy', 'Materials', 'Utilities', 'Real Estate'],
+            'Market Weight': [31.2, 12.8, 12.5, 10.2, 8.9, 8.5, 5.8, 3.8, 2.3, 2.4, 2.2],
+            'Earnings Weight': [28.5, 18.2, 10.5, 8.2, 12.8, 7.5, 5.2, 4.5, 1.8, 2.2, 1.5],
+            'P/E Ratio': [32.5, 15.8, 18.2, 28.2, 22.5, 21.8, 22.5, 12.8, 16.5, 18.5, 38.2],
+            'FWD EPS Growth': [15.2, 8.5, 12.8, 10.5, 18.2, 6.5, 4.2, -5.8, 2.5, 5.8, 3.2],
+        }
+        sector_earn_df = pd.DataFrame(SECTOR_EARNINGS)
+
+        st.dataframe(sector_earn_df, use_container_width=True, hide_index=True)
+
+        # Earnings vs Market Weight
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_weight = px.scatter(sector_earn_df, x='Market Weight', y='Earnings Weight',
+                                   size='P/E Ratio', color='FWD EPS Growth',
+                                   text='Sector',
+                                   title='Market Weight vs Earnings Contribution',
+                                   color_continuous_scale='RdYlGn')
+            fig_weight.add_trace(go.Scatter(x=[0, 35], y=[0, 35], mode='lines',
+                                           line=dict(dash='dash', color='gray'),
+                                           name='1:1 Line'))
+            fig_weight.update_traces(textposition='top center')
+            fig_weight.update_layout(height=450)
+            st.plotly_chart(fig_weight, use_container_width=True)
+
+        with col2:
+            fig_pe = px.bar(sector_earn_df.sort_values('P/E Ratio'),
+                           x='P/E Ratio', y='Sector',
+                           orientation='h',
+                           title='P/E Ratios by Sector',
+                           color='FWD EPS Growth',
+                           color_continuous_scale='RdYlGn')
+            fig_pe.update_layout(height=450)
+            st.plotly_chart(fig_pe, use_container_width=True)
+
+        # Key earnings dates callout
+        st.markdown("---")
+        st.info("""
+        **Key Earnings Season Dates:**
+        - **Financials Kick-off**: Jan 15 (JPM, WFC, GS, C, BLK)
+        - **Big Tech Week**: Jan 28-30 (MSFT, TSLA, META, AAPL, AMZN)
+        - **Q4 Earnings Peak**: Feb 3-14 (Bulk of S&P 500 reports)
+        """)
+
+
+# ============================================================================
 # PAGE: WATCHLIST
 # ============================================================================
 
@@ -6483,8 +6710,8 @@ elif page == "Calculators":
     st.markdown("*Investment planning and financial analysis tools*")
     st.markdown("---")
 
-    calc_tab1, calc_tab2, calc_tab3, calc_tab4 = st.tabs([
-        "Compound Interest", "Retirement Planner", "Loan Calculator", "Investment Returns"
+    calc_tab1, calc_tab2, calc_tab3, calc_tab4, calc_tab5 = st.tabs([
+        "Compound Interest", "Retirement Planner", "Loan Calculator", "Investment Returns", "Bond Pricing"
     ])
 
     with calc_tab1:
@@ -6918,6 +7145,126 @@ elif page == "Calculators":
                 icon = "✅" if vs_benchmark >= 0 else "❌"
                 st.markdown(f"{icon} vs {name}: {'+' if vs_benchmark >= 0 else ''}{vs_benchmark:,.0f}")
 
+    with calc_tab5:
+        st.subheader("Bond Pricing Calculator")
+        st.markdown("*Calculate bond prices, yields, duration, and convexity*")
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### Bond Parameters")
+            face_value = st.number_input("Face Value ($)", value=1000.0, min_value=100.0, step=100.0)
+            coupon_rate = st.number_input("Coupon Rate (%)", value=5.0, min_value=0.0, max_value=20.0, step=0.25)
+            ytm = st.number_input("Yield to Maturity (%)", value=4.5, min_value=0.1, max_value=20.0, step=0.1)
+            years_to_maturity = st.number_input("Years to Maturity", value=10, min_value=1, max_value=50)
+            payments_per_year = st.selectbox("Payment Frequency", [("Semi-Annual", 2), ("Annual", 1), ("Quarterly", 4)],
+                                            format_func=lambda x: x[0])[1]
+
+        with col2:
+            st.markdown("#### Bond Valuation")
+
+            # Calculate bond price
+            coupon_payment = (coupon_rate / 100) * face_value / payments_per_year
+            n_periods = years_to_maturity * payments_per_year
+            periodic_rate = (ytm / 100) / payments_per_year
+
+            # Present value of coupons
+            if periodic_rate > 0:
+                pv_coupons = coupon_payment * (1 - (1 + periodic_rate) ** -n_periods) / periodic_rate
+            else:
+                pv_coupons = coupon_payment * n_periods
+
+            # Present value of face value
+            pv_face = face_value / ((1 + periodic_rate) ** n_periods)
+
+            bond_price = pv_coupons + pv_face
+
+            # Premium/Discount status
+            if bond_price > face_value:
+                status = "Premium"
+                status_color = "#4caf50"
+            elif bond_price < face_value:
+                status = "Discount"
+                status_color = "#f44336"
+            else:
+                status = "Par"
+                status_color = "#757575"
+
+            st.metric("Bond Price", f"${bond_price:,.2f}")
+            st.markdown(f"**Status:** <span style='color:{status_color}'>{status}</span>", unsafe_allow_html=True)
+
+            # Current yield
+            current_yield = (coupon_rate / 100) * face_value / bond_price * 100
+            st.metric("Current Yield", f"{current_yield:.2f}%")
+
+            # Macaulay Duration
+            duration = 0
+            for t in range(1, n_periods + 1):
+                if t < n_periods:
+                    pv_cf = coupon_payment / ((1 + periodic_rate) ** t)
+                else:
+                    pv_cf = (coupon_payment + face_value) / ((1 + periodic_rate) ** t)
+                duration += (t / payments_per_year) * pv_cf / bond_price
+
+            # Modified Duration
+            mod_duration = duration / (1 + periodic_rate)
+
+            st.metric("Macaulay Duration", f"{duration:.2f} years")
+            st.metric("Modified Duration", f"{mod_duration:.2f}")
+
+            # Convexity
+            convexity = 0
+            for t in range(1, n_periods + 1):
+                if t < n_periods:
+                    cf = coupon_payment
+                else:
+                    cf = coupon_payment + face_value
+                convexity += (t * (t + 1) * cf) / ((1 + periodic_rate) ** (t + 2))
+            convexity = convexity / (bond_price * payments_per_year ** 2)
+
+            st.metric("Convexity", f"{convexity:.2f}")
+
+        # Price sensitivity analysis
+        st.markdown("---")
+        st.subheader("Price Sensitivity Analysis")
+
+        yield_shifts = [-2, -1, -0.5, -0.25, 0, 0.25, 0.5, 1, 2]
+        prices = []
+        for shift in yield_shifts:
+            new_ytm = ytm + shift
+            if new_ytm <= 0:
+                prices.append(None)
+                continue
+            new_periodic_rate = (new_ytm / 100) / payments_per_year
+            if new_periodic_rate > 0:
+                pv_c = coupon_payment * (1 - (1 + new_periodic_rate) ** -n_periods) / new_periodic_rate
+            else:
+                pv_c = coupon_payment * n_periods
+            pv_f = face_value / ((1 + new_periodic_rate) ** n_periods)
+            prices.append(pv_c + pv_f)
+
+        sensitivity_df = pd.DataFrame({
+            'Yield Change (%)': yield_shifts,
+            'New Yield (%)': [ytm + s for s in yield_shifts],
+            'Bond Price ($)': prices,
+            'Price Change (%)': [(p - bond_price) / bond_price * 100 if p else None for p in prices]
+        })
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.dataframe(sensitivity_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            fig_sens = px.line(sensitivity_df.dropna(), x='New Yield (%)', y='Bond Price ($)',
+                              title='Bond Price vs Yield',
+                              markers=True)
+            fig_sens.add_vline(x=ytm, line_dash="dash", line_color="red",
+                              annotation_text=f"Current YTM: {ytm}%")
+            fig_sens.update_traces(line=dict(color='#1976d2', width=3))
+            st.plotly_chart(fig_sens, use_container_width=True)
+
 
 # ============================================================================
 # PAGE: BOND MARKETS
@@ -7104,6 +7451,271 @@ elif page == "Bond Markets":
             'CDS 5Y': [152, 98, 215, 385, 82, 48],
         })
         st.dataframe(em_data, use_container_width=True, hide_index=True)
+
+
+# ============================================================================
+# PAGE: SECTOR ANALYSIS
+# ============================================================================
+
+elif page == "Sector Analysis":
+    st.title("S&P 500 Sector Analysis")
+    st.markdown("*Sector performance, rotation analysis, and ETF comparisons*")
+    st.markdown("---")
+
+    sector_tab1, sector_tab2, sector_tab3, sector_tab4 = st.tabs([
+        "Sector Performance", "Sector Rotation", "ETF Comparison", "Sector Correlations"
+    ])
+
+    with sector_tab1:
+        st.subheader("S&P 500 Sector Performance")
+
+        # Sector performance data
+        SECTOR_DATA = {
+            'Sector': ['Technology', 'Healthcare', 'Financials', 'Consumer Discretionary',
+                      'Communication Services', 'Industrials', 'Consumer Staples',
+                      'Energy', 'Utilities', 'Real Estate', 'Materials'],
+            'ETF': ['XLK', 'XLV', 'XLF', 'XLY', 'XLC', 'XLI', 'XLP', 'XLE', 'XLU', 'XLRE', 'XLB'],
+            'Weight %': [31.2, 12.5, 12.8, 10.2, 8.9, 8.5, 5.8, 3.8, 2.4, 2.2, 2.3],
+            'Day %': [+1.2, +0.3, +0.8, +1.5, +0.9, +0.4, -0.2, -1.1, -0.5, +0.1, +0.2],
+            'Week %': [+3.2, +1.5, +2.1, +4.2, +2.8, +1.8, +0.5, -2.8, +0.8, +1.2, +0.9],
+            'Month %': [+8.5, +3.2, +5.8, +9.2, +6.5, +4.2, +1.8, -5.2, +2.1, +3.5, +2.8],
+            'YTD %': [+42.5, +8.2, +22.5, +28.8, +35.2, +18.5, +12.2, -2.5, +15.8, +5.2, +8.5],
+            '52W High %': [-2.5, -8.5, -3.2, -5.8, -4.2, -6.5, -4.8, -18.5, -8.2, -12.5, -9.8],
+        }
+        sector_df = pd.DataFrame(SECTOR_DATA)
+
+        # Performance heatmap
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            # Style the dataframe
+            def color_performance(val):
+                if isinstance(val, (int, float)):
+                    if val > 0:
+                        return 'background-color: rgba(0, 200, 83, 0.3)'
+                    elif val < 0:
+                        return 'background-color: rgba(255, 23, 68, 0.3)'
+                return ''
+
+            styled_df = sector_df.style.applymap(
+                color_performance,
+                subset=['Day %', 'Week %', 'Month %', 'YTD %', '52W High %']
+            )
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+        with col2:
+            # Sector weights pie chart
+            fig_pie = px.pie(sector_df, values='Weight %', names='Sector',
+                            title='S&P 500 Sector Weights',
+                            hole=0.4)
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            fig_pie.update_layout(showlegend=False, height=400)
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        # Performance bar charts
+        st.markdown("---")
+        timeframe = st.selectbox("Select Timeframe", ['Day %', 'Week %', 'Month %', 'YTD %'])
+
+        fig_bar = px.bar(sector_df.sort_values(timeframe, ascending=True),
+                        x=timeframe, y='Sector',
+                        orientation='h',
+                        title=f'Sector Performance - {timeframe}',
+                        color=timeframe,
+                        color_continuous_scale='RdYlGn',
+                        color_continuous_midpoint=0)
+        fig_bar.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with sector_tab2:
+        st.subheader("Sector Rotation Model")
+        st.markdown("""
+        Sector rotation follows the economic cycle. Different sectors outperform at different stages:
+        """)
+
+        # Economic cycle phases
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### Economic Cycle Phases")
+            cycle_data = pd.DataFrame({
+                'Phase': ['Early Recovery', 'Mid Cycle', 'Late Cycle', 'Recession'],
+                'Best Sectors': ['Financials, Consumer Disc., Industrials',
+                                'Technology, Industrials, Materials',
+                                'Energy, Materials, Healthcare',
+                                'Utilities, Consumer Staples, Healthcare'],
+                'Worst Sectors': ['Utilities, Consumer Staples',
+                                 'Utilities, Consumer Staples',
+                                 'Financials, Consumer Disc.',
+                                 'Technology, Financials, Consumer Disc.'],
+                'Economic Indicators': ['GDP ↗, Employment ↗, Rates Low',
+                                        'GDP Strong, Corporate Profits ↗',
+                                        'Inflation ↗, Rates ↗, Yield Curve Flattens',
+                                        'GDP ↘, Unemployment ↗, Fed Cuts'],
+            })
+            st.dataframe(cycle_data, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.markdown("#### Current Cycle Assessment")
+
+            # Create cycle indicator
+            cycle_fig = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
+                value=72,
+                domain={'x': [0, 1], 'y': [0, 1]},
+                title={'text': "Cycle Position", 'font': {'size': 14}},
+                delta={'reference': 65},
+                gauge={
+                    'axis': {'range': [0, 100], 'ticktext': ['Early', 'Mid', 'Late', 'Recession'],
+                            'tickvals': [12.5, 37.5, 62.5, 87.5]},
+                    'bar': {'color': "#ff9800"},
+                    'steps': [
+                        {'range': [0, 25], 'color': '#e8f5e9'},
+                        {'range': [25, 50], 'color': '#c8e6c9'},
+                        {'range': [50, 75], 'color': '#fff3e0'},
+                        {'range': [75, 100], 'color': '#ffebee'}
+                    ],
+                }
+            ))
+            cycle_fig.update_layout(height=300)
+            st.plotly_chart(cycle_fig, use_container_width=True)
+
+            st.info("**Current Phase: Late Cycle**\n\nIndicators suggest late-cycle positioning. Consider defensive sectors like Healthcare and Consumer Staples.")
+
+        # Relative strength analysis
+        st.markdown("---")
+        st.subheader("Relative Strength Analysis")
+
+        # Mock relative strength data
+        rs_data = pd.DataFrame({
+            'Sector': ['Technology', 'Healthcare', 'Financials', 'Consumer Discretionary',
+                      'Industrials', 'Consumer Staples', 'Energy', 'Utilities', 'Materials'],
+            'RS vs SPY (1M)': [1.08, 0.98, 1.02, 1.12, 1.01, 0.95, 0.88, 0.96, 0.99],
+            'RS vs SPY (3M)': [1.15, 0.95, 1.05, 1.18, 1.02, 0.92, 0.82, 0.94, 0.97],
+            'RS Trend': ['↗ Improving', '→ Neutral', '↗ Improving', '↗ Improving',
+                        '→ Neutral', '↘ Weakening', '↘ Weakening', '→ Neutral', '→ Neutral'],
+            'Signal': ['🟢 Overweight', '🟡 Market Weight', '🟢 Overweight', '🟢 Overweight',
+                      '🟡 Market Weight', '🔴 Underweight', '🔴 Underweight', '🟡 Market Weight', '🟡 Market Weight'],
+        })
+        st.dataframe(rs_data, use_container_width=True, hide_index=True)
+
+    with sector_tab3:
+        st.subheader("Sector ETF Comparison")
+
+        # Detailed ETF metrics
+        ETF_DETAILS = {
+            'ETF': ['XLK', 'XLV', 'XLF', 'XLY', 'XLC', 'XLI', 'XLP', 'XLE', 'XLU', 'XLRE', 'XLB'],
+            'Name': ['Technology', 'Healthcare', 'Financials', 'Consumer Disc.', 'Comm. Services',
+                    'Industrials', 'Consumer Staples', 'Energy', 'Utilities', 'Real Estate', 'Materials'],
+            'Price': [218.50, 142.30, 43.80, 198.20, 82.40, 125.60, 78.90, 85.20, 72.50, 38.80, 88.40],
+            'Expense %': [0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09],
+            'Div Yield %': [0.62, 1.45, 1.52, 0.82, 0.78, 1.35, 2.52, 3.42, 2.95, 3.28, 1.82],
+            'P/E': [32.5, 18.2, 15.8, 28.2, 22.5, 21.8, 22.5, 12.8, 18.5, 38.2, 16.5],
+            'Beta': [1.22, 0.75, 1.08, 1.18, 1.05, 1.02, 0.58, 0.95, 0.45, 0.82, 1.05],
+            'AUM ($B)': [62.5, 38.2, 35.8, 22.5, 18.2, 18.5, 16.2, 32.5, 14.8, 5.2, 5.8],
+        }
+        etf_df = pd.DataFrame(ETF_DETAILS)
+
+        st.dataframe(etf_df, use_container_width=True, hide_index=True)
+
+        # Scatter plot: Yield vs Beta
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_scatter = px.scatter(etf_df, x='Beta', y='Div Yield %',
+                                    size='AUM ($B)', color='P/E',
+                                    hover_name='Name',
+                                    title='Risk vs Yield (Size = AUM)',
+                                    color_continuous_scale='RdYlGn_r')
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+        with col2:
+            fig_pe = px.bar(etf_df.sort_values('P/E'), x='Name', y='P/E',
+                           title='P/E Ratios by Sector',
+                           color='P/E',
+                           color_continuous_scale='RdYlGn_r')
+            fig_pe.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_pe, use_container_width=True)
+
+        # Top holdings
+        st.markdown("---")
+        st.subheader("Top Holdings by Sector")
+
+        selected_sector = st.selectbox("Select Sector", etf_df['Name'].tolist())
+
+        SECTOR_HOLDINGS = {
+            'Technology': [('AAPL', 'Apple Inc.', 22.5), ('MSFT', 'Microsoft Corp.', 21.2),
+                          ('NVDA', 'NVIDIA Corp.', 18.8), ('AVGO', 'Broadcom Inc.', 4.8),
+                          ('AMD', 'AMD Inc.', 3.2)],
+            'Healthcare': [('UNH', 'UnitedHealth', 10.5), ('JNJ', 'Johnson & Johnson', 8.2),
+                          ('LLY', 'Eli Lilly', 7.8), ('ABBV', 'AbbVie Inc.', 5.5),
+                          ('PFE', 'Pfizer Inc.', 4.2)],
+            'Financials': [('BRK.B', 'Berkshire Hathaway', 12.8), ('JPM', 'JPMorgan Chase', 10.5),
+                          ('V', 'Visa Inc.', 7.2), ('MA', 'Mastercard', 6.8),
+                          ('BAC', 'Bank of America', 4.5)],
+        }
+
+        holdings = SECTOR_HOLDINGS.get(selected_sector, [('N/A', 'Data not available', 0)])
+        holdings_df = pd.DataFrame(holdings, columns=['Symbol', 'Company', 'Weight %'])
+        st.dataframe(holdings_df, use_container_width=True, hide_index=True)
+
+    with sector_tab4:
+        st.subheader("Sector Correlation Matrix")
+
+        # Generate correlation matrix
+        sectors = ['XLK', 'XLV', 'XLF', 'XLY', 'XLC', 'XLI', 'XLP', 'XLE', 'XLU']
+        np.random.seed(42)
+
+        # Create realistic correlation matrix
+        base_corr = np.array([
+            [1.00, 0.65, 0.72, 0.85, 0.78, 0.75, 0.45, 0.38, 0.32],  # XLK
+            [0.65, 1.00, 0.58, 0.62, 0.55, 0.68, 0.72, 0.42, 0.55],  # XLV
+            [0.72, 0.58, 1.00, 0.75, 0.68, 0.82, 0.52, 0.55, 0.48],  # XLF
+            [0.85, 0.62, 0.75, 1.00, 0.82, 0.78, 0.48, 0.35, 0.28],  # XLY
+            [0.78, 0.55, 0.68, 0.82, 1.00, 0.72, 0.42, 0.32, 0.25],  # XLC
+            [0.75, 0.68, 0.82, 0.78, 0.72, 1.00, 0.58, 0.52, 0.45],  # XLI
+            [0.45, 0.72, 0.52, 0.48, 0.42, 0.58, 1.00, 0.48, 0.72],  # XLP
+            [0.38, 0.42, 0.55, 0.35, 0.32, 0.52, 0.48, 1.00, 0.42],  # XLE
+            [0.32, 0.55, 0.48, 0.28, 0.25, 0.45, 0.72, 0.42, 1.00],  # XLU
+        ])
+
+        corr_df = pd.DataFrame(base_corr, index=sectors, columns=sectors)
+
+        fig_corr = px.imshow(corr_df,
+                            labels=dict(color="Correlation"),
+                            x=sectors, y=sectors,
+                            color_continuous_scale='RdBu_r',
+                            zmin=-1, zmax=1,
+                            title='60-Day Sector Correlation Matrix')
+        fig_corr.update_layout(height=500)
+        st.plotly_chart(fig_corr, use_container_width=True)
+
+        # Diversification insights
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### Low Correlation Pairs (Diversification)")
+            low_corr = [
+                ('XLK / XLU', 0.32, 'Tech vs Utilities'),
+                ('XLC / XLU', 0.25, 'Comm. Services vs Utilities'),
+                ('XLY / XLU', 0.28, 'Consumer Disc. vs Utilities'),
+                ('XLY / XLE', 0.35, 'Consumer Disc. vs Energy'),
+                ('XLK / XLE', 0.38, 'Tech vs Energy'),
+            ]
+            for pair, corr, desc in low_corr:
+                st.markdown(f"- **{pair}**: {corr:.2f} ({desc})")
+
+        with col2:
+            st.markdown("#### High Correlation Pairs (Similar Movement)")
+            high_corr = [
+                ('XLK / XLY', 0.85, 'Tech & Consumer Disc.'),
+                ('XLY / XLC', 0.82, 'Consumer Disc. & Comm.'),
+                ('XLF / XLI', 0.82, 'Financials & Industrials'),
+                ('XLK / XLC', 0.78, 'Tech & Comm. Services'),
+                ('XLI / XLY', 0.78, 'Industrials & Consumer Disc.'),
+            ]
+            for pair, corr, desc in high_corr:
+                st.markdown(f"- **{pair}**: {corr:.2f} ({desc})")
 
 
 # ============================================================================
@@ -8470,6 +9082,291 @@ elif page == "Time Series":
 
 
 # ============================================================================
+# PAGE: OPTIONS FLOW
+# ============================================================================
+
+elif page == "Options Flow":
+    st.title("Options Flow & Derivatives")
+    st.markdown("*Put/call ratios, unusual activity, and implied volatility*")
+    st.markdown("---")
+
+    opt_tab1, opt_tab2, opt_tab3, opt_tab4 = st.tabs([
+        "Market Overview", "Unusual Activity", "IV Analysis", "Options Calculator"
+    ])
+
+    with opt_tab1:
+        st.subheader("Options Market Overview")
+
+        # Market-wide metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("CBOE Put/Call Ratio", "0.82", "-0.05", delta_color="inverse")
+        with col2:
+            st.metric("Equity P/C Ratio", "0.65", "+0.02")
+        with col3:
+            st.metric("VIX Level", "14.25", "-0.85", delta_color="inverse")
+        with col4:
+            st.metric("Total Volume", "42.5M", "+8.2%")
+
+        st.markdown("---")
+
+        # Put/Call ratio history
+        st.subheader("Put/Call Ratio Trend")
+
+        dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+        pc_data = pd.DataFrame({
+            'Date': dates,
+            'Total P/C': np.random.uniform(0.75, 0.95, 30),
+            'Equity P/C': np.random.uniform(0.55, 0.75, 30),
+            'Index P/C': np.random.uniform(1.05, 1.35, 30),
+        })
+
+        fig_pc = go.Figure()
+        fig_pc.add_trace(go.Scatter(x=pc_data['Date'], y=pc_data['Total P/C'],
+                                   name='Total P/C', line=dict(color='#1976d2', width=2)))
+        fig_pc.add_trace(go.Scatter(x=pc_data['Date'], y=pc_data['Equity P/C'],
+                                   name='Equity P/C', line=dict(color='#4caf50', width=2)))
+        fig_pc.add_trace(go.Scatter(x=pc_data['Date'], y=pc_data['Index P/C'],
+                                   name='Index P/C', line=dict(color='#ff9800', width=2)))
+        fig_pc.add_hline(y=1.0, line_dash="dash", line_color="gray",
+                        annotation_text="Neutral (1.0)")
+        fig_pc.update_layout(title='30-Day Put/Call Ratio History',
+                            yaxis_title='P/C Ratio', height=400)
+        st.plotly_chart(fig_pc, use_container_width=True)
+
+        # Most active options
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Most Active Calls")
+            active_calls = pd.DataFrame({
+                'Symbol': ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'AMD', 'META', 'AMZN'],
+                'Strike': ['$600', '$520', '$200', '$400', '$140', '$145', '$600', '$220'],
+                'Expiry': ['Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20'],
+                'Volume': ['285K', '142K', '98K', '87K', '75K', '68K', '55K', '48K'],
+                'OI': ['1.2M', '856K', '425K', '385K', '298K', '245K', '198K', '175K'],
+            })
+            st.dataframe(active_calls, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.subheader("Most Active Puts")
+            active_puts = pd.DataFrame({
+                'Symbol': ['SPY', 'QQQ', 'TSLA', 'AAPL', 'IWM', 'NVDA', 'XLF', 'META'],
+                'Strike': ['$580', '$500', '$350', '$185', '$220', '$130', '$42', '$550'],
+                'Expiry': ['Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20', 'Dec 20'],
+                'Volume': ['198K', '112K', '75K', '65K', '58K', '52K', '45K', '42K'],
+                'OI': ['985K', '625K', '298K', '275K', '248K', '185K', '165K', '145K'],
+            })
+            st.dataframe(active_puts, use_container_width=True, hide_index=True)
+
+    with opt_tab2:
+        st.subheader("Unusual Options Activity")
+        st.markdown("*Large volume trades that may indicate institutional positioning*")
+
+        # Unusual activity filters
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            min_premium = st.selectbox("Min Premium", ['$100K+', '$500K+', '$1M+', '$5M+'], index=1)
+        with col2:
+            flow_type = st.multiselect("Flow Type", ['Calls', 'Puts', 'Spreads'], default=['Calls', 'Puts'])
+        with col3:
+            sentiment = st.multiselect("Sentiment", ['Bullish', 'Bearish', 'Neutral'], default=['Bullish', 'Bearish'])
+
+        # Unusual activity table
+        UNUSUAL_FLOW = {
+            'Time': ['14:32', '14:15', '13:58', '13:42', '13:28', '12:55', '12:32', '11:48', '11:15', '10:42'],
+            'Symbol': ['NVDA', 'AAPL', 'META', 'TSLA', 'AMZN', 'GOOGL', 'SPY', 'AMD', 'MSFT', 'XLF'],
+            'Type': ['Call', 'Call', 'Put', 'Call', 'Call', 'Put', 'Put', 'Call', 'Call', 'Put'],
+            'Strike': ['$150', '$205', '$580', '$420', '$225', '$180', '$595', '$155', '$450', '$44'],
+            'Expiry': ['Jan 17', 'Dec 20', 'Jan 17', 'Jan 17', 'Dec 27', 'Jan 17', 'Dec 20', 'Jan 17', 'Dec 27', 'Jan 17'],
+            'Volume': ['15,200', '12,500', '8,200', '7,800', '6,500', '5,800', '25,000', '4,200', '3,800', '8,500'],
+            'OI': ['2,500', '8,200', '1,200', '3,500', '4,200', '950', '12,500', '1,800', '2,100', '5,200'],
+            'Premium': ['$2.8M', '$1.5M', '$2.1M', '$1.8M', '$980K', '$1.2M', '$3.5M', '$620K', '$850K', '$1.1M'],
+            'Sentiment': ['🟢 Bullish', '🟢 Bullish', '🔴 Bearish', '🟢 Bullish', '🟢 Bullish', '🔴 Bearish', '🔴 Bearish', '🟢 Bullish', '🟢 Bullish', '🔴 Bearish'],
+        }
+        unusual_df = pd.DataFrame(UNUSUAL_FLOW)
+        st.dataframe(unusual_df, use_container_width=True, hide_index=True)
+
+        # Flow summary
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Bullish Flow", "$12.5M", "+18%")
+        with col2:
+            st.metric("Bearish Flow", "$8.2M", "+5%")
+        with col3:
+            st.metric("Net Sentiment", "Bullish", "1.52 B/A Ratio")
+
+        # Sector flow heatmap
+        st.markdown("---")
+        st.subheader("Sector Options Flow")
+
+        sector_flow = pd.DataFrame({
+            'Sector': ['Technology', 'Financials', 'Healthcare', 'Consumer Disc.', 'Energy', 'Industrials'],
+            'Call Volume': [2850000, 1250000, 850000, 720000, 580000, 450000],
+            'Put Volume': [1850000, 980000, 720000, 520000, 680000, 380000],
+            'Net Flow': ['+$85M', '+$42M', '+$18M', '+$28M', '-$12M', '+$15M'],
+            'Sentiment': ['Very Bullish', 'Bullish', 'Slight Bullish', 'Bullish', 'Slight Bearish', 'Neutral'],
+        })
+        sector_flow['P/C Ratio'] = sector_flow['Put Volume'] / sector_flow['Call Volume']
+
+        fig_sector = px.bar(sector_flow, x='Sector', y=['Call Volume', 'Put Volume'],
+                           title='Options Volume by Sector',
+                           barmode='group',
+                           color_discrete_map={'Call Volume': '#4caf50', 'Put Volume': '#f44336'})
+        st.plotly_chart(fig_sector, use_container_width=True)
+
+    with opt_tab3:
+        st.subheader("Implied Volatility Analysis")
+
+        # IV metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("VIX (30-day)", "14.25", "-0.85")
+        with col2:
+            st.metric("VIX9D (9-day)", "12.85", "-1.20")
+        with col3:
+            st.metric("VIX3M (3-month)", "16.42", "-0.25")
+        with col4:
+            st.metric("VIX Term Structure", "Contango", "+15.2%")
+
+        st.markdown("---")
+
+        # VIX term structure
+        st.subheader("VIX Term Structure")
+
+        terms = ['VIX9D', 'VIX', 'VIX3M', 'VIX6M', 'VIX1Y']
+        current_vix = [12.85, 14.25, 16.42, 17.85, 18.95]
+        week_ago = [14.25, 15.80, 17.20, 18.45, 19.42]
+
+        term_df = pd.DataFrame({
+            'Term': terms * 2,
+            'VIX Level': current_vix + week_ago,
+            'Period': ['Current'] * 5 + ['1 Week Ago'] * 5
+        })
+
+        fig_term = px.line(term_df, x='Term', y='VIX Level', color='Period',
+                          title='VIX Term Structure',
+                          markers=True)
+        st.plotly_chart(fig_term, use_container_width=True)
+
+        # Stock IV rankings
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Highest IV Stocks")
+            high_iv = pd.DataFrame({
+                'Symbol': ['GME', 'AMC', 'MARA', 'COIN', 'RIVN', 'LCID', 'PLTR', 'SMCI'],
+                'IV Rank': ['95%', '92%', '88%', '85%', '82%', '80%', '78%', '75%'],
+                'Current IV': ['125%', '118%', '95%', '88%', '82%', '78%', '65%', '72%'],
+                '30-Day Avg': ['98%', '95%', '78%', '72%', '68%', '65%', '55%', '58%'],
+            })
+            st.dataframe(high_iv, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.subheader("Lowest IV Stocks (Calm)")
+            low_iv = pd.DataFrame({
+                'Symbol': ['KO', 'PG', 'JNJ', 'PEP', 'WMT', 'MCD', 'VZ', 'T'],
+                'IV Rank': ['12%', '15%', '18%', '20%', '22%', '25%', '28%', '30%'],
+                'Current IV': ['15%', '16%', '18%', '17%', '19%', '20%', '22%', '24%'],
+                '30-Day Avg': ['18%', '19%', '20%', '19%', '21%', '22%', '24%', '26%'],
+            })
+            st.dataframe(low_iv, use_container_width=True, hide_index=True)
+
+        # IV Skew
+        st.markdown("---")
+        st.subheader("Volatility Skew (SPY)")
+
+        strikes = list(range(570, 630, 5))
+        iv_values = [22, 20, 18.5, 17.5, 16.8, 16.2, 15.8, 15.5, 15.8, 16.5, 17.5, 19]
+
+        skew_df = pd.DataFrame({'Strike': strikes, 'IV %': iv_values})
+        fig_skew = px.line(skew_df, x='Strike', y='IV %',
+                          title='SPY Options IV Skew (Dec 20 Expiry)',
+                          markers=True)
+        fig_skew.add_vline(x=600, line_dash="dash", line_color="red",
+                          annotation_text="ATM Strike")
+        fig_skew.update_traces(line=dict(color='#9c27b0', width=3))
+        st.plotly_chart(fig_skew, use_container_width=True)
+
+    with opt_tab4:
+        st.subheader("Black-Scholes Options Calculator")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### Input Parameters")
+            spot_price = st.number_input("Stock Price ($)", value=100.0, min_value=0.01, step=1.0)
+            strike_price = st.number_input("Strike Price ($)", value=100.0, min_value=0.01, step=1.0)
+            time_to_exp = st.number_input("Time to Expiry (Days)", value=30, min_value=1, max_value=365)
+            volatility = st.number_input("Implied Volatility (%)", value=25.0, min_value=1.0, max_value=200.0) / 100
+            risk_free = st.number_input("Risk-Free Rate (%)", value=4.5, min_value=0.0, max_value=20.0) / 100
+            dividend = st.number_input("Dividend Yield (%)", value=0.0, min_value=0.0, max_value=20.0) / 100
+
+        with col2:
+            st.markdown("#### Option Prices")
+
+            # Black-Scholes calculation
+            from math import log, sqrt, exp
+            from scipy.stats import norm
+
+            T = time_to_exp / 365
+            d1 = (log(spot_price / strike_price) + (risk_free - dividend + 0.5 * volatility**2) * T) / (volatility * sqrt(T))
+            d2 = d1 - volatility * sqrt(T)
+
+            call_price = spot_price * exp(-dividend * T) * norm.cdf(d1) - strike_price * exp(-risk_free * T) * norm.cdf(d2)
+            put_price = strike_price * exp(-risk_free * T) * norm.cdf(-d2) - spot_price * exp(-dividend * T) * norm.cdf(-d1)
+
+            # Greeks
+            delta_call = exp(-dividend * T) * norm.cdf(d1)
+            delta_put = -exp(-dividend * T) * norm.cdf(-d1)
+            gamma = exp(-dividend * T) * norm.pdf(d1) / (spot_price * volatility * sqrt(T))
+            theta_call = (-spot_price * volatility * exp(-dividend * T) * norm.pdf(d1) / (2 * sqrt(T))
+                         - risk_free * strike_price * exp(-risk_free * T) * norm.cdf(d2)
+                         + dividend * spot_price * exp(-dividend * T) * norm.cdf(d1)) / 365
+            vega = spot_price * exp(-dividend * T) * norm.pdf(d1) * sqrt(T) / 100
+
+            st.metric("Call Price", f"${call_price:.2f}")
+            st.metric("Put Price", f"${put_price:.2f}")
+
+            st.markdown("---")
+            st.markdown("#### Greeks")
+
+            g_col1, g_col2 = st.columns(2)
+            with g_col1:
+                st.metric("Delta (Call)", f"{delta_call:.4f}")
+                st.metric("Delta (Put)", f"{delta_put:.4f}")
+                st.metric("Gamma", f"{gamma:.4f}")
+            with g_col2:
+                st.metric("Theta (Call)", f"${theta_call:.4f}/day")
+                st.metric("Vega", f"${vega:.4f}")
+
+        # Payoff diagram
+        st.markdown("---")
+        st.subheader("Payoff at Expiration")
+
+        stock_range = np.linspace(spot_price * 0.7, spot_price * 1.3, 100)
+        call_payoff = np.maximum(stock_range - strike_price, 0) - call_price
+        put_payoff = np.maximum(strike_price - stock_range, 0) - put_price
+
+        fig_payoff = go.Figure()
+        fig_payoff.add_trace(go.Scatter(x=stock_range, y=call_payoff,
+                                       name='Long Call', line=dict(color='#4caf50', width=2)))
+        fig_payoff.add_trace(go.Scatter(x=stock_range, y=put_payoff,
+                                       name='Long Put', line=dict(color='#f44336', width=2)))
+        fig_payoff.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig_payoff.add_vline(x=strike_price, line_dash="dash", line_color="blue",
+                            annotation_text=f"Strike: ${strike_price}")
+        fig_payoff.update_layout(
+            title='Option Payoff Diagram',
+            xaxis_title='Stock Price at Expiry',
+            yaxis_title='Profit/Loss ($)',
+            height=400
+        )
+        st.plotly_chart(fig_payoff, use_container_width=True)
+
+
+# ============================================================================
 # PAGE: PORTFOLIO
 # ============================================================================
 
@@ -8834,6 +9731,215 @@ elif page == "Portfolio":
                 st.warning("Need price data for at least 2 assets. Run collectors first.")
         else:
             st.info("Select at least 2 assets to analyze portfolio correlations.")
+
+
+# ============================================================================
+# PAGE: CURRENCY CONVERTER
+# ============================================================================
+
+elif page == "Currency Converter":
+    st.title("Currency Converter & FX Rates")
+    st.markdown("*Live exchange rates, conversions, and historical trends*")
+    st.markdown("---")
+
+    fx_tab1, fx_tab2, fx_tab3 = st.tabs([
+        "Converter", "Live Rates", "Historical Charts"
+    ])
+
+    # Currency data (would come from forex table in production)
+    FX_RATES = {
+        'EUR': {'name': 'Euro', 'rate': 1.0550, 'flag': '🇪🇺'},
+        'GBP': {'name': 'British Pound', 'rate': 0.7920, 'flag': '🇬🇧'},
+        'JPY': {'name': 'Japanese Yen', 'rate': 151.25, 'flag': '🇯🇵'},
+        'CHF': {'name': 'Swiss Franc', 'rate': 0.8820, 'flag': '🇨🇭'},
+        'CAD': {'name': 'Canadian Dollar', 'rate': 1.4250, 'flag': '🇨🇦'},
+        'AUD': {'name': 'Australian Dollar', 'rate': 1.5680, 'flag': '🇦🇺'},
+        'NZD': {'name': 'New Zealand Dollar', 'rate': 1.7150, 'flag': '🇳🇿'},
+        'CNY': {'name': 'Chinese Yuan', 'rate': 7.2450, 'flag': '🇨🇳'},
+        'INR': {'name': 'Indian Rupee', 'rate': 84.25, 'flag': '🇮🇳'},
+        'MXN': {'name': 'Mexican Peso', 'rate': 20.15, 'flag': '🇲🇽'},
+        'BRL': {'name': 'Brazilian Real', 'rate': 6.05, 'flag': '🇧🇷'},
+        'KRW': {'name': 'South Korean Won', 'rate': 1435.50, 'flag': '🇰🇷'},
+        'SGD': {'name': 'Singapore Dollar', 'rate': 1.3520, 'flag': '🇸🇬'},
+        'HKD': {'name': 'Hong Kong Dollar', 'rate': 7.7850, 'flag': '🇭🇰'},
+        'SEK': {'name': 'Swedish Krona', 'rate': 10.95, 'flag': '🇸🇪'},
+        'NOK': {'name': 'Norwegian Krone', 'rate': 11.25, 'flag': '🇳🇴'},
+        'ZAR': {'name': 'South African Rand', 'rate': 18.25, 'flag': '🇿🇦'},
+        'TRY': {'name': 'Turkish Lira', 'rate': 34.50, 'flag': '🇹🇷'},
+        'RUB': {'name': 'Russian Ruble', 'rate': 102.50, 'flag': '🇷🇺'},
+        'PLN': {'name': 'Polish Zloty', 'rate': 4.05, 'flag': '🇵🇱'},
+    }
+
+    with fx_tab1:
+        st.subheader("Currency Converter")
+
+        col1, col2, col3 = st.columns([2, 1, 2])
+
+        currency_options = ['USD'] + list(FX_RATES.keys())
+
+        with col1:
+            amount = st.number_input("Amount", value=1000.0, min_value=0.01, step=100.0)
+            from_currency = st.selectbox("From", currency_options,
+                                         format_func=lambda x: f"🇺🇸 USD - US Dollar" if x == 'USD'
+                                         else f"{FX_RATES[x]['flag']} {x} - {FX_RATES[x]['name']}")
+
+        with col2:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>→</h1>", unsafe_allow_html=True)
+
+        with col3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            to_currency = st.selectbox("To", currency_options,
+                                       format_func=lambda x: f"🇺🇸 USD - US Dollar" if x == 'USD'
+                                       else f"{FX_RATES[x]['flag']} {x} - {FX_RATES[x]['name']}",
+                                       index=1)
+
+        # Calculate conversion
+        if from_currency == 'USD':
+            from_rate = 1.0
+        else:
+            from_rate = FX_RATES[from_currency]['rate']
+
+        if to_currency == 'USD':
+            to_rate = 1.0
+        else:
+            to_rate = FX_RATES[to_currency]['rate']
+
+        # Convert through USD
+        usd_amount = amount / from_rate if from_currency != 'USD' else amount
+        converted = usd_amount * to_rate if to_currency != 'USD' else usd_amount
+
+        exchange_rate = converted / amount
+
+        st.markdown("---")
+        st.markdown(f"### {amount:,.2f} {from_currency} = **{converted:,.2f} {to_currency}**")
+        st.caption(f"Exchange Rate: 1 {from_currency} = {exchange_rate:.4f} {to_currency}")
+
+        # Quick conversion table
+        st.markdown("---")
+        st.subheader("Quick Reference")
+
+        amounts_to_show = [1, 10, 100, 500, 1000, 5000, 10000]
+        quick_conversions = []
+        for amt in amounts_to_show:
+            usd_amt = amt / from_rate if from_currency != 'USD' else amt
+            conv_amt = usd_amt * to_rate if to_currency != 'USD' else usd_amt
+            quick_conversions.append({
+                f'{from_currency}': f'{amt:,.2f}',
+                f'{to_currency}': f'{conv_amt:,.2f}'
+            })
+
+        st.dataframe(pd.DataFrame(quick_conversions), use_container_width=True, hide_index=True)
+
+    with fx_tab2:
+        st.subheader("Live Exchange Rates (vs USD)")
+
+        # Create rates table
+        rates_data = []
+        for code, data in FX_RATES.items():
+            change = np.random.uniform(-0.5, 0.5)  # Mock change
+            rates_data.append({
+                'Currency': f"{data['flag']} {code}",
+                'Name': data['name'],
+                'Rate': data['rate'],
+                'Change %': f"{'+' if change > 0 else ''}{change:.2f}%",
+                'Inverse': f"{1/data['rate']:.4f}"
+            })
+
+        rates_df = pd.DataFrame(rates_data)
+        st.dataframe(rates_df, use_container_width=True, hide_index=True)
+
+        # Major pairs
+        st.markdown("---")
+        st.subheader("Major Currency Pairs")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("EUR/USD", f"{1/FX_RATES['EUR']['rate']:.4f}", "+0.0012")
+        with col2:
+            st.metric("GBP/USD", f"{1/FX_RATES['GBP']['rate']:.4f}", "+0.0028")
+        with col3:
+            st.metric("USD/JPY", f"{FX_RATES['JPY']['rate']:.2f}", "-0.35")
+        with col4:
+            st.metric("USD/CHF", f"{FX_RATES['CHF']['rate']:.4f}", "+0.0015")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("AUD/USD", f"{1/FX_RATES['AUD']['rate']:.4f}", "-0.0008")
+        with col2:
+            st.metric("USD/CAD", f"{FX_RATES['CAD']['rate']:.4f}", "+0.0022")
+        with col3:
+            st.metric("EUR/GBP", f"{FX_RATES['GBP']['rate']/FX_RATES['EUR']['rate']:.4f}", "+0.0005")
+        with col4:
+            st.metric("EUR/JPY", f"{FX_RATES['JPY']['rate']/FX_RATES['EUR']['rate']:.2f}", "-0.25")
+
+    with fx_tab3:
+        st.subheader("Historical Exchange Rate Charts")
+
+        # Select currency pair
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            base_currency = st.selectbox("Base Currency", ['USD', 'EUR', 'GBP', 'JPY'], key="hist_base")
+        with col2:
+            quote_currency = st.selectbox("Quote Currency", ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'],
+                                         key="hist_quote", index=1 if base_currency == 'EUR' else 0)
+        with col3:
+            time_period = st.selectbox("Time Period", ['1 Week', '1 Month', '3 Months', '1 Year', '5 Years'])
+
+        # Generate mock historical data
+        periods_map = {'1 Week': 7, '1 Month': 30, '3 Months': 90, '1 Year': 365, '5 Years': 1825}
+        days = periods_map[time_period]
+
+        dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
+
+        # Base rate for the pair
+        if base_currency == 'USD' and quote_currency in FX_RATES:
+            base_rate = FX_RATES[quote_currency]['rate']
+        elif quote_currency == 'USD' and base_currency in FX_RATES:
+            base_rate = 1 / FX_RATES[base_currency]['rate']
+        elif base_currency in FX_RATES and quote_currency in FX_RATES:
+            base_rate = FX_RATES[quote_currency]['rate'] / FX_RATES[base_currency]['rate']
+        else:
+            base_rate = 1.0
+
+        # Add some random walk
+        np.random.seed(42)
+        returns = np.random.normal(0, 0.005, days)
+        rates = base_rate * np.cumprod(1 + returns)
+
+        hist_df = pd.DataFrame({
+            'Date': dates,
+            'Rate': rates
+        })
+
+        fig_hist = px.line(hist_df, x='Date', y='Rate',
+                          title=f'{base_currency}/{quote_currency} Exchange Rate')
+        fig_hist.update_traces(line=dict(color='#1976d2', width=2))
+
+        # Add moving averages
+        hist_df['MA20'] = hist_df['Rate'].rolling(20).mean()
+        hist_df['MA50'] = hist_df['Rate'].rolling(50).mean()
+
+        if days > 20:
+            fig_hist.add_trace(go.Scatter(x=hist_df['Date'], y=hist_df['MA20'],
+                                         name='20-Day MA', line=dict(color='#ff9800', width=1, dash='dot')))
+        if days > 50:
+            fig_hist.add_trace(go.Scatter(x=hist_df['Date'], y=hist_df['MA50'],
+                                         name='50-Day MA', line=dict(color='#f44336', width=1, dash='dot')))
+
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+        # Statistics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Current Rate", f"{rates[-1]:.4f}")
+        with col2:
+            period_change = (rates[-1] - rates[0]) / rates[0] * 100
+            st.metric("Period Change", f"{period_change:+.2f}%")
+        with col3:
+            st.metric("High", f"{rates.max():.4f}")
+        with col4:
+            st.metric("Low", f"{rates.min():.4f}")
 
 
 # ============================================================================
