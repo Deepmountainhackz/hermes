@@ -170,7 +170,7 @@ class CommoditiesService:
             })
             
             commodity_data = {
-                'commodity': commodity_symbol,
+                'symbol': commodity_symbol,
                 'name': commodity_info['name'],
                 'price': self._safe_float(latest.get('value')),
                 'change': None,  # Calculate if previous data available
