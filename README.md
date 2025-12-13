@@ -8,13 +8,17 @@ A comprehensive, automated data collection and analysis platform that integrates
 
 ---
 
-## ✨ What's New in v4.0
+## ✨ What's New in v4.1
 
+- **📊 Market Sentiment Dashboard** - Fear & Greed Index for crypto and stocks
+- **📈 Treasury Yield Curve** - 3M, 2Y, 5Y, 10Y, 30Y yields with curve visualization
+- **📉 VIX Volatility Index** - Real-time market fear gauge with interpretation
+- **🏦 Central Bank Calendar** - Fed, ECB, BoE, BoJ, BoC meeting schedules
+- **🔗 Cross-Asset Correlation Matrix** - Visual correlations across stocks, crypto, commodities
 - **🌐 3D Interactive Globe** - Rotating Earth visualization with weather data overlay
 - **📊 Time Series Analysis** - Historical trends for stocks, crypto, economics, and weather
 - **🔥 GDELT Integration** - Global events and social unrest tracking with sentiment analysis
-- **📈 Enhanced Economics** - PMI, Consumer Confidence, Industrial Production for 5 countries
-- **🌙 Dark Mode UI** - Sleek dark theme optimized for data visualization
+- **📈 Enhanced Economics** - 32+ indicators including PMI, Consumer Sentiment, Retail Sales
 - **₿ Cryptocurrency Tracking** - Top 15 cryptos with real-time prices and 24h changes
 - **📥 Data Export** - Download any dataset as CSV with one click
 - **🚨 Smart Alerts** - Stock moves, crypto volatility, hazardous NEOs, and social unrest
@@ -63,12 +67,20 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 - **Alerts:** Automatic detection of >10% price moves
 
 ### **Economic Indicators**
-- **25+ Key Indicators** across 5 major economies
+- **32+ Key Indicators** across 5 major economies
   - United States: GDP, Unemployment, Inflation, Interest Rate, PMI, Consumer Sentiment, Retail Sales, Industrial Production
   - Eurozone: GDP, Unemployment, Inflation, Consumer Confidence, Industrial Production
   - United Kingdom: GDP, Unemployment, Inflation, Consumer Confidence, Retail Sales
   - Japan: GDP, Unemployment, Inflation, Consumer Confidence, Industrial Production
   - China: GDP, Inflation, Industrial Production
+
+### **Market Sentiment & Risk**
+- **Treasury Yields** - 3-Month, 2-Year, 5-Year, 10-Year, 30-Year
+- **Yield Curve Spread** - 10Y-2Y spread (recession indicator)
+- **VIX Volatility Index** - Market fear gauge
+- **Fear & Greed Index** - Crypto (via Alternative.me) and Stock (calculated)
+- **Cross-Asset Correlations** - Stocks, crypto, commodities relationships
+- **Central Bank Calendar** - 8 major central banks with 2025 meeting dates
 
 ### **Global Events (GDELT)**
 - **Social Unrest Tracking** - Protests, riots, strikes worldwide
@@ -333,20 +345,23 @@ Add all API keys as repository secrets:
 ### **Phase 2: Enhanced Intelligence** ✅ Complete
 - ✅ Cryptocurrency tracking (15 top cryptos)
 - ✅ Alert system for significant events
-- ✅ Dark mode UI
 - ✅ CSV data export
-- [ ] Additional economic indicators (PMI, confidence indexes)
+- ✅ Additional economic indicators (PMI, confidence indexes)
 
-### **Phase 3: Advanced Analysis** (Next)
-- [ ] GDELT social unrest integration
+### **Phase 3: Advanced Analysis** ✅ Complete
+- ✅ GDELT social unrest integration
+- ✅ Cross-layer correlation analysis
+- ✅ Treasury yields and yield curve tracking
+- ✅ VIX volatility index
+- ✅ Fear & Greed Index (crypto + stock)
 - [ ] LLM-powered event classification
-- [ ] Cross-layer correlation analysis
-- [ ] European geopolitical intelligence
 - [ ] Custom query interface
 
-### **Phase 4: Visualization & UI** (Future)
-- [ ] 3D interactive globe visualization
-- [ ] Time-series analysis tools
+### **Phase 4: Visualization & UI** ✅ Complete
+- ✅ 3D interactive globe visualization
+- ✅ Time-series analysis tools
+- ✅ Cross-asset correlation matrix
+- ✅ Central bank meeting calendar
 - [ ] Portfolio correlation views
 - [ ] Custom dashboard builder
 - [ ] Mobile-responsive design

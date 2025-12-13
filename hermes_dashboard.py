@@ -118,27 +118,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Dark mode CSS
-DARK_MODE_CSS = """
-<style>
-    .stApp { background-color: #0e1117; color: #fafafa; }
-    .stSidebar { background-color: #161b22; }
-    .stMetric { background-color: #21262d; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
-    .stDataFrame { background-color: #161b22; }
-    .metric-card { background: linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%); padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin: 5px 0; }
-    .positive { color: #00d26a; }
-    .negative { color: #ff4757; }
-    .neutral { color: #a0a0a0; }
-    h1, h2, h3 { color: #58a6ff; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { background-color: #21262d; border-radius: 8px; color: #c9d1d9; padding: 10px 20px; }
-    .stTabs [aria-selected="true"] { background-color: #388bfd; color: white; }
-    .alert-box { background-color: #2d1f1f; border: 1px solid #ff4757; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .success-box { background-color: #1f2d1f; border: 1px solid #00d26a; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .warning-box { background-color: #2d2d1f; border: 1px solid #ffa502; border-radius: 8px; padding: 15px; margin: 10px 0; }
-</style>
-"""
-st.markdown(DARK_MODE_CSS, unsafe_allow_html=True)
+# Light mode - clean default Streamlit styling
 
 
 # ============================================================================
@@ -239,7 +219,7 @@ st.sidebar.markdown("---")
 page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators",
-     "Weather & Globe", "Space", "Global Events", "News",
+     "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
      "Time Series", "Alerts & Export"]
 )
 
@@ -251,7 +231,7 @@ if st.sidebar.button("Refresh Data"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Last Refresh: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-st.sidebar.caption("v4.0 - Globe + Time Series + GDELT")
+st.sidebar.caption("v4.1 - Sentiment + Yields + Central Bank")
 
 
 # ============================================================================
@@ -585,6 +565,313 @@ elif page == "Economic Indicators":
                             color='value', color_continuous_scale='Blues')
                 fig.update_layout(**get_dark_plotly_layout(), height=400)
                 st.plotly_chart(fig, use_container_width=True)
+
+
+# ============================================================================
+# PAGE: MARKET SENTIMENT
+# ============================================================================
+
+elif page == "Market Sentiment":
+    st.title("Market Sentiment & Risk Indicators")
+    st.markdown("---")
+
+    # Load economic data to get VIX and yield curve
+    econ_df = load_data("""
+        SELECT indicator, name, value, timestamp
+        FROM economic_indicators
+        WHERE country = 'USA'
+        ORDER BY timestamp DESC
+    """)
+
+    # Extract VIX and Yield Curve values
+    vix_value = None
+    yield_spread = None
+    treasury_data = {}
+
+    if not econ_df.empty:
+        econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
+        latest_econ = econ_df.groupby('indicator').first().reset_index()
+
+        for _, row in latest_econ.iterrows():
+            if row['indicator'] == 'VIXCLS':
+                vix_value = float(row['value']) if row['value'] else None
+            elif row['indicator'] == 'T10Y2Y':
+                yield_spread = float(row['value']) if row['value'] else None
+            elif row['indicator'] in ['DGS3MO', 'DGS2', 'DGS5', 'DGS10', 'DGS30']:
+                treasury_data[row['indicator']] = float(row['value']) if row['value'] else None
+
+    # ---- Fear & Greed Section ----
+    st.subheader("Fear & Greed Index")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("##### Crypto Fear & Greed")
+        # Fetch crypto fear & greed from API
+        try:
+            import requests
+            fng_response = requests.get("https://api.alternative.me/fng/?limit=1", timeout=10)
+            if fng_response.status_code == 200:
+                fng_data = fng_response.json()
+                if 'data' in fng_data and fng_data['data']:
+                    crypto_fng = int(fng_data['data'][0]['value'])
+                    crypto_class = fng_data['data'][0]['value_classification']
+
+                    # Color based on value
+                    if crypto_fng <= 25:
+                        fng_color = "#ff4757"
+                    elif crypto_fng <= 45:
+                        fng_color = "#ff6b81"
+                    elif crypto_fng <= 55:
+                        fng_color = "#ffa502"
+                    elif crypto_fng <= 75:
+                        fng_color = "#7bed9f"
+                    else:
+                        fng_color = "#2ed573"
+
+                    st.metric("Crypto F&G Index", crypto_fng, crypto_class)
+                    st.progress(crypto_fng / 100)
+                else:
+                    st.info("Crypto F&G data unavailable")
+            else:
+                st.info("Crypto F&G API unavailable")
+        except Exception:
+            st.info("Could not fetch Crypto F&G data")
+
+    with col2:
+        st.markdown("##### Stock Market Sentiment")
+        if vix_value is not None and yield_spread is not None:
+            # Calculate stock fear & greed
+            if vix_value <= 12:
+                vix_score = 100
+            elif vix_value >= 35:
+                vix_score = 0
+            else:
+                vix_score = 100 - ((vix_value - 12) / 23 * 100)
+
+            if yield_spread >= 1.0:
+                yield_score = 100
+            elif yield_spread <= -0.5:
+                yield_score = 0
+            else:
+                yield_score = ((yield_spread + 0.5) / 1.5) * 100
+
+            stock_fng = int((vix_score * 0.6) + (yield_score * 0.4))
+            stock_fng = max(0, min(100, stock_fng))
+
+            if stock_fng <= 25:
+                stock_class = "Extreme Fear"
+            elif stock_fng <= 45:
+                stock_class = "Fear"
+            elif stock_fng <= 55:
+                stock_class = "Neutral"
+            elif stock_fng <= 75:
+                stock_class = "Greed"
+            else:
+                stock_class = "Extreme Greed"
+
+            st.metric("Stock F&G Index", stock_fng, stock_class)
+            st.progress(stock_fng / 100)
+        else:
+            st.info("Waiting for VIX and Yield data (run collector)")
+
+    st.markdown("---")
+
+    # ---- VIX & Yield Curve Section ----
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("VIX Volatility Index")
+        if vix_value is not None:
+            # VIX interpretation
+            if vix_value < 15:
+                vix_status = "Low Volatility (Complacency)"
+                vix_color = "#2ed573"
+            elif vix_value < 20:
+                vix_status = "Normal Volatility"
+                vix_color = "#7bed9f"
+            elif vix_value < 25:
+                vix_status = "Elevated Volatility"
+                vix_color = "#ffa502"
+            elif vix_value < 35:
+                vix_status = "High Volatility"
+                vix_color = "#ff6b81"
+            else:
+                vix_status = "Extreme Fear"
+                vix_color = "#ff4757"
+
+            st.metric("VIX Level", f"{vix_value:.2f}", vix_status)
+        else:
+            st.info("VIX data not yet collected")
+
+    with col2:
+        st.subheader("Yield Curve (10Y-2Y Spread)")
+        if yield_spread is not None:
+            if yield_spread > 0.5:
+                curve_status = "Steep (Normal)"
+                curve_color = "#2ed573"
+            elif yield_spread > 0:
+                curve_status = "Normal"
+                curve_color = "#7bed9f"
+            elif yield_spread > -0.25:
+                curve_status = "Flat (Caution)"
+                curve_color = "#ffa502"
+            else:
+                curve_status = "Inverted (Recession Signal)"
+                curve_color = "#ff4757"
+
+            st.metric("10Y-2Y Spread", f"{yield_spread:.2f}%", curve_status)
+        else:
+            st.info("Yield curve data not yet collected")
+
+    st.markdown("---")
+
+    # ---- Treasury Yield Curve Chart ----
+    st.subheader("Treasury Yield Curve")
+    if treasury_data:
+        maturities = ['3M', '2Y', '5Y', '10Y', '30Y']
+        maturity_map = {'DGS3MO': '3M', 'DGS2': '2Y', 'DGS5': '5Y', 'DGS10': '10Y', 'DGS30': '30Y'}
+        yields = []
+        labels = []
+
+        for series, label in maturity_map.items():
+            if series in treasury_data and treasury_data[series] is not None:
+                yields.append(treasury_data[series])
+                labels.append(label)
+
+        if yields:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=labels,
+                y=yields,
+                mode='lines+markers',
+                name='Treasury Yields',
+                line=dict(color='#3498db', width=3),
+                marker=dict(size=10)
+            ))
+            fig.update_layout(
+                title="US Treasury Yield Curve",
+                xaxis_title="Maturity",
+                yaxis_title="Yield (%)",
+                height=350
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Treasury yield data not yet collected. Run the economics collector.")
+
+    st.markdown("---")
+
+    # ---- Cross-Asset Correlation Matrix ----
+    st.subheader("Cross-Asset Correlation Matrix")
+
+    # Load various asset data for correlation
+    stocks_df = load_data("SELECT symbol, price, timestamp FROM stocks ORDER BY timestamp")
+    crypto_df = load_data("SELECT symbol, price, timestamp FROM crypto ORDER BY timestamp")
+    commodities_df = load_data("SELECT symbol, price, timestamp FROM commodities ORDER BY timestamp")
+
+    # Build correlation data
+    corr_assets = {}
+
+    if not stocks_df.empty:
+        stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp']).dt.date
+        for symbol in ['AAPL', 'GOOGL', 'MSFT']:
+            sym_data = stocks_df[stocks_df['symbol'] == symbol]
+            if not sym_data.empty:
+                corr_assets[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+    if not crypto_df.empty:
+        crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp']).dt.date
+        for symbol in ['BTC', 'ETH']:
+            sym_data = crypto_df[crypto_df['symbol'] == symbol]
+            if not sym_data.empty:
+                corr_assets[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+    if not commodities_df.empty:
+        commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp']).dt.date
+        for symbol in ['CRUDE_OIL', 'GOLD']:
+            sym_data = commodities_df[commodities_df['symbol'] == symbol]
+            if not sym_data.empty:
+                corr_assets[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+    if len(corr_assets) >= 3:
+        corr_df = pd.DataFrame(corr_assets)
+        corr_matrix = corr_df.pct_change().dropna().corr()
+
+        if not corr_matrix.empty:
+            fig = px.imshow(
+                corr_matrix,
+                text_auto='.2f',
+                color_continuous_scale='RdYlGn',
+                zmin=-1, zmax=1,
+                title="Asset Correlation Matrix (Price Returns)"
+            )
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Not enough data points for correlation calculation")
+    else:
+        st.info("Need more asset data for correlation matrix. Run collectors to populate data.")
+
+    st.markdown("---")
+
+    # ---- Central Bank Calendar ----
+    st.subheader("Central Bank Meeting Calendar")
+
+    # Central Bank meetings (2024-2025)
+    from datetime import timedelta
+
+    central_banks = {
+        'Federal Reserve (FOMC)': {
+            'country': 'USA', 'currency': 'USD',
+            'meetings': ['2025-01-29', '2025-03-19', '2025-05-07', '2025-06-18',
+                        '2025-07-30', '2025-09-17', '2025-11-05', '2025-12-17']
+        },
+        'European Central Bank (ECB)': {
+            'country': 'EU', 'currency': 'EUR',
+            'meetings': ['2025-01-30', '2025-03-06', '2025-04-17', '2025-06-05',
+                        '2025-07-17', '2025-09-11', '2025-10-30', '2025-12-18']
+        },
+        'Bank of England (BoE)': {
+            'country': 'UK', 'currency': 'GBP',
+            'meetings': ['2025-02-06', '2025-03-20', '2025-05-08', '2025-06-19',
+                        '2025-08-07', '2025-09-18', '2025-11-06', '2025-12-18']
+        },
+        'Bank of Japan (BoJ)': {
+            'country': 'Japan', 'currency': 'JPY',
+            'meetings': ['2025-01-24', '2025-03-14', '2025-05-01', '2025-06-17',
+                        '2025-07-31', '2025-09-19', '2025-10-31', '2025-12-19']
+        },
+        'Bank of Canada (BoC)': {
+            'country': 'Canada', 'currency': 'CAD',
+            'meetings': ['2025-01-29', '2025-03-12', '2025-04-16', '2025-06-04',
+                        '2025-07-30', '2025-09-03', '2025-10-29', '2025-12-10']
+        }
+    }
+
+    today = datetime.now().date()
+    upcoming_meetings = []
+
+    for bank, info in central_banks.items():
+        for meeting_str in info['meetings']:
+            meeting_date = datetime.strptime(meeting_str, '%Y-%m-%d').date()
+            if meeting_date >= today:
+                days_until = (meeting_date - today).days
+                if days_until <= 60:  # Show next 60 days
+                    upcoming_meetings.append({
+                        'Bank': bank,
+                        'Country': info['country'],
+                        'Currency': info['currency'],
+                        'Date': meeting_date.strftime('%b %d, %Y'),
+                        'Days Until': days_until
+                    })
+
+    upcoming_meetings.sort(key=lambda x: x['Days Until'])
+
+    if upcoming_meetings:
+        meetings_df = pd.DataFrame(upcoming_meetings[:10])  # Show top 10
+        st.dataframe(meetings_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No upcoming central bank meetings in the next 60 days")
 
 
 # ============================================================================

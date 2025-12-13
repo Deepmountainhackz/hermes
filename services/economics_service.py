@@ -30,6 +30,16 @@ class EconomicsService:
             'CONSUMER_CONFIDENCE': {'series_id': 'UMCSENT', 'name': 'Consumer Sentiment', 'unit': 'Index'},
             'RETAIL_SALES': {'series_id': 'RSXFS', 'name': 'Retail Sales', 'unit': 'Millions USD'},
             'INDUSTRIAL_PRODUCTION': {'series_id': 'INDPRO', 'name': 'Industrial Production', 'unit': 'Index'},
+            # Treasury Yields
+            'TREASURY_3M': {'series_id': 'DGS3MO', 'name': '3-Month Treasury', 'unit': '%'},
+            'TREASURY_2Y': {'series_id': 'DGS2', 'name': '2-Year Treasury', 'unit': '%'},
+            'TREASURY_5Y': {'series_id': 'DGS5', 'name': '5-Year Treasury', 'unit': '%'},
+            'TREASURY_10Y': {'series_id': 'DGS10', 'name': '10-Year Treasury', 'unit': '%'},
+            'TREASURY_30Y': {'series_id': 'DGS30', 'name': '30-Year Treasury', 'unit': '%'},
+            # Yield Curve Spread (10Y - 2Y, recession indicator)
+            'YIELD_CURVE_10Y2Y': {'series_id': 'T10Y2Y', 'name': '10Y-2Y Yield Spread', 'unit': '%'},
+            # VIX Volatility Index
+            'VIX': {'series_id': 'VIXCLS', 'name': 'VIX Volatility Index', 'unit': 'Index'},
         },
         'EU': {
             'GDP': {'series_id': 'CLVMNACSCAB1GQEA19', 'name': 'GDP', 'unit': 'Millions EUR'},
