@@ -2945,49 +2945,150 @@ elif page == "Global Events":
 
 elif page == "News":
     st.title("News Intelligence")
+    st.markdown("*AI-powered sentiment analysis and market impact*")
     st.markdown("---")
 
     news_df = load_data("""
         SELECT title, source, url, description, published_at
-        FROM news ORDER BY published_at DESC LIMIT 50
+        FROM news ORDER BY published_at DESC LIMIT 100
     """)
 
     if news_df.empty:
         st.warning("No news data available.")
     else:
+        # ========== SENTIMENT DASHBOARD ==========
+        st.subheader("📊 Market Sentiment Dashboard")
+
+        # Analyze all articles for sentiment
+        sentiment_data = []
+        for _, article in news_df.iterrows():
+            sentiment, confidence, keywords = classify_event_sentiment(
+                article.get('title', ''),
+                article.get('description', '')
+            )
+            sentiment_data.append({
+                'title': article['title'],
+                'source': article['source'],
+                'published_at': article['published_at'],
+                'sentiment': sentiment,
+                'confidence': confidence,
+                'keywords': keywords
+            })
+
+        sentiment_df = pd.DataFrame(sentiment_data)
+
+        # Calculate sentiment scores
+        bullish_count = len(sentiment_df[sentiment_df['sentiment'] == 'bullish'])
+        bearish_count = len(sentiment_df[sentiment_df['sentiment'] == 'bearish'])
+        neutral_count = len(sentiment_df[sentiment_df['sentiment'] == 'neutral'])
+        total = len(sentiment_df)
+
+        # Sentiment Index: -100 (all bearish) to +100 (all bullish)
+        if total > 0:
+            sentiment_index = ((bullish_count - bearish_count) / total) * 100
+        else:
+            sentiment_index = 0
+
+        # Display sentiment metrics
+        sent_col1, sent_col2, sent_col3, sent_col4 = st.columns(4)
+
+        with sent_col1:
+            # Sentiment gauge
+            if sentiment_index > 20:
+                index_color = "#00a86b"
+                index_label = "Bullish"
+            elif sentiment_index < -20:
+                index_color = "#f44336"
+                index_label = "Bearish"
+            else:
+                index_color = "#ff9800"
+                index_label = "Neutral"
+
+            st.markdown(
+                f"""<div style="text-align:center; padding:15px; background-color:#1e1e1e; border-radius:10px;">
+                <div style="font-size:2.5em; color:{index_color}; font-weight:bold;">{sentiment_index:+.0f}</div>
+                <div style="color:{index_color};">{index_label}</div>
+                <small style="color:#888;">Sentiment Index</small>
+                </div>""",
+                unsafe_allow_html=True
+            )
+
+        with sent_col2:
+            st.metric("🟢 Bullish", bullish_count, f"{bullish_count/total*100:.0f}%" if total > 0 else "0%")
+
+        with sent_col3:
+            st.metric("🔴 Bearish", bearish_count, f"{bearish_count/total*100:.0f}%" if total > 0 else "0%")
+
+        with sent_col4:
+            st.metric("⚪ Neutral", neutral_count, f"{neutral_count/total*100:.0f}%" if total > 0 else "0%")
+
+        # Sentiment distribution pie chart
+        pie_col1, pie_col2 = st.columns([1, 2])
+
+        with pie_col1:
+            fig_pie = px.pie(
+                values=[bullish_count, bearish_count, neutral_count],
+                names=['Bullish', 'Bearish', 'Neutral'],
+                color_discrete_sequence=['#00a86b', '#f44336', '#888888'],
+                hole=0.4
+            )
+            fig_pie.update_layout(
+                showlegend=True,
+                height=250,
+                margin=dict(l=20, r=20, t=30, b=20)
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        with pie_col2:
+            # Top keywords from news
+            all_keywords = []
+            for kws in sentiment_df['keywords']:
+                if kws:
+                    all_keywords.extend(kws)
+
+            if all_keywords:
+                from collections import Counter
+                keyword_counts = Counter(all_keywords).most_common(10)
+
+                st.markdown("**Trending Keywords**")
+                kw_cols = st.columns(5)
+                for i, (kw, count) in enumerate(keyword_counts[:10]):
+                    with kw_cols[i % 5]:
+                        # Color based on sentiment association
+                        bullish_kws = ['growth', 'surge', 'rally', 'record', 'beat', 'profit', 'gain']
+                        bearish_kws = ['fall', 'crash', 'crisis', 'loss', 'decline', 'fear', 'risk']
+                        if kw.lower() in bullish_kws:
+                            kw_color = "#00a86b"
+                        elif kw.lower() in bearish_kws:
+                            kw_color = "#f44336"
+                        else:
+                            kw_color = "#888"
+                        st.markdown(f"<span style='background-color:{kw_color}; padding:3px 8px; border-radius:3px; color:white; font-size:0.9em;'>{kw} ({count})</span>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ========== NEWS FILTERS ==========
         col1, col2 = st.columns([2, 1])
         with col1:
             sources = ['All'] + sorted(news_df['source'].dropna().unique().tolist())
             selected_source = st.selectbox("Filter by Source", sources)
         with col2:
-            show_sentiment = st.checkbox("Show AI Sentiment", value=True)
+            sentiment_filter = st.selectbox("Filter by Sentiment", ['All', 'Bullish', 'Bearish', 'Neutral'])
 
-        filtered = news_df if selected_source == 'All' else news_df[news_df['source'] == selected_source]
+        # Apply filters
+        filtered = news_df.copy()
+        if selected_source != 'All':
+            filtered = filtered[filtered['source'] == selected_source]
 
-        # Sentiment summary if enabled
-        if show_sentiment:
-            bullish_count = 0
-            bearish_count = 0
-            neutral_count = 0
-            for _, article in filtered.iterrows():
-                sentiment, _, _ = classify_event_sentiment(
-                    article.get('title', ''),
-                    article.get('description', '')
-                )
-                if sentiment == 'bullish':
-                    bullish_count += 1
-                elif sentiment == 'bearish':
-                    bearish_count += 1
-                else:
-                    neutral_count += 1
+        # Merge sentiment data
+        filtered = filtered.merge(
+            sentiment_df[['title', 'sentiment', 'confidence', 'keywords']],
+            on='title',
+            how='left'
+        )
 
-            scol1, scol2, scol3 = st.columns(3)
-            with scol1:
-                st.metric("Bullish", bullish_count, delta=None)
-            with scol2:
-                st.metric("Bearish", bearish_count, delta=None)
-            with scol3:
-                st.metric("Neutral", neutral_count, delta=None)
+        if sentiment_filter != 'All':
+            filtered = filtered[filtered['sentiment'] == sentiment_filter.lower()]
 
         st.write(f"**Showing {len(filtered)} articles**")
         st.markdown("---")
@@ -2995,18 +3096,15 @@ elif page == "News":
         for _, article in filtered.iterrows():
             title = article['title'] or 'Untitled'
 
-            # Add sentiment badge if enabled
-            if show_sentiment:
-                sentiment, confidence, keywords = classify_event_sentiment(
-                    title,
-                    article.get('description', '')
-                )
-                badge = get_sentiment_badge(sentiment)
-                st.markdown(f"### {title} {badge}", unsafe_allow_html=True)
-                if keywords:
-                    st.caption(f"Keywords: {', '.join(keywords)} ({confidence:.0%} confidence)")
-            else:
-                st.markdown(f"### {title}")
+            # Use pre-calculated sentiment from merged data
+            sentiment = article.get('sentiment', 'neutral')
+            confidence = article.get('confidence', 0)
+            keywords = article.get('keywords', [])
+
+            badge = get_sentiment_badge(sentiment)
+            st.markdown(f"### {title} {badge}", unsafe_allow_html=True)
+            if keywords:
+                st.caption(f"Keywords: {', '.join(keywords)} ({confidence:.0%} confidence)")
 
             if article.get('description'):
                 st.write(article['description'][:300] + "..." if len(str(article['description'])) > 300 else article['description'])
@@ -4426,14 +4524,31 @@ elif page == "Technical Analysis":
                 bb_upper = bb_middle + (bb_std * 2)
                 bb_lower = bb_middle - (bb_std * 2)
 
+                # Stochastic Oscillator (14,3,3)
+                low_14 = close.rolling(window=14).min()
+                high_14 = close.rolling(window=14).max()
+                stoch_k = 100 * (close - low_14) / (high_14 - low_14)
+                stoch_d = stoch_k.rolling(window=3).mean()
+
+                # ATR (Average True Range) - simplified using close only
+                tr = close.diff().abs()
+                atr = tr.rolling(window=14).mean()
+
+                # Williams %R
+                williams_r = -100 * (high_14 - close) / (high_14 - low_14)
+
                 # Latest values
                 latest_price = close.iloc[-1]
                 latest_rsi = rsi.iloc[-1]
                 latest_macd = macd_line.iloc[-1]
                 latest_signal = signal_line.iloc[-1]
+                latest_stoch_k = stoch_k.iloc[-1] if not pd.isna(stoch_k.iloc[-1]) else 50
+                latest_stoch_d = stoch_d.iloc[-1] if not pd.isna(stoch_d.iloc[-1]) else 50
+                latest_atr = atr.iloc[-1] if not pd.isna(atr.iloc[-1]) else 0
+                latest_williams = williams_r.iloc[-1] if not pd.isna(williams_r.iloc[-1]) else -50
 
                 # Summary metrics
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
                     st.metric("Price", f"${latest_price:,.2f}")
                 with col2:
@@ -4443,8 +4558,11 @@ elif page == "Technical Analysis":
                     macd_status = "Bullish" if latest_macd > latest_signal else "Bearish"
                     st.metric("MACD", f"{latest_macd:.4f}", macd_status)
                 with col4:
-                    ma_status = "Above" if latest_price > sma_20.iloc[-1] else "Below"
-                    st.metric("vs SMA20", ma_status)
+                    stoch_status = "Overbought" if latest_stoch_k > 80 else "Oversold" if latest_stoch_k < 20 else "Neutral"
+                    st.metric("Stoch %K", f"{latest_stoch_k:.1f}", stoch_status)
+                with col5:
+                    atr_pct = (latest_atr / latest_price * 100) if latest_price > 0 else 0
+                    st.metric("ATR (14)", f"${latest_atr:.2f}", f"{atr_pct:.1f}% volatility")
 
                 st.markdown("---")
 
@@ -4529,6 +4647,26 @@ elif page == "Technical Analysis":
                 fig_macd.update_layout(**get_clean_plotly_layout(), height=250)
                 st.plotly_chart(fig_macd, use_container_width=True)
 
+                # Stochastic Oscillator Chart
+                st.subheader("Stochastic Oscillator (14, 3, 3)")
+                fig_stoch = go.Figure()
+
+                fig_stoch.add_trace(go.Scatter(
+                    x=stoch_k.index, y=stoch_k,
+                    mode='lines', name='%K',
+                    line=dict(color='#2196F3', width=2)
+                ))
+                fig_stoch.add_trace(go.Scatter(
+                    x=stoch_d.index, y=stoch_d,
+                    mode='lines', name='%D',
+                    line=dict(color='#FF5722', width=2)
+                ))
+
+                fig_stoch.add_hline(y=80, line_dash="dash", line_color="red", annotation_text="Overbought")
+                fig_stoch.add_hline(y=20, line_dash="dash", line_color="green", annotation_text="Oversold")
+                fig_stoch.update_layout(**get_clean_plotly_layout(), height=200, yaxis_range=[0, 100])
+                st.plotly_chart(fig_stoch, use_container_width=True)
+
                 # Signal Summary
                 st.markdown("---")
                 st.subheader("Signal Summary")
@@ -4561,6 +4699,29 @@ elif page == "Technical Analysis":
                     signals.append(("Bollinger", "Bullish", "At lower band"))
                 else:
                     signals.append(("Bollinger", "Neutral", "Within bands"))
+
+                # Stochastic Signal
+                latest_stoch_k = stoch_k.iloc[-1] if not pd.isna(stoch_k.iloc[-1]) else 50
+                latest_stoch_d = stoch_d.iloc[-1] if not pd.isna(stoch_d.iloc[-1]) else 50
+                if latest_stoch_k > 80:
+                    signals.append(("Stochastic", "Bearish", f"Overbought at {latest_stoch_k:.1f}"))
+                elif latest_stoch_k < 20:
+                    signals.append(("Stochastic", "Bullish", f"Oversold at {latest_stoch_k:.1f}"))
+                elif latest_stoch_k > latest_stoch_d:
+                    signals.append(("Stochastic", "Bullish", f"%K crossed above %D"))
+                elif latest_stoch_k < latest_stoch_d:
+                    signals.append(("Stochastic", "Bearish", f"%K crossed below %D"))
+                else:
+                    signals.append(("Stochastic", "Neutral", f"At {latest_stoch_k:.1f}"))
+
+                # Williams %R Signal
+                latest_williams = williams_r.iloc[-1] if not pd.isna(williams_r.iloc[-1]) else -50
+                if latest_williams > -20:
+                    signals.append(("Williams %R", "Bearish", f"Overbought at {latest_williams:.1f}"))
+                elif latest_williams < -80:
+                    signals.append(("Williams %R", "Bullish", f"Oversold at {latest_williams:.1f}"))
+                else:
+                    signals.append(("Williams %R", "Neutral", f"At {latest_williams:.1f}"))
 
                 signal_df = pd.DataFrame(signals, columns=['Indicator', 'Signal', 'Description'])
                 st.dataframe(signal_df, use_container_width=True, hide_index=True)
