@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.19
+Hermes Intelligence Platform Dashboard v6.20
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -3113,15 +3113,25 @@ elif page == "Economic Indicators":
             latest_comparison = comparison_data.groupby('country').first().reset_index()
 
             if not latest_comparison.empty:
-                # Use country names only (no emoji flags - they don't render in Plotly)
+                # Simple bar chart - single color, no legend
                 fig = px.bar(latest_comparison, x='country', y='value',
                             title=f"{selected_indicator} by Country",
-                            color='value', color_continuous_scale='Blues',
                             text='value')
-                fig.update_layout(**get_clean_plotly_layout(), height=400)
+                fig.update_layout(
+                    **get_clean_plotly_layout(),
+                    height=400,
+                    showlegend=False,
+                    margin=dict(t=60, b=60, l=60, r=40),  # Extra top margin for labels
+                )
                 fig.update_xaxes(title_text="Country")
-                # Show values on bars
-                fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
+                fig.update_traces(
+                    texttemplate='%{text:.1f}',
+                    textposition='outside',
+                    marker_color='#3b82f6'  # Primary blue color
+                )
+                # Ensure y-axis has room for outside labels
+                max_val = latest_comparison['value'].max()
+                fig.update_yaxes(range=[0, max_val * 1.15])
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -3238,19 +3248,28 @@ elif page == "Global Development":
                         ind_data = latest_wb[latest_wb['indicator_name'] == selected_indicator].copy()
                         ind_data = ind_data.sort_values('value', ascending=False)
 
-                        # Bar chart of all countries (no flags in Plotly - they don't render)
+                        # Bar chart - single color, no legend, room for labels
                         fig = px.bar(
                             ind_data,
                             x='country_name',
                             y='value',
                             title=f"{selected_indicator} by Country",
-                            color='value',
-                            color_continuous_scale='Viridis',
                             text='value'
                         )
-                        fig.update_layout(**get_clean_plotly_layout(), height=500)
+                        fig.update_layout(
+                            **get_clean_plotly_layout(),
+                            height=500,
+                            showlegend=False,
+                            margin=dict(t=60, b=80, l=60, r=40),
+                        )
                         fig.update_xaxes(title_text="Country", tickangle=45)
-                        fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
+                        fig.update_traces(
+                            texttemplate='%{text:.1f}',
+                            textposition='outside',
+                            marker_color='#3b82f6'
+                        )
+                        max_val = ind_data['value'].max()
+                        fig.update_yaxes(range=[0, max_val * 1.15])
                         st.plotly_chart(fig, use_container_width=True)
 
                         # Data table
@@ -5339,13 +5358,20 @@ elif page == "Trade & Shipping":
             y='Country',
             orientation='h',
             title=f'{trade_type} by Country (Trillion USD)',
-            color='Share %',
-            color_continuous_scale='Blues',
             text='Value (T$)'
         )
-        fig_trade.update_layout(**get_clean_plotly_layout(), height=400)
+        fig_trade.update_layout(
+            **get_clean_plotly_layout(),
+            height=400,
+            showlegend=False,
+            margin=dict(t=60, b=40, l=100, r=80),
+        )
         fig_trade.update_yaxes(categoryorder='total ascending', title_text='Country')
-        fig_trade.update_traces(texttemplate='$%{text:.1f}T', textposition='outside')
+        fig_trade.update_traces(
+            texttemplate='$%{text:.1f}T',
+            textposition='outside',
+            marker_color='#3b82f6'
+        )
         st.plotly_chart(fig_trade, use_container_width=True)
 
         fig_pie = px.pie(
@@ -5984,13 +6010,20 @@ elif page == "Debt & Fiscal":
                 y='Country',
                 orientation='h',
                 title='Highest Debt-to-GDP Ratios',
-                color='Debt/GDP %',
-                color_continuous_scale='Reds',
                 text='Debt/GDP %'
             )
-            fig_high.update_layout(**get_clean_plotly_layout(), height=500)
+            fig_high.update_layout(
+                **get_clean_plotly_layout(),
+                height=500,
+                showlegend=False,
+                margin=dict(t=60, b=40, l=100, r=80),
+            )
             fig_high.update_yaxes(categoryorder='total ascending', title_text='Country')
-            fig_high.update_traces(texttemplate='%{text:.0f}%', textposition='outside')
+            fig_high.update_traces(
+                texttemplate='%{text:.0f}%',
+                textposition='outside',
+                marker_color='#e07a5f'  # Coral for high debt
+            )
             st.plotly_chart(fig_high, use_container_width=True)
 
         with col2:
@@ -6003,13 +6036,20 @@ elif page == "Debt & Fiscal":
                 y='Country',
                 orientation='h',
                 title='Lowest Debt-to-GDP Ratios',
-                color='Debt/GDP %',
-                color_continuous_scale='Greens',
                 text='Debt/GDP %'
             )
-            fig_low.update_layout(**get_clean_plotly_layout(), height=500)
+            fig_low.update_layout(
+                **get_clean_plotly_layout(),
+                height=500,
+                showlegend=False,
+                margin=dict(t=60, b=40, l=100, r=80),
+            )
             fig_low.update_yaxes(categoryorder='total descending', title_text='Country')
-            fig_low.update_traces(texttemplate='%{text:.0f}%', textposition='outside')
+            fig_low.update_traces(
+                texttemplate='%{text:.0f}%',
+                textposition='outside',
+                marker_color='#0d9488'  # Teal for low debt
+            )
             st.plotly_chart(fig_low, use_container_width=True)
 
     with debt_tabs[2]:
@@ -6024,13 +6064,20 @@ elif page == "Debt & Fiscal":
             y='Country',
             orientation='h',
             title='National Debt by Country (Trillion USD)',
-            color='Debt/GDP %',
-            color_continuous_scale='RdYlGn_r',
             text='Debt (T$)'
         )
-        fig_debt.update_layout(**get_clean_plotly_layout(), height=450)
+        fig_debt.update_layout(
+            **get_clean_plotly_layout(),
+            height=450,
+            showlegend=False,
+            margin=dict(t=60, b=40, l=100, r=80),
+        )
         fig_debt.update_yaxes(categoryorder='total ascending', title_text='Country')
-        fig_debt.update_traces(texttemplate='$%{text:.1f}T', textposition='outside')
+        fig_debt.update_traces(
+            texttemplate='$%{text:.1f}T',
+            textposition='outside',
+            marker_color='#3b82f6'
+        )
         st.plotly_chart(fig_debt, use_container_width=True)
 
         st.dataframe(debt_df, use_container_width=True, hide_index=True)
@@ -6054,13 +6101,20 @@ elif page == "Debt & Fiscal":
                 y='Country',
                 orientation='h',
                 title='Largest Budget Deficits (% of GDP)',
-                color='Balance %',
-                color_continuous_scale='Reds',
                 text='Balance %'
             )
-            fig_deficit.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_deficit.update_layout(
+                **get_clean_plotly_layout(),
+                height=400,
+                showlegend=False,
+                margin=dict(t=60, b=40, l=100, r=80),
+            )
             fig_deficit.update_yaxes(categoryorder='total descending', title_text='Country')
-            fig_deficit.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+            fig_deficit.update_traces(
+                texttemplate='%{text:.1f}%',
+                textposition='outside',
+                marker_color='#e07a5f'
+            )
             st.plotly_chart(fig_deficit, use_container_width=True)
 
         with col2:
@@ -6073,13 +6127,20 @@ elif page == "Debt & Fiscal":
                 y='Country',
                 orientation='h',
                 title='Largest Budget Surpluses (% of GDP)',
-                color='Balance %',
-                color_continuous_scale='Greens',
                 text='Balance %'
             )
-            fig_surplus.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_surplus.update_layout(
+                **get_clean_plotly_layout(),
+                height=400,
+                showlegend=False,
+                margin=dict(t=60, b=40, l=100, r=80),
+            )
             fig_surplus.update_yaxes(categoryorder='total ascending', title_text='Country')
-            fig_surplus.update_traces(texttemplate='+%{text:.1f}%', textposition='outside')
+            fig_surplus.update_traces(
+                texttemplate='+%{text:.1f}%',
+                textposition='outside',
+                marker_color='#0d9488'
+            )
             st.plotly_chart(fig_surplus, use_container_width=True)
 
     with debt_tabs[4]:
