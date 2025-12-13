@@ -8,18 +8,22 @@ A comprehensive, automated data collection and analysis platform that integrates
 
 ---
 
-## ✨ What's New in v4.2
+## ✨ What's New in v4.3
 
-### UX Improvements
+### New Features
+- **📊 Portfolio Correlation** - Build custom portfolios and analyze correlations
+- **🔍 Query Builder** - Custom SQL query interface with templates
+- **🤖 AI Sentiment Analysis** - Keyword-based sentiment classification for news
+- **📱 Mobile Responsive** - Optimized layouts for phones and tablets
+- **📈 Normalized Performance** - Compare asset performance (indexed to 100)
+- **🎯 Diversification Metrics** - Average, highest, and lowest correlations
+
+### v4.2 UX Improvements
 - **🎨 Light Mode Theme** - Clean, professional light mode styling throughout
 - **📊 Stock Heatmap** - Treemap visualization showing performance by volume
 - **🔄 Data Freshness Indicators** - Real-time status of data collection
 - **🕐 Market Status Banner** - Live US market open/closed status
 - **💡 Key Highlights** - Auto-generated insights on Overview page
-- **📈 Gauge Charts** - Visual Fear & Greed gauges
-- **✨ Sparklines** - Mini trend charts for tables
-- **ℹ️ Tooltip Explainers** - Contextual help icons
-- **🌍 Improved Globe** - Light mode globe with better country visibility
 
 ### v4.1 Features
 - **📊 Market Sentiment Dashboard** - Fear & Greed Index for crypto and stocks
@@ -366,17 +370,23 @@ Add all API keys as repository secrets:
 - ✅ Treasury yields and yield curve tracking
 - ✅ VIX volatility index
 - ✅ Fear & Greed Index (crypto + stock)
-- [ ] LLM-powered event classification
-- [ ] Custom query interface
+- ✅ AI-powered event classification (keyword-based, upgradable to LLM)
+- ✅ Custom query interface with templates
 
 ### **Phase 4: Visualization & UI** ✅ Complete
 - ✅ 3D interactive globe visualization
 - ✅ Time-series analysis tools
 - ✅ Cross-asset correlation matrix
 - ✅ Central bank meeting calendar
-- [ ] Portfolio correlation views
-- [ ] Custom dashboard builder
-- [ ] Mobile-responsive design
+- ✅ Portfolio correlation views with diversification metrics
+- ✅ Mobile-responsive design (phone & tablet optimized)
+
+### **Phase 5: Future Enhancements** (Planned)
+- [ ] Custom dashboard builder (drag-and-drop widgets)
+- [ ] Full LLM integration (Claude/GPT for event analysis)
+- [ ] Real-time WebSocket data streaming
+- [ ] User authentication and saved portfolios
+- [ ] PDF report generation
 
 ---
 

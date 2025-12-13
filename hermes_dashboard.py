@@ -1,6 +1,6 @@
 """
-Hermes Intelligence Platform Dashboard v4.2
-Enhanced UX with gauges, sparklines, data freshness, and improved styling
+Hermes Intelligence Platform Dashboard v4.3
+Custom query interface, portfolio views, mobile-responsive, LLM classification
 """
 
 import streamlit as st
@@ -173,6 +173,59 @@ CUSTOM_CSS = """
     /* Market status */
     .market-open { background-color: #e8f5e9; color: #2e7d32; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
     .market-closed { background-color: #ffebee; color: #c62828; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
+
+    /* Portfolio card */
+    .portfolio-card {
+        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    .portfolio-card h3 { margin: 0 0 0.5rem 0; }
+    .portfolio-card .value { font-size: 2rem; font-weight: 700; }
+
+    /* Query builder */
+    .query-result {
+        background-color: #f5f5f5;
+        border: 1px solid #e0e0e0;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: monospace;
+        overflow-x: auto;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .stMetric { padding: 0.5rem !important; }
+        .stMetric label { font-size: 0.75rem !important; }
+        .stMetric [data-testid="stMetricValue"] { font-size: 1.25rem !important; }
+        .stDataFrame { font-size: 0.75rem !important; }
+        [data-testid="stSidebar"] { min-width: 200px !important; }
+        .stTabs [data-baseweb="tab"] { padding: 0.5rem !important; font-size: 0.8rem !important; }
+        h1 { font-size: 1.5rem !important; }
+        h2 { font-size: 1.25rem !important; }
+        h3 { font-size: 1rem !important; }
+    }
+
+    /* Tablet responsive */
+    @media (max-width: 1024px) and (min-width: 769px) {
+        .stMetric [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
+        h1 { font-size: 1.75rem !important; }
+    }
+
+    /* LLM classification badge */
+    .llm-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    .llm-badge.bullish { background-color: #e8f5e9; color: #2e7d32; }
+    .llm-badge.bearish { background-color: #ffebee; color: #c62828; }
+    .llm-badge.neutral { background-color: #f5f5f5; color: #616161; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -382,6 +435,55 @@ def info_tooltip(text):
     return f' <span class="tooltip-icon" title="{text}">ⓘ</span>'
 
 
+def classify_event_sentiment(title, description=""):
+    """
+    Simple keyword-based event classification.
+    Can be upgraded to use Claude/OpenAI API for more accurate classification.
+
+    Returns: (sentiment, confidence, keywords_found)
+    sentiment: 'bullish', 'bearish', or 'neutral'
+    """
+    text = f"{title} {description}".lower()
+
+    bullish_keywords = [
+        'growth', 'surge', 'rally', 'gain', 'profit', 'beat', 'exceed',
+        'strong', 'boom', 'record high', 'bullish', 'upturn', 'recovery',
+        'expansion', 'hire', 'hiring', 'invest', 'investment', 'deal',
+        'partnership', 'breakthrough', 'innovation', 'launch', 'success'
+    ]
+
+    bearish_keywords = [
+        'fall', 'drop', 'decline', 'loss', 'crash', 'recession', 'bearish',
+        'downturn', 'layoff', 'layoffs', 'cut', 'miss', 'disappoint',
+        'weak', 'slump', 'fear', 'crisis', 'default', 'bankruptcy',
+        'inflation', 'tariff', 'war', 'conflict', 'shutdown', 'risk'
+    ]
+
+    bullish_count = sum(1 for kw in bullish_keywords if kw in text)
+    bearish_count = sum(1 for kw in bearish_keywords if kw in text)
+
+    bullish_found = [kw for kw in bullish_keywords if kw in text]
+    bearish_found = [kw for kw in bearish_keywords if kw in text]
+
+    total = bullish_count + bearish_count
+    if total == 0:
+        return 'neutral', 0.5, []
+
+    if bullish_count > bearish_count:
+        confidence = min(0.5 + (bullish_count - bearish_count) * 0.1, 0.95)
+        return 'bullish', confidence, bullish_found[:3]
+    elif bearish_count > bullish_count:
+        confidence = min(0.5 + (bearish_count - bullish_count) * 0.1, 0.95)
+        return 'bearish', confidence, bearish_found[:3]
+    else:
+        return 'neutral', 0.5, []
+
+
+def get_sentiment_badge(sentiment):
+    """Return HTML badge for sentiment classification"""
+    return f'<span class="llm-badge {sentiment}">{sentiment.upper()}</span>'
+
+
 # ============================================================================
 # SIDEBAR NAVIGATION
 # ============================================================================
@@ -399,7 +501,7 @@ page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators",
      "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
-     "Time Series", "Alerts & Export"]
+     "Time Series", "Portfolio", "Query Builder", "Alerts & Export"]
 )
 
 st.sidebar.markdown("---")
@@ -420,7 +522,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v4.2 - Enhanced UX")
+st.sidebar.caption("v4.3 - Query & Portfolio")
 
 
 # ============================================================================
@@ -1401,16 +1503,59 @@ elif page == "News":
     if news_df.empty:
         st.warning("No news data available.")
     else:
-        sources = ['All'] + sorted(news_df['source'].dropna().unique().tolist())
-        selected_source = st.selectbox("Filter by Source", sources)
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            sources = ['All'] + sorted(news_df['source'].dropna().unique().tolist())
+            selected_source = st.selectbox("Filter by Source", sources)
+        with col2:
+            show_sentiment = st.checkbox("Show AI Sentiment", value=True)
 
         filtered = news_df if selected_source == 'All' else news_df[news_df['source'] == selected_source]
+
+        # Sentiment summary if enabled
+        if show_sentiment:
+            bullish_count = 0
+            bearish_count = 0
+            neutral_count = 0
+            for _, article in filtered.iterrows():
+                sentiment, _, _ = classify_event_sentiment(
+                    article.get('title', ''),
+                    article.get('description', '')
+                )
+                if sentiment == 'bullish':
+                    bullish_count += 1
+                elif sentiment == 'bearish':
+                    bearish_count += 1
+                else:
+                    neutral_count += 1
+
+            scol1, scol2, scol3 = st.columns(3)
+            with scol1:
+                st.metric("Bullish", bullish_count, delta=None)
+            with scol2:
+                st.metric("Bearish", bearish_count, delta=None)
+            with scol3:
+                st.metric("Neutral", neutral_count, delta=None)
 
         st.write(f"**Showing {len(filtered)} articles**")
         st.markdown("---")
 
         for _, article in filtered.iterrows():
-            st.markdown(f"### {article['title'] or 'Untitled'}")
+            title = article['title'] or 'Untitled'
+
+            # Add sentiment badge if enabled
+            if show_sentiment:
+                sentiment, confidence, keywords = classify_event_sentiment(
+                    title,
+                    article.get('description', '')
+                )
+                badge = get_sentiment_badge(sentiment)
+                st.markdown(f"### {title} {badge}", unsafe_allow_html=True)
+                if keywords:
+                    st.caption(f"Keywords: {', '.join(keywords)} ({confidence:.0%} confidence)")
+            else:
+                st.markdown(f"### {title}")
+
             if article.get('description'):
                 st.write(article['description'][:300] + "..." if len(str(article['description'])) > 300 else article['description'])
             col1, col2 = st.columns([3, 1])
@@ -1576,6 +1721,351 @@ elif page == "Time Series":
                     height=400
                 )
                 st.plotly_chart(fig, use_container_width=True)
+
+
+# ============================================================================
+# PAGE: PORTFOLIO
+# ============================================================================
+
+elif page == "Portfolio":
+    st.title("Portfolio Correlation Analysis")
+    st.markdown("---")
+
+    st.markdown("""
+    Build a custom portfolio and analyze correlations between your holdings.
+    Select assets from stocks, crypto, and commodities to see how they move together.
+    """)
+
+    # Portfolio builder
+    st.subheader("Build Your Portfolio")
+
+    col1, col2, col3 = st.columns(3)
+
+    # Get available assets
+    stocks_list = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+    crypto_list = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
+    commodities_list = load_data("SELECT DISTINCT symbol FROM commodities ORDER BY symbol")
+
+    with col1:
+        st.markdown("##### Stocks")
+        selected_stocks = st.multiselect(
+            "Select stocks",
+            stocks_list['symbol'].tolist() if not stocks_list.empty else [],
+            default=['AAPL', 'MSFT'] if not stocks_list.empty else []
+        )
+
+    with col2:
+        st.markdown("##### Crypto")
+        selected_crypto = st.multiselect(
+            "Select crypto",
+            crypto_list['symbol'].tolist() if not crypto_list.empty else [],
+            default=['BTC', 'ETH'] if not crypto_list.empty else []
+        )
+
+    with col3:
+        st.markdown("##### Commodities")
+        selected_commodities = st.multiselect(
+            "Select commodities",
+            commodities_list['symbol'].tolist() if not commodities_list.empty else [],
+            default=[]
+        )
+
+    all_selected = selected_stocks + selected_crypto + selected_commodities
+
+    if len(all_selected) >= 2:
+        st.markdown("---")
+        st.subheader("Portfolio Correlation Matrix")
+
+        # Build portfolio data
+        portfolio_data = {}
+
+        # Load stock prices
+        if selected_stocks:
+            stocks_df = load_data(f"""
+                SELECT symbol, price, timestamp FROM stocks
+                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_stocks])})
+                ORDER BY timestamp
+            """)
+            if not stocks_df.empty:
+                stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp']).dt.date
+                for symbol in selected_stocks:
+                    sym_data = stocks_df[stocks_df['symbol'] == symbol]
+                    if not sym_data.empty:
+                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+        # Load crypto prices
+        if selected_crypto:
+            crypto_df = load_data(f"""
+                SELECT symbol, price, timestamp FROM crypto
+                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_crypto])})
+                ORDER BY timestamp
+            """)
+            if not crypto_df.empty:
+                crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp']).dt.date
+                for symbol in selected_crypto:
+                    sym_data = crypto_df[crypto_df['symbol'] == symbol]
+                    if not sym_data.empty:
+                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+        # Load commodity prices
+        if selected_commodities:
+            commodities_df = load_data(f"""
+                SELECT symbol, price, timestamp FROM commodities
+                WHERE symbol IN ({','.join([f"'{s}'" for s in selected_commodities])})
+                ORDER BY timestamp
+            """)
+            if not commodities_df.empty:
+                commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp']).dt.date
+                for symbol in selected_commodities:
+                    sym_data = commodities_df[commodities_df['symbol'] == symbol]
+                    if not sym_data.empty:
+                        portfolio_data[symbol] = sym_data.groupby('timestamp')['price'].first()
+
+        if len(portfolio_data) >= 2:
+            # Calculate correlations
+            portfolio_df = pd.DataFrame(portfolio_data)
+            returns_df = portfolio_df.pct_change().dropna()
+
+            if len(returns_df) >= 5:
+                corr_matrix = returns_df.corr()
+
+                # Correlation heatmap
+                fig = px.imshow(
+                    corr_matrix,
+                    text_auto='.2f',
+                    color_continuous_scale='RdYlGn',
+                    zmin=-1, zmax=1,
+                    title="Portfolio Correlation Matrix (Daily Returns)"
+                )
+                fig.update_layout(**get_clean_plotly_layout(), height=500)
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Portfolio statistics
+                st.markdown("---")
+                st.subheader("Portfolio Statistics")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    avg_corr = corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean()
+                    st.metric("Average Correlation", f"{avg_corr:.2f}")
+                    if avg_corr > 0.7:
+                        st.warning("High correlation - limited diversification")
+                    elif avg_corr < 0.3:
+                        st.success("Low correlation - good diversification")
+
+                with col2:
+                    # Find highest correlation pair
+                    mask = np.triu(np.ones_like(corr_matrix, dtype=bool), k=1)
+                    max_corr_idx = np.unravel_index(np.argmax(corr_matrix.where(mask).values), corr_matrix.shape)
+                    max_corr = corr_matrix.iloc[max_corr_idx]
+                    pair_names = f"{corr_matrix.index[max_corr_idx[0]]} & {corr_matrix.columns[max_corr_idx[1]]}"
+                    st.metric("Highest Correlation", f"{max_corr:.2f}")
+                    st.caption(pair_names)
+
+                with col3:
+                    # Find lowest correlation pair
+                    min_corr_idx = np.unravel_index(np.argmin(corr_matrix.where(mask).values), corr_matrix.shape)
+                    min_corr = corr_matrix.iloc[min_corr_idx]
+                    pair_names = f"{corr_matrix.index[min_corr_idx[0]]} & {corr_matrix.columns[min_corr_idx[1]]}"
+                    st.metric("Lowest Correlation", f"{min_corr:.2f}")
+                    st.caption(pair_names)
+
+                # Price performance chart
+                st.markdown("---")
+                st.subheader("Normalized Price Performance")
+
+                normalized_df = portfolio_df.div(portfolio_df.iloc[0]) * 100
+
+                fig = go.Figure()
+                colors = px.colors.qualitative.Set2
+                for i, col in enumerate(normalized_df.columns):
+                    fig.add_trace(go.Scatter(
+                        x=normalized_df.index,
+                        y=normalized_df[col],
+                        mode='lines',
+                        name=col,
+                        line=dict(color=colors[i % len(colors)], width=2)
+                    ))
+
+                fig.update_layout(
+                    title="Portfolio Performance (Indexed to 100)",
+                    yaxis_title="Value (Base = 100)",
+                    **get_clean_plotly_layout(),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Need at least 5 data points for correlation analysis. Run collectors to gather more data.")
+        else:
+            st.warning("Need price data for at least 2 assets. Run collectors first.")
+    else:
+        st.info("Select at least 2 assets to analyze portfolio correlations.")
+
+
+# ============================================================================
+# PAGE: QUERY BUILDER
+# ============================================================================
+
+elif page == "Query Builder":
+    st.title("Custom Query Builder")
+    st.markdown("---")
+
+    st.markdown("""
+    Build custom queries to explore your data. Select a table, choose columns,
+    add filters, and export results.
+    """)
+
+    # Available tables
+    available_tables = {
+        'stocks': ['symbol', 'name', 'price', 'change', 'change_percent', 'volume', 'timestamp'],
+        'crypto': ['symbol', 'name', 'price', 'change_24h', 'change_percent_24h', 'market_cap', 'volume_24h', 'timestamp'],
+        'forex': ['pair', 'rate', 'bid', 'ask', 'timestamp'],
+        'commodities': ['symbol', 'name', 'price', 'change_percent', 'unit', 'timestamp'],
+        'economic_indicators': ['country', 'indicator', 'name', 'value', 'unit', 'timestamp'],
+        'weather': ['city', 'temperature', 'humidity', 'description', 'wind_speed', 'timestamp'],
+        'news': ['title', 'source', 'url', 'published_at', 'description'],
+        'earthquakes': ['location', 'magnitude', 'depth', 'latitude', 'longitude', 'timestamp'],
+        'near_earth_objects': ['name', 'date', 'estimated_diameter_max', 'relative_velocity', 'miss_distance', 'is_potentially_hazardous'],
+    }
+
+    # Check if GDELT exists
+    if table_exists('gdelt_events'):
+        available_tables['gdelt_events'] = ['country', 'title', 'event_type', 'tone', 'source', 'url', 'timestamp']
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        st.subheader("Query Options")
+
+        selected_table = st.selectbox("Select Table", list(available_tables.keys()))
+        available_columns = available_tables[selected_table]
+
+        selected_columns = st.multiselect(
+            "Select Columns",
+            available_columns,
+            default=available_columns[:4]
+        )
+
+        # Filters
+        st.markdown("**Filters**")
+
+        # Time filter for tables with timestamp
+        if 'timestamp' in available_columns or 'published_at' in available_columns or 'date' in available_columns:
+            time_col = 'timestamp' if 'timestamp' in available_columns else ('published_at' if 'published_at' in available_columns else 'date')
+            time_filter = st.selectbox(
+                "Time Range",
+                ["All Time", "Last 24 Hours", "Last 7 Days", "Last 30 Days", "Last 90 Days"]
+            )
+        else:
+            time_filter = "All Time"
+            time_col = None
+
+        # Limit
+        limit = st.slider("Row Limit", 10, 1000, 100)
+
+        # Order
+        order_col = st.selectbox("Order By", selected_columns if selected_columns else available_columns[:1])
+        order_dir = st.radio("Order Direction", ["DESC", "ASC"], horizontal=True)
+
+    with col2:
+        st.subheader("Results")
+
+        # Build query
+        if selected_columns:
+            columns_str = ", ".join(selected_columns)
+            query = f"SELECT {columns_str} FROM {selected_table}"
+
+            # Add time filter
+            if time_filter != "All Time" and time_col:
+                if time_filter == "Last 24 Hours":
+                    query += f" WHERE {time_col} >= NOW() - INTERVAL '24 hours'"
+                elif time_filter == "Last 7 Days":
+                    query += f" WHERE {time_col} >= NOW() - INTERVAL '7 days'"
+                elif time_filter == "Last 30 Days":
+                    query += f" WHERE {time_col} >= NOW() - INTERVAL '30 days'"
+                elif time_filter == "Last 90 Days":
+                    query += f" WHERE {time_col} >= NOW() - INTERVAL '90 days'"
+
+            query += f" ORDER BY {order_col} {order_dir} LIMIT {limit}"
+
+            # Show query
+            st.markdown("**Generated Query:**")
+            st.code(query, language="sql")
+
+            if st.button("Run Query", type="primary"):
+                with st.spinner("Executing query..."):
+                    try:
+                        result_df = load_data(query)
+                        if not result_df.empty:
+                            st.success(f"Returned {len(result_df)} rows")
+                            st.dataframe(result_df, use_container_width=True, hide_index=True)
+
+                            # Export option
+                            export_csv(result_df, f"query_{selected_table}")
+
+                            # Basic stats for numeric columns
+                            numeric_cols = result_df.select_dtypes(include=[np.number]).columns.tolist()
+                            if numeric_cols:
+                                st.markdown("**Quick Stats:**")
+                                st.dataframe(result_df[numeric_cols].describe(), use_container_width=True)
+                        else:
+                            st.warning("Query returned no results")
+                    except Exception as e:
+                        st.error(f"Query error: {str(e)}")
+        else:
+            st.info("Select at least one column to build a query")
+
+    # Quick query templates
+    st.markdown("---")
+    st.subheader("Quick Query Templates")
+
+    templates = {
+        "Top Movers Today": """SELECT symbol, name, price, change_percent
+FROM stocks
+WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
+ORDER BY ABS(change_percent) DESC NULLS LAST
+LIMIT 10""",
+        "Crypto 24h Volatility": """SELECT symbol, name, price, change_percent_24h, market_cap
+FROM crypto
+WHERE timestamp = (SELECT MAX(timestamp) FROM crypto)
+ORDER BY ABS(change_percent_24h) DESC NULLS LAST
+LIMIT 15""",
+        "Economic Indicators by Country": """SELECT country, name, value, unit, timestamp
+FROM economic_indicators
+WHERE country = 'USA'
+ORDER BY timestamp DESC
+LIMIT 20""",
+        "Recent Earthquakes M5+": """SELECT location, magnitude, depth, timestamp
+FROM earthquakes
+WHERE magnitude >= 5.0
+ORDER BY timestamp DESC
+LIMIT 10""",
+        "Hazardous NEOs": """SELECT name, date, estimated_diameter_max, miss_distance
+FROM near_earth_objects
+WHERE is_potentially_hazardous = true
+ORDER BY date DESC
+LIMIT 10"""
+    }
+
+    selected_template = st.selectbox("Select Template", ["-- Choose --"] + list(templates.keys()))
+
+    if selected_template != "-- Choose --":
+        template_query = templates[selected_template]
+        st.code(template_query, language="sql")
+
+        if st.button("Run Template Query"):
+            with st.spinner("Executing..."):
+                try:
+                    result_df = load_data(template_query)
+                    if not result_df.empty:
+                        st.success(f"Returned {len(result_df)} rows")
+                        st.dataframe(result_df, use_container_width=True, hide_index=True)
+                        export_csv(result_df, f"template_{selected_template.lower().replace(' ', '_')}")
+                    else:
+                        st.warning("No results")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
 
 
 # ============================================================================
