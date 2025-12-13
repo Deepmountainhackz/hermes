@@ -749,56 +749,89 @@ if page == "Overview":
 
 elif page == "Markets":
     st.title("Market Intelligence")
+    st.markdown("*Stocks, Commodities, and Forex*")
     st.markdown("---")
 
     tab1, tab2, tab3 = st.tabs(["Stocks", "Commodities", "Forex"])
 
     with tab1:
-        st.subheader("Stock Market Overview")
         stocks_df = load_data("""
             SELECT symbol, name, price, change, change_percent, volume, timestamp
             FROM stocks ORDER BY timestamp DESC, symbol
         """)
 
         if stocks_df.empty:
-            st.warning("No stock data available.")
+            st.warning("No stock data available. Run: `python scheduler.py --collector markets`")
         else:
             stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
             latest_stocks = stocks_df.groupby('symbol').first().reset_index()
+            latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
 
-            col1, col2, col3, col4 = st.columns(4)
-            gainers = latest_stocks[latest_stocks['change_percent'] > 0]
-            losers = latest_stocks[latest_stocks['change_percent'] < 0]
+            gainers = latest_stocks[latest_stocks['change_percent'] > 0].sort_values('change_percent', ascending=False)
+            losers = latest_stocks[latest_stocks['change_percent'] < 0].sort_values('change_percent', ascending=True)
 
+            # Summary metrics
+            col1, col2, col3, col4, col5 = st.columns(5)
             with col1:
                 st.metric("Total Stocks", len(latest_stocks))
             with col2:
-                st.metric("Gainers", len(gainers))
+                st.metric("Gainers", len(gainers), delta=f"{len(gainers)}" if len(gainers) > 0 else None)
             with col3:
-                st.metric("Losers", len(losers))
+                st.metric("Losers", len(losers), delta=f"-{len(losers)}" if len(losers) > 0 else None, delta_color="inverse")
             with col4:
-                avg = latest_stocks['change_percent'].mean() if not latest_stocks.empty else 0
-                st.metric("Avg Change", f"{avg:.2f}%")
+                avg = latest_stocks['change_percent'].mean()
+                st.metric("Avg Change", f"{avg:+.2f}%")
+            with col5:
+                total_vol = latest_stocks['volume'].sum()
+                st.metric("Total Volume", format_large_number(total_vol))
 
             st.markdown("---")
-            # View toggle: Table or Heatmap
-            view_mode = st.radio("View Mode", ["Table", "Heatmap"], horizontal=True)
 
-            if view_mode == "Table":
+            # Sub-tabs for different views
+            stock_view = st.radio("View", ["All Stocks", "Top Gainers", "Top Losers", "Heatmap"], horizontal=True)
+
+            if stock_view == "All Stocks":
                 display_df = latest_stocks[['symbol', 'name', 'price', 'change_percent', 'volume']].copy()
-                display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}" if x else "N/A")
+                display_df = display_df.sort_values('change_percent', ascending=False)
+                display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else "N/A")
                 display_df['change_percent'] = display_df['change_percent'].apply(format_change)
-                display_df['volume'] = display_df['volume'].apply(lambda x: f"{x:,.0f}" if x else "N/A")
+                display_df['volume'] = display_df['volume'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "N/A")
                 display_df.columns = ['Symbol', 'Name', 'Price', 'Change %', 'Volume']
                 st.dataframe(display_df, use_container_width=True, hide_index=True)
-            else:
-                # Treemap heatmap showing stock performance
+
+            elif stock_view == "Top Gainers":
+                st.subheader("Top Gainers")
+                if not gainers.empty:
+                    top_gainers = gainers.head(10)
+                    for _, row in top_gainers.iterrows():
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        with col1:
+                            st.markdown(f"**{row['symbol']}** - {row['name'] or 'N/A'}")
+                        with col2:
+                            st.markdown(f"${row['price']:.2f}")
+                        with col3:
+                            st.markdown(f"<span class='positive'>+{row['change_percent']:.2f}%</span>", unsafe_allow_html=True)
+                else:
+                    st.info("No gainers today")
+
+            elif stock_view == "Top Losers":
+                st.subheader("Top Losers")
+                if not losers.empty:
+                    top_losers = losers.head(10)
+                    for _, row in top_losers.iterrows():
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        with col1:
+                            st.markdown(f"**{row['symbol']}** - {row['name'] or 'N/A'}")
+                        with col2:
+                            st.markdown(f"${row['price']:.2f}")
+                        with col3:
+                            st.markdown(f"<span class='negative'>{row['change_percent']:.2f}%</span>", unsafe_allow_html=True)
+                else:
+                    st.info("No losers today")
+
+            else:  # Heatmap
                 heatmap_df = latest_stocks[['symbol', 'name', 'price', 'change_percent', 'volume']].copy()
-                heatmap_df['change_percent'] = heatmap_df['change_percent'].fillna(0)
                 heatmap_df['volume'] = heatmap_df['volume'].fillna(1)
-                heatmap_df['display_text'] = heatmap_df.apply(
-                    lambda r: f"{r['symbol']}<br>${r['price']:.2f}<br>{r['change_percent']:+.2f}%", axis=1
-                )
 
                 fig = px.treemap(
                     heatmap_df,
@@ -814,13 +847,9 @@ elif page == "Markets":
                     texttemplate='<b>%{label}</b><br>$%{customdata[1]:.2f}<br>%{customdata[2]:+.2f}%',
                     hovertemplate='<b>%{customdata[0]}</b><br>Symbol: %{label}<br>Price: $%{customdata[1]:.2f}<br>Change: %{customdata[2]:+.2f}%<extra></extra>'
                 )
-                fig.update_layout(
-                    **get_clean_plotly_layout(),
-                    height=500,
-                    margin=dict(l=10, r=10, t=30, b=10)
-                )
+                fig.update_layout(**get_clean_plotly_layout(), height=500, margin=dict(l=10, r=10, t=30, b=10))
                 st.plotly_chart(fig, use_container_width=True)
-                st.caption("Size represents trading volume. Color shows daily change (green=gain, red=loss).")
+                st.caption("Size = Volume | Color = Daily Change (Green = Gain, Red = Loss)")
 
     with tab2:
         st.subheader("Commodity Prices")
@@ -830,20 +859,35 @@ elif page == "Markets":
         """)
 
         if commodities_df.empty:
-            st.warning("No commodity data available.")
+            st.warning("No commodity data. Run: `python scheduler.py --collector commodities`")
         else:
             commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
             latest_commodities = commodities_df.groupby('symbol').first().reset_index()
 
-            cols = st.columns(3)
-            for idx, (_, row) in enumerate(latest_commodities.iterrows()):
-                with cols[idx % 3]:
+            # Group by category
+            energy = latest_commodities[latest_commodities['symbol'].isin(['CRUDE_OIL', 'NATURAL_GAS', 'BRENT'])]
+            metals = latest_commodities[latest_commodities['symbol'].isin(['GOLD', 'SILVER', 'COPPER', 'PLATINUM'])]
+            agriculture = latest_commodities[~latest_commodities['symbol'].isin(['CRUDE_OIL', 'NATURAL_GAS', 'BRENT', 'GOLD', 'SILVER', 'COPPER', 'PLATINUM'])]
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.markdown("**Energy**")
+                for _, row in energy.iterrows():
                     change = row.get('change_percent', 0) or 0
-                    st.metric(
-                        label=row['name'] or row['symbol'],
-                        value=f"${row['price']:.2f}" if row['price'] else "N/A",
-                        delta=format_change(change)
-                    )
+                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
+
+            with col2:
+                st.markdown("**Metals**")
+                for _, row in metals.iterrows():
+                    change = row.get('change_percent', 0) or 0
+                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
+
+            with col3:
+                st.markdown("**Agriculture**")
+                for _, row in agriculture.iterrows():
+                    change = row.get('change_percent', 0) or 0
+                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
 
     with tab3:
         st.subheader("Foreign Exchange Rates")
@@ -853,11 +897,28 @@ elif page == "Markets":
         """)
 
         if forex_df.empty:
-            st.warning("No forex data available.")
+            st.warning("No forex data. Run: `python scheduler.py --collector forex`")
         else:
             forex_df['timestamp'] = pd.to_datetime(forex_df['timestamp'])
             latest_forex = forex_df.groupby('pair').first().reset_index()
 
+            # Major pairs
+            major_pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD']
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Major Pairs**")
+                for _, row in latest_forex[latest_forex['pair'].isin(major_pairs)].iterrows():
+                    st.metric(row['pair'], f"{row['rate']:.4f}")
+
+            with col2:
+                st.markdown("**Other Pairs**")
+                for _, row in latest_forex[~latest_forex['pair'].isin(major_pairs)].iterrows():
+                    st.metric(row['pair'], f"{row['rate']:.4f}")
+
+            st.markdown("---")
+            st.subheader("All Rates")
             display_forex = latest_forex[['pair', 'rate', 'bid', 'ask']].copy()
             display_forex['rate'] = display_forex['rate'].apply(lambda x: f"{x:.4f}" if x else "N/A")
             display_forex['bid'] = display_forex['bid'].apply(lambda x: f"{x:.4f}" if x else "N/A")
@@ -872,6 +933,7 @@ elif page == "Markets":
 
 elif page == "Crypto":
     st.title("Cryptocurrency Intelligence")
+    st.markdown("*Real-time crypto prices and market data*")
     st.markdown("---")
 
     crypto_df = load_data("""
@@ -881,53 +943,135 @@ elif page == "Crypto":
     """)
 
     if crypto_df.empty:
-        st.warning("No cryptocurrency data available. Run the crypto collector to populate data.")
+        st.warning("No cryptocurrency data. Run: `python scheduler.py --collector crypto`")
     else:
         crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
         latest_crypto = crypto_df.groupby('symbol').first().reset_index()
+        latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
+        latest_crypto['market_cap'] = pd.to_numeric(latest_crypto['market_cap'], errors='coerce').fillna(0)
 
-        col1, col2, col3, col4 = st.columns(4)
-        total_market_cap = latest_crypto['market_cap'].sum() if 'market_cap' in latest_crypto.columns else 0
-        gainers = latest_crypto[latest_crypto['change_percent_24h'] > 0] if 'change_percent_24h' in latest_crypto.columns else pd.DataFrame()
-        losers = latest_crypto[latest_crypto['change_percent_24h'] < 0] if 'change_percent_24h' in latest_crypto.columns else pd.DataFrame()
+        total_market_cap = latest_crypto['market_cap'].sum()
+        gainers = latest_crypto[latest_crypto['change_percent_24h'] > 0].sort_values('change_percent_24h', ascending=False)
+        losers = latest_crypto[latest_crypto['change_percent_24h'] < 0].sort_values('change_percent_24h', ascending=True)
 
+        # Summary metrics
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric("Total Coins", len(latest_crypto))
         with col2:
-            st.metric("Total Market Cap", format_large_number(total_market_cap))
+            st.metric("Market Cap", format_large_number(total_market_cap))
         with col3:
-            st.metric("Gainers (24h)", len(gainers))
+            st.metric("Gainers", len(gainers), delta=f"+{len(gainers)}")
         with col4:
-            st.metric("Losers (24h)", len(losers))
+            st.metric("Losers", len(losers), delta=f"-{len(losers)}", delta_color="inverse")
+        with col5:
+            # BTC dominance
+            btc_cap = latest_crypto[latest_crypto['symbol'] == 'BTC']['market_cap'].sum()
+            dominance = (btc_cap / total_market_cap * 100) if total_market_cap > 0 else 0
+            st.metric("BTC Dominance", f"{dominance:.1f}%")
 
         st.markdown("---")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Top Gainers")
-            if not gainers.empty and 'change_percent_24h' in gainers.columns:
-                top_gainers = gainers.nlargest(5, 'change_percent_24h')
-                for _, row in top_gainers.iterrows():
-                    st.markdown(f"**{row['symbol']}**: <span class='positive'>+{row['change_percent_24h']:.2f}%</span>",
+        # Tab views
+        crypto_view = st.radio("View", ["Overview", "Top Gainers", "Top Losers", "Market Cap Chart", "All Coins"], horizontal=True)
+
+        if crypto_view == "Overview":
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.subheader("Top 10 by Market Cap")
+                top_10 = latest_crypto.nlargest(10, 'market_cap')
+                for i, (_, row) in enumerate(top_10.iterrows(), 1):
+                    change = row['change_percent_24h']
+                    color = "positive" if change >= 0 else "negative"
+                    price_fmt = f"${row['price']:,.2f}" if row['price'] < 10000 else f"${row['price']:,.0f}"
+                    st.markdown(f"**{i}. {row['symbol']}** {price_fmt} <span class='{color}'>{change:+.2f}%</span>",
                                unsafe_allow_html=True)
 
-        with col2:
-            st.subheader("Top Losers")
-            if not losers.empty and 'change_percent_24h' in losers.columns:
-                top_losers = losers.nsmallest(5, 'change_percent_24h')
-                for _, row in top_losers.iterrows():
-                    st.markdown(f"**{row['symbol']}**: <span class='negative'>{row['change_percent_24h']:.2f}%</span>",
+            with col2:
+                st.subheader("Biggest Movers (24h)")
+                # Top 5 gainers and losers
+                st.markdown("**Gainers**")
+                for _, row in gainers.head(5).iterrows():
+                    st.markdown(f"**{row['symbol']}** <span class='positive'>+{row['change_percent_24h']:.2f}%</span>",
+                               unsafe_allow_html=True)
+                st.markdown("**Losers**")
+                for _, row in losers.head(5).iterrows():
+                    st.markdown(f"**{row['symbol']}** <span class='negative'>{row['change_percent_24h']:.2f}%</span>",
                                unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.subheader("All Cryptocurrencies")
-        display_crypto = latest_crypto[['symbol', 'name', 'price', 'change_percent_24h', 'market_cap', 'volume_24h']].copy()
-        display_crypto['price'] = display_crypto['price'].apply(lambda x: f"${x:,.2f}" if pd.notna(x) else "N/A")
-        display_crypto['change_percent_24h'] = display_crypto['change_percent_24h'].apply(format_change)
-        display_crypto['market_cap'] = display_crypto['market_cap'].apply(format_large_number)
-        display_crypto['volume_24h'] = display_crypto['volume_24h'].apply(format_large_number)
-        display_crypto.columns = ['Symbol', 'Name', 'Price', '24h Change', 'Market Cap', '24h Volume']
-        st.dataframe(display_crypto, use_container_width=True, hide_index=True)
+        elif crypto_view == "Top Gainers":
+            st.subheader("Top Gainers (24h)")
+            if not gainers.empty:
+                for _, row in gainers.head(15).iterrows():
+                    col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+                    with col1:
+                        st.markdown(f"**{row['symbol']}**")
+                    with col2:
+                        st.markdown(f"{row['name'] or '-'}")
+                    with col3:
+                        st.markdown(f"${row['price']:,.2f}")
+                    with col4:
+                        st.markdown(f"<span class='positive'>+{row['change_percent_24h']:.2f}%</span>", unsafe_allow_html=True)
+            else:
+                st.info("No gainers in the last 24 hours")
+
+        elif crypto_view == "Top Losers":
+            st.subheader("Top Losers (24h)")
+            if not losers.empty:
+                for _, row in losers.head(15).iterrows():
+                    col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+                    with col1:
+                        st.markdown(f"**{row['symbol']}**")
+                    with col2:
+                        st.markdown(f"{row['name'] or '-'}")
+                    with col3:
+                        st.markdown(f"${row['price']:,.2f}")
+                    with col4:
+                        st.markdown(f"<span class='negative'>{row['change_percent_24h']:.2f}%</span>", unsafe_allow_html=True)
+            else:
+                st.info("No losers in the last 24 hours")
+
+        elif crypto_view == "Market Cap Chart":
+            st.subheader("Market Cap Distribution")
+            top_coins = latest_crypto.nlargest(10, 'market_cap').copy()
+            top_coins['market_cap_b'] = top_coins['market_cap'] / 1e9
+
+            fig = px.pie(
+                top_coins,
+                values='market_cap_b',
+                names='symbol',
+                title='Top 10 Cryptocurrencies by Market Cap',
+                hole=0.4
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            fig.update_layout(**get_clean_plotly_layout(), height=500)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Bar chart of top 10
+            fig2 = px.bar(
+                top_coins.sort_values('market_cap_b', ascending=True),
+                x='market_cap_b',
+                y='symbol',
+                orientation='h',
+                title='Market Cap (Billions USD)',
+                color='change_percent_24h',
+                color_continuous_scale='RdYlGn',
+                color_continuous_midpoint=0
+            )
+            fig2.update_layout(**get_clean_plotly_layout(), height=400)
+            st.plotly_chart(fig2, use_container_width=True)
+
+        else:  # All Coins
+            st.subheader("All Cryptocurrencies")
+            display_crypto = latest_crypto[['symbol', 'name', 'price', 'change_percent_24h', 'market_cap', 'volume_24h']].copy()
+            display_crypto = display_crypto.sort_values('market_cap', ascending=False)
+            display_crypto['price'] = display_crypto['price'].apply(lambda x: f"${x:,.2f}" if pd.notna(x) else "N/A")
+            display_crypto['change_percent_24h'] = display_crypto['change_percent_24h'].apply(format_change)
+            display_crypto['market_cap'] = display_crypto['market_cap'].apply(format_large_number)
+            display_crypto['volume_24h'] = display_crypto['volume_24h'].apply(format_large_number)
+            display_crypto.columns = ['Symbol', 'Name', 'Price', '24h Change', 'Market Cap', '24h Volume']
+            st.dataframe(display_crypto, use_container_width=True, hide_index=True)
 
 
 # ============================================================================
