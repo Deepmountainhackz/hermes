@@ -523,7 +523,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v4.4 - World Bank Data")
+st.sidebar.caption("v4.5 - World Bank Data")
 
 
 # ============================================================================
@@ -927,14 +927,17 @@ elif page == "Economic Indicators":
             st.markdown("---")
             st.subheader(f"{selected_country} Economic Indicators")
 
-            cols = st.columns(min(4, len(latest_country)))
-            for idx, (_, row) in enumerate(latest_country.iterrows()):
-                with cols[idx % len(cols)]:
-                    unit_str = f" {row['unit']}" if row.get('unit') else ""
-                    st.metric(
-                        label=row['name'] or row['indicator'],
-                        value=f"{row['value']:.2f}{unit_str}" if row['value'] else "N/A"
-                    )
+            if latest_country.empty:
+                st.info("No indicators available for this country")
+            else:
+                cols = st.columns(min(4, len(latest_country)))
+                for idx, (_, row) in enumerate(latest_country.iterrows()):
+                    with cols[idx % len(cols)]:
+                        unit_str = f" {row['unit']}" if row.get('unit') else ""
+                        st.metric(
+                            label=row['name'] or row['indicator'],
+                            value=f"{row['value']:.2f}{unit_str}" if row['value'] else "N/A"
+                        )
 
         # Comparison chart
         st.markdown("---")
@@ -2323,6 +2326,7 @@ elif page == "Alerts & Export":
         if not stocks_df.empty:
             stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
             latest_stocks = stocks_df.groupby('symbol').first().reset_index()
+            latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
             big_movers = latest_stocks[abs(latest_stocks['change_percent']) > 5]
             if not big_movers.empty:
                 st.markdown("#### Stock Alerts (>5% change)")
@@ -2340,6 +2344,7 @@ elif page == "Alerts & Export":
         if not crypto_df.empty:
             crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
             latest_crypto = crypto_df.groupby('symbol').first().reset_index()
+            latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
             big_crypto = latest_crypto[abs(latest_crypto['change_percent_24h']) > 10]
             if not big_crypto.empty:
                 st.markdown("#### Crypto Alerts (>10% change)")
