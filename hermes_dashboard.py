@@ -1030,33 +1030,47 @@ def nav_button(page_name, current_page):
         st.session_state.current_page = page_name
         st.rerun()
 
+# Get current page's category color for dynamic styling
+current_cat_color = COLORS['primary']
+for cat_name, (cat_key, cat_pages) in NAV_STRUCTURE.items():
+    if st.session_state.current_page in cat_pages:
+        current_cat_color = COLORS.get(cat_key, COLORS['primary'])
+        break
+
+# Inject dynamic CSS for the current category's selected button color
+st.sidebar.markdown(f"""
+<style>
+    /* Dynamic category color for selected nav buttons */
+    section[data-testid="stSidebar"] button[kind="primary"] {{
+        background-color: {current_cat_color} !important;
+        border-color: {current_cat_color} !important;
+    }}
+    section[data-testid="stSidebar"] button[kind="primary"]:hover {{
+        background-color: {current_cat_color} !important;
+        border-color: {current_cat_color} !important;
+        filter: brightness(0.9);
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 # Render grouped navigation
 for category, (cat_color_key, pages) in NAV_STRUCTURE.items():
     # Check if any page in this category is currently selected
     category_has_selection = st.session_state.current_page in pages
-    cat_color = COLORS.get(cat_color_key, COLORS['primary'])
 
     with st.sidebar.expander(category, expanded=category_has_selection):
         for page_name in pages:
             is_selected = st.session_state.current_page == page_name
+            prefix = "→ " if is_selected else "   "
 
-            if is_selected:
-                # Custom colored button for selected state
-                st.markdown(
-                    f"""<div style="background-color:{cat_color}; color:white; padding:8px 12px; border-radius:6px; margin:4px 0; font-weight:500; display:flex; align-items:center;">
-                        <span style="margin-right:8px;">→</span> {page_name}
-                    </div>""",
-                    unsafe_allow_html=True
-                )
-            else:
-                if st.button(
-                    f"   {page_name}",
-                    key=f"nav_{page_name}",
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    st.session_state.current_page = page_name
-                    st.rerun()
+            if st.button(
+                f"{prefix}{page_name}",
+                key=f"nav_{page_name}",
+                use_container_width=True,
+                type="primary" if is_selected else "secondary"
+            ):
+                st.session_state.current_page = page_name
+                st.rerun()
 
 # Get current page from session state
 page = st.session_state.current_page
@@ -1078,7 +1092,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.11 - Category-Colored Navigation")
+st.sidebar.caption("v6.12 - Dynamic Category Nav Colors")
 
 
 # ============================================================================
