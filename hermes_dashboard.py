@@ -580,7 +580,8 @@ st.sidebar.markdown("---")
 page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators", "Global Development",
-     "Energy & Resources", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
+     "Energy & Resources", "Agriculture & Food", "Trade & Shipping", "Demographics",
+     "Debt & Fiscal", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
      "Time Series", "Technical Analysis", "Portfolio", "Query Builder",
      "Collection Status", "Alerts & Export"]
 )
@@ -3537,6 +3538,1472 @@ elif page == "Energy & Resources":
 
     else:
         st.error("Unable to load energy data. Please check your internet connection.")
+
+
+# ============================================================================
+# PAGE: AGRICULTURE & FOOD
+# ============================================================================
+
+elif page == "Agriculture & Food":
+    st.title("Agriculture & Food Security")
+    st.markdown("*Global crop production, food prices, and food security metrics*")
+    st.markdown("---")
+
+    # Curated agricultural data from FAO, USDA, and World Bank (2023 estimates)
+
+    # Major crop production data (million metric tons)
+    CROP_PRODUCTION = {
+        'Wheat': {
+            'world_total': 783,
+            'unit': 'million metric tons',
+            'producers': [
+                ('China', 137, 17.5),
+                ('India', 110, 14.0),
+                ('Russia', 92, 11.7),
+                ('United States', 49, 6.3),
+                ('France', 35, 4.5),
+                ('Canada', 34, 4.3),
+                ('Ukraine', 21, 2.7),
+                ('Pakistan', 27, 3.4),
+                ('Germany', 22, 2.8),
+                ('Australia', 26, 3.3),
+            ],
+            'top_exporters': ['Russia', 'EU', 'Australia', 'Canada', 'USA', 'Ukraine'],
+            'top_importers': ['Egypt', 'Indonesia', 'Turkey', 'Algeria', 'Philippines', 'Nigeria'],
+        },
+        'Rice': {
+            'world_total': 518,
+            'unit': 'million metric tons (milled)',
+            'producers': [
+                ('China', 146, 28.2),
+                ('India', 135, 26.1),
+                ('Bangladesh', 37, 7.1),
+                ('Indonesia', 34, 6.6),
+                ('Vietnam', 27, 5.2),
+                ('Thailand', 20, 3.9),
+                ('Myanmar', 13, 2.5),
+                ('Philippines', 13, 2.5),
+                ('Brazil', 8, 1.5),
+                ('Japan', 8, 1.5),
+            ],
+            'top_exporters': ['India', 'Thailand', 'Vietnam', 'Pakistan', 'USA'],
+            'top_importers': ['China', 'Philippines', 'EU', 'Saudi Arabia', 'Ivory Coast'],
+        },
+        'Corn (Maize)': {
+            'world_total': 1147,
+            'unit': 'million metric tons',
+            'producers': [
+                ('United States', 383, 33.4),
+                ('China', 277, 24.1),
+                ('Brazil', 127, 11.1),
+                ('Argentina', 50, 4.4),
+                ('Ukraine', 27, 2.4),
+                ('India', 35, 3.1),
+                ('Mexico', 27, 2.4),
+                ('Indonesia', 20, 1.7),
+                ('South Africa', 16, 1.4),
+                ('France', 12, 1.0),
+            ],
+            'top_exporters': ['USA', 'Brazil', 'Argentina', 'Ukraine', 'France'],
+            'top_importers': ['China', 'EU', 'Japan', 'Mexico', 'South Korea', 'Egypt'],
+        },
+        'Soybeans': {
+            'world_total': 370,
+            'unit': 'million metric tons',
+            'producers': [
+                ('Brazil', 154, 41.6),
+                ('United States', 113, 30.5),
+                ('Argentina', 43, 11.6),
+                ('China', 20, 5.4),
+                ('India', 13, 3.5),
+                ('Paraguay', 10, 2.7),
+                ('Canada', 7, 1.9),
+                ('Russia', 6, 1.6),
+                ('Ukraine', 4, 1.1),
+                ('Bolivia', 3, 0.8),
+            ],
+            'top_exporters': ['Brazil', 'USA', 'Argentina', 'Paraguay', 'Canada'],
+            'top_importers': ['China', 'EU', 'Mexico', 'Japan', 'Thailand'],
+        },
+        'Sugar': {
+            'world_total': 179,
+            'unit': 'million metric tons (raw)',
+            'producers': [
+                ('Brazil', 42, 23.5),
+                ('India', 36, 20.1),
+                ('EU', 16, 8.9),
+                ('China', 10, 5.6),
+                ('Thailand', 11, 6.1),
+                ('United States', 8, 4.5),
+                ('Pakistan', 7, 3.9),
+                ('Mexico', 6, 3.4),
+                ('Russia', 6, 3.4),
+                ('Australia', 5, 2.8),
+            ],
+            'top_exporters': ['Brazil', 'Thailand', 'India', 'Australia', 'Guatemala'],
+            'top_importers': ['Indonesia', 'China', 'USA', 'EU', 'Bangladesh'],
+        },
+        'Coffee': {
+            'world_total': 10.5,
+            'unit': 'million metric tons',
+            'producers': [
+                ('Brazil', 3.1, 29.5),
+                ('Vietnam', 1.9, 18.1),
+                ('Colombia', 0.75, 7.1),
+                ('Indonesia', 0.67, 6.4),
+                ('Ethiopia', 0.50, 4.8),
+                ('Honduras', 0.40, 3.8),
+                ('Uganda', 0.38, 3.6),
+                ('Peru', 0.35, 3.3),
+                ('India', 0.33, 3.1),
+                ('Guatemala', 0.23, 2.2),
+            ],
+            'top_exporters': ['Brazil', 'Vietnam', 'Colombia', 'Indonesia', 'Honduras'],
+            'top_importers': ['USA', 'Germany', 'France', 'Italy', 'Japan'],
+        },
+        'Palm Oil': {
+            'world_total': 77,
+            'unit': 'million metric tons',
+            'producers': [
+                ('Indonesia', 46, 59.7),
+                ('Malaysia', 18, 23.4),
+                ('Thailand', 3.3, 4.3),
+                ('Colombia', 1.8, 2.3),
+                ('Nigeria', 1.4, 1.8),
+                ('Guatemala', 0.9, 1.2),
+                ('Papua New Guinea', 0.7, 0.9),
+                ('Honduras', 0.6, 0.8),
+                ('Ecuador', 0.6, 0.8),
+                ('Brazil', 0.5, 0.6),
+            ],
+            'top_exporters': ['Indonesia', 'Malaysia', 'Guatemala', 'Papua New Guinea'],
+            'top_importers': ['India', 'China', 'EU', 'Pakistan', 'USA'],
+        },
+    }
+
+    # Fertilizer production (million metric tons)
+    FERTILIZER_DATA = {
+        'Nitrogen (N)': {
+            'world_total': 150,
+            'producers': [
+                ('China', 42, 28.0),
+                ('Russia', 14, 9.3),
+                ('India', 13, 8.7),
+                ('United States', 11, 7.3),
+                ('Indonesia', 7, 4.7),
+                ('EU', 10, 6.7),
+                ('Saudi Arabia', 5, 3.3),
+                ('Egypt', 4, 2.7),
+                ('Canada', 4, 2.7),
+                ('Qatar', 4, 2.7),
+            ],
+        },
+        'Phosphate (P2O5)': {
+            'world_total': 47,
+            'producers': [
+                ('China', 17, 36.2),
+                ('Morocco', 6, 12.8),
+                ('USA', 4, 8.5),
+                ('Russia', 4, 8.5),
+                ('India', 3, 6.4),
+                ('Brazil', 2, 4.3),
+                ('Saudi Arabia', 2, 4.3),
+                ('Egypt', 1.5, 3.2),
+                ('Vietnam', 1, 2.1),
+                ('Tunisia', 1, 2.1),
+            ],
+        },
+        'Potash (K2O)': {
+            'world_total': 45,
+            'producers': [
+                ('Canada', 14, 31.1),
+                ('Russia', 9, 20.0),
+                ('Belarus', 7, 15.6),
+                ('China', 6, 13.3),
+                ('Germany', 2.5, 5.6),
+                ('Israel', 2, 4.4),
+                ('Jordan', 1.5, 3.3),
+                ('USA', 0.5, 1.1),
+                ('Chile', 0.5, 1.1),
+                ('Spain', 0.4, 0.9),
+            ],
+        },
+    }
+
+    # Food Security Index (higher = more secure, scale 0-100)
+    FOOD_SECURITY = {
+        'Most Food Secure': [
+            ('Finland', 83.7),
+            ('Ireland', 82.9),
+            ('Norway', 81.5),
+            ('France', 81.3),
+            ('Netherlands', 80.5),
+            ('Japan', 79.5),
+            ('Canada', 79.3),
+            ('Sweden', 79.2),
+            ('Germany', 78.8),
+            ('Switzerland', 78.3),
+            ('USA', 78.0),
+            ('UK', 77.8),
+            ('Australia', 77.5),
+            ('Denmark', 77.2),
+            ('New Zealand', 76.8),
+        ],
+        'Least Food Secure': [
+            ('Syria', 36.2),
+            ('Yemen', 34.8),
+            ('Venezuela', 38.5),
+            ('Haiti', 37.4),
+            ('Chad', 35.6),
+            ('Sudan', 39.2),
+            ('Afghanistan', 38.0),
+            ('Madagascar', 40.5),
+            ('DR Congo', 33.8),
+            ('Central African Republic', 31.2),
+        ],
+    }
+
+    # Agricultural land use (million hectares)
+    LAND_USE = {
+        'Total Agricultural Land': {
+            'world_total': 4800,
+            'countries': [
+                ('China', 528, 11.0),
+                ('USA', 406, 8.5),
+                ('Australia', 371, 7.7),
+                ('Brazil', 264, 5.5),
+                ('Russia', 216, 4.5),
+                ('India', 179, 3.7),
+                ('Argentina', 148, 3.1),
+                ('Kazakhstan', 107, 2.2),
+                ('Saudi Arabia', 106, 2.2),
+                ('Mexico', 106, 2.2),
+            ],
+        },
+        'Arable Land': {
+            'world_total': 1400,
+            'countries': [
+                ('USA', 158, 11.3),
+                ('India', 156, 11.1),
+                ('Russia', 122, 8.7),
+                ('China', 119, 8.5),
+                ('Brazil', 63, 4.5),
+                ('Argentina', 39, 2.8),
+                ('Canada', 38, 2.7),
+                ('Ukraine', 33, 2.4),
+                ('Nigeria', 34, 2.4),
+                ('Indonesia', 24, 1.7),
+            ],
+        },
+    }
+
+    # Create tabs
+    ag_tabs = st.tabs(["Crop Production", "Trade Flows", "Fertilizers", "Food Security", "Land Use"])
+
+    with ag_tabs[0]:
+        st.subheader("Global Crop Production")
+
+        selected_crop = st.selectbox(
+            "Select crop:",
+            list(CROP_PRODUCTION.keys()),
+            key="crop_select"
+        )
+
+        crop_data = CROP_PRODUCTION[selected_crop]
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("World Production", f"{crop_data['world_total']:,} MT")
+        with col2:
+            top_producer = crop_data['producers'][0]
+            st.metric("Top Producer", f"{top_producer[0]}")
+        with col3:
+            st.metric("Top Producer Share", f"{top_producer[2]:.1f}%")
+
+        # Production bar chart
+        prod_df = pd.DataFrame(crop_data['producers'], columns=['Country', 'Production', 'Share %'])
+
+        fig_crop = px.bar(
+            prod_df,
+            x='Production',
+            y='Country',
+            orientation='h',
+            title=f'{selected_crop} Production by Country ({crop_data["unit"]})',
+            color='Share %',
+            color_continuous_scale='Greens'
+        )
+        fig_crop.update_layout(**get_clean_plotly_layout(), height=400)
+        fig_crop.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_crop, use_container_width=True)
+
+        # Pie chart
+        fig_pie = px.pie(
+            prod_df,
+            values='Production',
+            names='Country',
+            title=f'{selected_crop} Global Production Share'
+        )
+        fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        # All crops comparison
+        st.markdown("---")
+        st.subheader("All Major Crops - Production Comparison")
+
+        all_crops = []
+        for crop_name, data in CROP_PRODUCTION.items():
+            all_crops.append({
+                'Crop': crop_name,
+                'World Production (MT)': f"{data['world_total']:,}",
+                'Top Producer': data['producers'][0][0],
+                'Top Producer Share': f"{data['producers'][0][2]:.1f}%"
+            })
+
+        st.dataframe(pd.DataFrame(all_crops), use_container_width=True, hide_index=True)
+
+    with ag_tabs[1]:
+        st.subheader("Agricultural Trade Flows")
+        st.markdown("*Who feeds the world - major exporters and importers*")
+
+        selected_trade_crop = st.selectbox(
+            "Select crop:",
+            list(CROP_PRODUCTION.keys()),
+            key="trade_crop_select"
+        )
+
+        trade_data = CROP_PRODUCTION[selected_trade_crop]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Top Exporters")
+            for i, exp in enumerate(trade_data['top_exporters'], 1):
+                st.markdown(f"{i}. 📤 **{exp}**")
+
+        with col2:
+            st.markdown("##### Top Importers")
+            for i, imp in enumerate(trade_data['top_importers'], 1):
+                st.markdown(f"{i}. 📥 **{imp}**")
+
+        st.markdown("---")
+
+        # Aggregate export/import data
+        st.subheader("Major Agricultural Trading Nations")
+
+        export_counts = {}
+        import_counts = {}
+
+        for crop, data in CROP_PRODUCTION.items():
+            for exp in data['top_exporters']:
+                if exp not in export_counts:
+                    export_counts[exp] = []
+                export_counts[exp].append(crop)
+            for imp in data['top_importers']:
+                if imp not in import_counts:
+                    import_counts[imp] = []
+                import_counts[imp].append(crop)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            export_df = pd.DataFrame([
+                {'Country': k, 'Crops Exported': len(v), 'Crops': ', '.join(v[:3]) + ('...' if len(v) > 3 else '')}
+                for k, v in sorted(export_counts.items(), key=lambda x: -len(x[1]))
+            ])
+
+            fig_exp = px.bar(
+                export_df.head(10),
+                x='Crops Exported',
+                y='Country',
+                orientation='h',
+                title='Top Agricultural Exporters',
+                hover_data=['Crops'],
+                color_discrete_sequence=['#2ecc71']
+            )
+            fig_exp.update_layout(**get_clean_plotly_layout(), height=350)
+            fig_exp.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_exp, use_container_width=True)
+
+        with col2:
+            import_df = pd.DataFrame([
+                {'Country': k, 'Crops Imported': len(v), 'Crops': ', '.join(v[:3]) + ('...' if len(v) > 3 else '')}
+                for k, v in sorted(import_counts.items(), key=lambda x: -len(x[1]))
+            ])
+
+            fig_imp = px.bar(
+                import_df.head(10),
+                x='Crops Imported',
+                y='Country',
+                orientation='h',
+                title='Top Agricultural Importers',
+                hover_data=['Crops'],
+                color_discrete_sequence=['#e74c3c']
+            )
+            fig_imp.update_layout(**get_clean_plotly_layout(), height=350)
+            fig_imp.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_imp, use_container_width=True)
+
+    with ag_tabs[2]:
+        st.subheader("Fertilizer Production")
+        st.markdown("*Global fertilizer supply - critical for food production*")
+
+        selected_fert = st.selectbox(
+            "Select fertilizer type:",
+            list(FERTILIZER_DATA.keys()),
+            key="fert_select"
+        )
+
+        fert_data = FERTILIZER_DATA[selected_fert]
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("World Production", f"{fert_data['world_total']} million MT")
+        with col2:
+            top_prod = fert_data['producers'][0]
+            st.metric("Top Producer", f"{top_prod[0]} ({top_prod[2]:.1f}%)")
+
+        fert_df = pd.DataFrame(fert_data['producers'], columns=['Country', 'Production (MT)', 'Share %'])
+
+        fig_fert = px.bar(
+            fert_df,
+            x='Production (MT)',
+            y='Country',
+            orientation='h',
+            title=f'{selected_fert} Fertilizer Production (million metric tons)',
+            color='Share %',
+            color_continuous_scale='YlOrBr'
+        )
+        fig_fert.update_layout(**get_clean_plotly_layout(), height=400)
+        fig_fert.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_fert, use_container_width=True)
+
+        # All fertilizers summary
+        st.markdown("---")
+        st.subheader("Fertilizer Market Overview")
+
+        fert_summary = []
+        for fert_name, data in FERTILIZER_DATA.items():
+            fert_summary.append({
+                'Type': fert_name,
+                'World Production (MT)': f"{data['world_total']}M",
+                'Top Producer': data['producers'][0][0],
+                'Share': f"{data['producers'][0][2]:.1f}%"
+            })
+
+        st.dataframe(pd.DataFrame(fert_summary), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.info("**Note:** Belarus and Russia together control ~36% of global potash. Sanctions and supply disruptions significantly impact global fertilizer prices and food security.")
+
+    with ag_tabs[3]:
+        st.subheader("Global Food Security Index")
+        st.markdown("*Measuring affordability, availability, quality & safety of food*")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Most Food Secure Countries")
+            secure_df = pd.DataFrame(FOOD_SECURITY['Most Food Secure'], columns=['Country', 'Score'])
+
+            fig_secure = px.bar(
+                secure_df,
+                x='Score',
+                y='Country',
+                orientation='h',
+                title='Food Security Index (0-100)',
+                color='Score',
+                color_continuous_scale='Greens'
+            )
+            fig_secure.update_layout(**get_clean_plotly_layout(), height=450)
+            fig_secure.update_yaxes(categoryorder='total ascending')
+            fig_secure.update_xaxes(range=[0, 100])
+            st.plotly_chart(fig_secure, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Least Food Secure Countries")
+            insecure_df = pd.DataFrame(FOOD_SECURITY['Least Food Secure'], columns=['Country', 'Score'])
+
+            fig_insecure = px.bar(
+                insecure_df,
+                x='Score',
+                y='Country',
+                orientation='h',
+                title='Food Security Index (0-100)',
+                color='Score',
+                color_continuous_scale='Reds_r'
+            )
+            fig_insecure.update_layout(**get_clean_plotly_layout(), height=450)
+            fig_insecure.update_yaxes(categoryorder='total descending')
+            fig_insecure.update_xaxes(range=[0, 100])
+            st.plotly_chart(fig_insecure, use_container_width=True)
+
+        st.markdown("---")
+        st.markdown("""
+        **Food Security Index Components:**
+        - **Affordability** - Food prices relative to income, social safety nets
+        - **Availability** - Agricultural production, supply infrastructure
+        - **Quality & Safety** - Nutritional diversity, food standards
+        - **Natural Resources** - Climate resilience, water scarcity risks
+        """)
+
+    with ag_tabs[4]:
+        st.subheader("Agricultural Land Use")
+
+        land_type = st.selectbox(
+            "Select land type:",
+            list(LAND_USE.keys()),
+            key="land_select"
+        )
+
+        land_data = LAND_USE[land_type]
+
+        st.metric("World Total", f"{land_data['world_total']:,} million hectares")
+
+        land_df = pd.DataFrame(land_data['countries'], columns=['Country', 'Area (Mha)', 'Share %'])
+
+        fig_land = px.bar(
+            land_df,
+            x='Area (Mha)',
+            y='Country',
+            orientation='h',
+            title=f'{land_type} by Country (million hectares)',
+            color='Share %',
+            color_continuous_scale='YlGn'
+        )
+        fig_land.update_layout(**get_clean_plotly_layout(), height=400)
+        fig_land.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_land, use_container_width=True)
+
+        fig_pie = px.pie(
+            land_df,
+            values='Area (Mha)',
+            names='Country',
+            title=f'{land_type} - Global Distribution'
+        )
+        fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.markdown("---")
+    st.caption("Data sources: FAO (Food and Agriculture Organization), USDA, World Bank, Global Food Security Index 2023")
+    st.caption("Production figures are 2022/2023 estimates. Food Security Index is from The Economist Intelligence Unit.")
+
+
+# ============================================================================
+# PAGE: TRADE & SHIPPING
+# ============================================================================
+
+elif page == "Trade & Shipping":
+    st.title("Global Trade & Shipping")
+    st.markdown("*World trade volumes, shipping indices, and trade balances*")
+    st.markdown("---")
+
+    # Baltic Dry Index historical context
+    BDI_INFO = {
+        'current': 1450,
+        'ytd_change': -12.5,
+        'all_time_high': 11793,  # May 2008
+        'all_time_low': 290,     # February 2016
+        'description': 'Measures cost of shipping raw materials (iron ore, coal, grain)',
+    }
+
+    # Global trade data (trillion USD, 2023)
+    TRADE_DATA = {
+        'Total World Trade': 25.3,
+        'Goods Trade': 19.5,
+        'Services Trade': 5.8,
+    }
+
+    # Top trading nations (trillion USD, 2023)
+    TOP_TRADERS = {
+        'Total Trade': [
+            ('China', 5.94, 23.5),
+            ('United States', 5.08, 20.1),
+            ('Germany', 3.17, 12.5),
+            ('Netherlands', 1.78, 7.0),
+            ('Japan', 1.47, 5.8),
+            ('France', 1.41, 5.6),
+            ('South Korea', 1.32, 5.2),
+            ('UK', 1.31, 5.2),
+            ('Italy', 1.25, 4.9),
+            ('Hong Kong', 1.18, 4.7),
+        ],
+        'Exports': [
+            ('China', 3.38, 14.7),
+            ('United States', 2.02, 8.8),
+            ('Germany', 1.69, 7.4),
+            ('Netherlands', 0.97, 4.2),
+            ('Japan', 0.76, 3.3),
+            ('South Korea', 0.68, 3.0),
+            ('France', 0.65, 2.8),
+            ('Italy', 0.66, 2.9),
+            ('Belgium', 0.58, 2.5),
+            ('Canada', 0.57, 2.5),
+        ],
+        'Imports': [
+            ('United States', 3.06, 13.3),
+            ('China', 2.56, 11.1),
+            ('Germany', 1.48, 6.4),
+            ('Japan', 0.71, 3.1),
+            ('UK', 0.74, 3.2),
+            ('France', 0.76, 3.3),
+            ('Netherlands', 0.81, 3.5),
+            ('India', 0.67, 2.9),
+            ('South Korea', 0.64, 2.8),
+            ('Italy', 0.59, 2.6),
+        ],
+    }
+
+    # Trade balances (billion USD)
+    TRADE_BALANCES = [
+        ('China', 823, 'surplus'),
+        ('Germany', 210, 'surplus'),
+        ('Russia', 140, 'surplus'),
+        ('Saudi Arabia', 130, 'surplus'),
+        ('Netherlands', 160, 'surplus'),
+        ('United States', -1040, 'deficit'),
+        ('UK', -235, 'deficit'),
+        ('India', -265, 'deficit'),
+        ('France', -110, 'deficit'),
+        ('Turkey', -95, 'deficit'),
+    ]
+
+    # Container shipping rates
+    SHIPPING_ROUTES = {
+        'Shanghai - Los Angeles': {'rate': 2150, 'change': -45.2, 'unit': '40ft container'},
+        'Shanghai - Rotterdam': {'rate': 2850, 'change': -38.5, 'unit': '40ft container'},
+        'Shanghai - New York': {'rate': 3100, 'change': -42.1, 'unit': '40ft container'},
+        'Rotterdam - New York': {'rate': 2200, 'change': -28.3, 'unit': '40ft container'},
+        'Singapore - Rotterdam': {'rate': 2650, 'change': -35.7, 'unit': '40ft container'},
+    }
+
+    # Major ports (TEU millions, 2023)
+    TOP_PORTS = [
+        ('Shanghai', 47.3, 'China'),
+        ('Singapore', 39.0, 'Singapore'),
+        ('Ningbo-Zhoushan', 35.3, 'China'),
+        ('Shenzhen', 30.2, 'China'),
+        ('Guangzhou', 24.6, 'China'),
+        ('Qingdao', 26.4, 'China'),
+        ('Busan', 22.7, 'South Korea'),
+        ('Tianjin', 21.0, 'China'),
+        ('Hong Kong', 14.9, 'China'),
+        ('Rotterdam', 14.5, 'Netherlands'),
+        ('Dubai', 14.0, 'UAE'),
+        ('Los Angeles', 9.9, 'USA'),
+    ]
+
+    # Create tabs
+    trade_tabs = st.tabs(["Overview", "Trade Rankings", "Trade Balance", "Shipping", "Major Ports"])
+
+    with trade_tabs[0]:
+        st.subheader("Global Trade Overview")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("World Trade (2023)", f"${TRADE_DATA['Total World Trade']}T")
+        with col2:
+            st.metric("Goods Trade", f"${TRADE_DATA['Goods Trade']}T")
+        with col3:
+            st.metric("Services Trade", f"${TRADE_DATA['Services Trade']}T")
+
+        st.markdown("---")
+
+        # Baltic Dry Index
+        st.subheader("Baltic Dry Index (BDI)")
+        st.markdown(f"*{BDI_INFO['description']}*")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Current", f"{BDI_INFO['current']:,}")
+        with col2:
+            st.metric("YTD Change", f"{BDI_INFO['ytd_change']:.1f}%")
+        with col3:
+            st.metric("All-Time High", f"{BDI_INFO['all_time_high']:,}", help="May 2008")
+        with col4:
+            st.metric("All-Time Low", f"{BDI_INFO['all_time_low']:,}", help="February 2016")
+
+        st.markdown("---")
+        st.markdown("""
+        **Key Trade Indicators:**
+        - **Baltic Dry Index** - Leading indicator for global economic activity
+        - **Container Rates** - Cost to ship finished goods
+        - **Trade Balance** - Difference between exports and imports
+        """)
+
+    with trade_tabs[1]:
+        st.subheader("Top Trading Nations")
+
+        trade_type = st.selectbox(
+            "Select trade type:",
+            list(TOP_TRADERS.keys()),
+            key="trade_type_select"
+        )
+
+        trade_df = pd.DataFrame(TOP_TRADERS[trade_type], columns=['Country', 'Value (T$)', 'Share %'])
+
+        fig_trade = px.bar(
+            trade_df,
+            x='Value (T$)',
+            y='Country',
+            orientation='h',
+            title=f'{trade_type} by Country (Trillion USD)',
+            color='Share %',
+            color_continuous_scale='Blues'
+        )
+        fig_trade.update_layout(**get_clean_plotly_layout(), height=400)
+        fig_trade.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_trade, use_container_width=True)
+
+        fig_pie = px.pie(
+            trade_df,
+            values='Value (T$)',
+            names='Country',
+            title=f'{trade_type} - Market Share'
+        )
+        fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with trade_tabs[2]:
+        st.subheader("Trade Balances")
+        st.markdown("*Surplus (green) vs Deficit (red) countries*")
+
+        balance_df = pd.DataFrame(TRADE_BALANCES, columns=['Country', 'Balance ($B)', 'Type'])
+        balance_df['Color'] = balance_df['Type'].map({'surplus': '#2ecc71', 'deficit': '#e74c3c'})
+
+        fig_balance = px.bar(
+            balance_df.sort_values('Balance ($B)'),
+            x='Balance ($B)',
+            y='Country',
+            orientation='h',
+            title='Trade Balance by Country (Billion USD)',
+            color='Type',
+            color_discrete_map={'surplus': '#2ecc71', 'deficit': '#e74c3c'}
+        )
+        fig_balance.update_layout(**get_clean_plotly_layout(), height=450)
+        st.plotly_chart(fig_balance, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("##### Largest Surpluses")
+            surplus_df = balance_df[balance_df['Type'] == 'surplus'].sort_values('Balance ($B)', ascending=False)
+            for _, row in surplus_df.iterrows():
+                st.markdown(f"- **{row['Country']}**: +${row['Balance ($B)']:,}B")
+
+        with col2:
+            st.markdown("##### Largest Deficits")
+            deficit_df = balance_df[balance_df['Type'] == 'deficit'].sort_values('Balance ($B)')
+            for _, row in deficit_df.iterrows():
+                st.markdown(f"- **{row['Country']}**: ${row['Balance ($B)']:,}B")
+
+    with trade_tabs[3]:
+        st.subheader("Container Shipping Rates")
+        st.markdown("*Current rates for major shipping routes (40ft container)*")
+
+        routes_data = []
+        for route, data in SHIPPING_ROUTES.items():
+            routes_data.append({
+                'Route': route,
+                'Rate ($)': data['rate'],
+                'YoY Change': data['change']
+            })
+
+        routes_df = pd.DataFrame(routes_data)
+
+        fig_routes = px.bar(
+            routes_df,
+            x='Rate ($)',
+            y='Route',
+            orientation='h',
+            title='Container Shipping Rates (USD per 40ft container)',
+            color='YoY Change',
+            color_continuous_scale='RdYlGn_r'
+        )
+        fig_routes.update_layout(**get_clean_plotly_layout(), height=350)
+        fig_routes.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_routes, use_container_width=True)
+
+        st.dataframe(routes_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.info("**Note:** Shipping rates have normalized from 2021-2022 peaks when routes like Shanghai-LA reached $20,000+")
+
+    with trade_tabs[4]:
+        st.subheader("World's Busiest Ports")
+        st.markdown("*Container throughput in million TEU (Twenty-foot Equivalent Units)*")
+
+        ports_df = pd.DataFrame(TOP_PORTS, columns=['Port', 'TEU (M)', 'Country'])
+
+        fig_ports = px.bar(
+            ports_df,
+            x='TEU (M)',
+            y='Port',
+            orientation='h',
+            title='Top Container Ports by Volume (Million TEU)',
+            color='Country',
+        )
+        fig_ports.update_layout(**get_clean_plotly_layout(), height=450)
+        fig_ports.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_ports, use_container_width=True)
+
+        # Port distribution by country
+        country_ports = ports_df.groupby('Country')['TEU (M)'].sum().reset_index()
+        country_ports = country_ports.sort_values('TEU (M)', ascending=False)
+
+        fig_country = px.pie(
+            country_ports,
+            values='TEU (M)',
+            names='Country',
+            title='Container Traffic by Country'
+        )
+        fig_country.update_layout(**get_clean_plotly_layout(), height=350)
+        st.plotly_chart(fig_country, use_container_width=True)
+
+        st.markdown("---")
+        st.warning("**China dominates global shipping** - 7 of the top 10 busiest ports are in China, handling over 60% of top-port container traffic.")
+
+    st.markdown("---")
+    st.caption("Data sources: WTO, World Bank, Drewry Shipping Consultants, Lloyd's List, Baltic Exchange")
+    st.caption("Trade figures are 2023 estimates. Shipping rates are indicative spot rates.")
+
+
+# ============================================================================
+# PAGE: DEMOGRAPHICS
+# ============================================================================
+
+elif page == "Demographics":
+    st.title("Global Demographics & Population")
+    st.markdown("*World population, growth trends, and demographic indicators*")
+    st.markdown("---")
+
+    # World population data
+    WORLD_POP = {
+        'total': 8.1,  # billion
+        'growth_rate': 0.88,  # percent per year
+        'urban_percent': 57,
+        'median_age': 30.5,
+    }
+
+    # Most populous countries (millions, 2024)
+    POPULATION_RANKING = [
+        ('India', 1441, 17.8),
+        ('China', 1425, 17.6),
+        ('United States', 340, 4.2),
+        ('Indonesia', 278, 3.4),
+        ('Pakistan', 240, 3.0),
+        ('Nigeria', 229, 2.8),
+        ('Brazil', 217, 2.7),
+        ('Bangladesh', 173, 2.1),
+        ('Russia', 144, 1.8),
+        ('Ethiopia', 129, 1.6),
+        ('Mexico', 129, 1.6),
+        ('Japan', 123, 1.5),
+        ('Philippines', 118, 1.5),
+        ('Egypt', 113, 1.4),
+        ('Vietnam', 100, 1.2),
+    ]
+
+    # Population growth rates (% per year)
+    GROWTH_RATES = {
+        'Fastest Growing': [
+            ('Niger', 3.7),
+            ('Angola', 3.3),
+            ('DR Congo', 3.2),
+            ('Mali', 3.0),
+            ('Chad', 3.0),
+            ('Uganda', 2.9),
+            ('Somalia', 2.8),
+            ('Mozambique', 2.7),
+            ('Tanzania', 2.7),
+            ('Zambia', 2.7),
+        ],
+        'Shrinking': [
+            ('Ukraine', -1.5),
+            ('Bulgaria', -1.1),
+            ('Latvia', -1.0),
+            ('Lithuania', -0.9),
+            ('Serbia', -0.8),
+            ('Croatia', -0.7),
+            ('Romania', -0.6),
+            ('Hungary', -0.5),
+            ('Japan', -0.5),
+            ('Italy', -0.4),
+        ],
+    }
+
+    # Median age by country
+    MEDIAN_AGE = {
+        'Oldest': [
+            ('Monaco', 55.4),
+            ('Japan', 49.1),
+            ('Italy', 47.9),
+            ('Germany', 47.8),
+            ('Portugal', 46.8),
+            ('Finland', 43.6),
+            ('Greece', 45.7),
+            ('Slovenia', 45.1),
+            ('Austria', 44.5),
+            ('Spain', 45.5),
+        ],
+        'Youngest': [
+            ('Niger', 14.9),
+            ('Mali', 15.8),
+            ('Uganda', 15.9),
+            ('Chad', 16.1),
+            ('Angola', 16.2),
+            ('Somalia', 16.4),
+            ('DR Congo', 16.7),
+            ('Zambia', 16.9),
+            ('Mozambique', 17.1),
+            ('Malawi', 17.2),
+        ],
+    }
+
+    # Urbanization rates
+    URBANIZATION = {
+        'Most Urban': [
+            ('Singapore', 100),
+            ('Monaco', 100),
+            ('Kuwait', 100),
+            ('Belgium', 98),
+            ('Qatar', 99),
+            ('Malta', 95),
+            ('San Marino', 97),
+            ('Netherlands', 93),
+            ('Japan', 92),
+            ('Israel', 93),
+        ],
+        'Least Urban': [
+            ('Burundi', 14),
+            ('Papua New Guinea', 13),
+            ('Niger', 17),
+            ('Malawi', 18),
+            ('Rwanda', 18),
+            ('Chad', 24),
+            ('Ethiopia', 23),
+            ('Uganda', 26),
+            ('Nepal', 22),
+            ('Sri Lanka', 19),
+        ],
+    }
+
+    # Life expectancy
+    LIFE_EXPECTANCY = {
+        'Highest': [
+            ('Monaco', 89.4),
+            ('Japan', 84.8),
+            ('Switzerland', 84.0),
+            ('Singapore', 84.1),
+            ('Spain', 83.6),
+            ('Italy', 83.5),
+            ('Australia', 83.5),
+            ('Iceland', 83.3),
+            ('Israel', 83.0),
+            ('Sweden', 82.8),
+        ],
+        'Lowest': [
+            ('Chad', 53.1),
+            ('Nigeria', 53.9),
+            ('Lesotho', 54.3),
+            ('Central African Republic', 54.4),
+            ('Somalia', 56.5),
+            ('Eswatini', 57.1),
+            ('South Sudan', 57.9),
+            ('Ivory Coast', 58.8),
+            ('Guinea-Bissau', 59.4),
+            ('Sierra Leone', 60.1),
+        ],
+    }
+
+    # Create tabs
+    demo_tabs = st.tabs(["Overview", "Population", "Growth Rates", "Age Structure", "Urbanization", "Life Expectancy"])
+
+    with demo_tabs[0]:
+        st.subheader("World Population Overview")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("World Population", f"{WORLD_POP['total']} billion")
+        with col2:
+            st.metric("Annual Growth", f"{WORLD_POP['growth_rate']}%")
+        with col3:
+            st.metric("Urban Population", f"{WORLD_POP['urban_percent']}%")
+        with col4:
+            st.metric("Median Age", f"{WORLD_POP['median_age']} years")
+
+        st.markdown("---")
+
+        st.markdown("""
+        **Key Demographic Trends:**
+        - **India passed China** as the world's most populous country in 2023
+        - **Africa** is the fastest-growing continent, expected to double by 2050
+        - **Europe and East Asia** face population decline and aging
+        - **Urbanization** continues rapidly in developing nations
+        - **Life expectancy** has increased 25+ years since 1950
+        """)
+
+    with demo_tabs[1]:
+        st.subheader("Most Populous Countries")
+
+        pop_df = pd.DataFrame(POPULATION_RANKING, columns=['Country', 'Population (M)', 'Share %'])
+
+        fig_pop = px.bar(
+            pop_df,
+            x='Population (M)',
+            y='Country',
+            orientation='h',
+            title='Population by Country (Millions)',
+            color='Share %',
+            color_continuous_scale='Reds'
+        )
+        fig_pop.update_layout(**get_clean_plotly_layout(), height=500)
+        fig_pop.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_pop, use_container_width=True)
+
+        fig_pie = px.pie(
+            pop_df.head(10),
+            values='Population (M)',
+            names='Country',
+            title='Top 10 Countries - World Population Share'
+        )
+        fig_pie.update_layout(**get_clean_plotly_layout(), height=400)
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with demo_tabs[2]:
+        st.subheader("Population Growth Rates")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Fastest Growing")
+            fast_df = pd.DataFrame(GROWTH_RATES['Fastest Growing'], columns=['Country', 'Growth Rate %'])
+
+            fig_fast = px.bar(
+                fast_df,
+                x='Growth Rate %',
+                y='Country',
+                orientation='h',
+                title='Fastest Growing Populations',
+                color='Growth Rate %',
+                color_continuous_scale='Greens'
+            )
+            fig_fast.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_fast.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_fast, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Shrinking Populations")
+            shrink_df = pd.DataFrame(GROWTH_RATES['Shrinking'], columns=['Country', 'Growth Rate %'])
+
+            fig_shrink = px.bar(
+                shrink_df,
+                x='Growth Rate %',
+                y='Country',
+                orientation='h',
+                title='Shrinking Populations',
+                color='Growth Rate %',
+                color_continuous_scale='Reds_r'
+            )
+            fig_shrink.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_shrink.update_yaxes(categoryorder='total descending')
+            st.plotly_chart(fig_shrink, use_container_width=True)
+
+    with demo_tabs[3]:
+        st.subheader("Age Structure - Median Age")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Oldest Populations")
+            old_df = pd.DataFrame(MEDIAN_AGE['Oldest'], columns=['Country', 'Median Age'])
+
+            fig_old = px.bar(
+                old_df,
+                x='Median Age',
+                y='Country',
+                orientation='h',
+                title='Countries with Oldest Populations',
+                color='Median Age',
+                color_continuous_scale='Blues'
+            )
+            fig_old.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_old.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_old, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Youngest Populations")
+            young_df = pd.DataFrame(MEDIAN_AGE['Youngest'], columns=['Country', 'Median Age'])
+
+            fig_young = px.bar(
+                young_df,
+                x='Median Age',
+                y='Country',
+                orientation='h',
+                title='Countries with Youngest Populations',
+                color='Median Age',
+                color_continuous_scale='Oranges_r'
+            )
+            fig_young.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_young.update_yaxes(categoryorder='total descending')
+            st.plotly_chart(fig_young, use_container_width=True)
+
+    with demo_tabs[4]:
+        st.subheader("Urbanization")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Most Urbanized")
+            urban_df = pd.DataFrame(URBANIZATION['Most Urban'], columns=['Country', 'Urban %'])
+
+            fig_urban = px.bar(
+                urban_df,
+                x='Urban %',
+                y='Country',
+                orientation='h',
+                title='Most Urbanized Countries',
+                color='Urban %',
+                color_continuous_scale='Purples'
+            )
+            fig_urban.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_urban.update_yaxes(categoryorder='total ascending')
+            fig_urban.update_xaxes(range=[0, 100])
+            st.plotly_chart(fig_urban, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Least Urbanized")
+            rural_df = pd.DataFrame(URBANIZATION['Least Urban'], columns=['Country', 'Urban %'])
+
+            fig_rural = px.bar(
+                rural_df,
+                x='Urban %',
+                y='Country',
+                orientation='h',
+                title='Least Urbanized Countries',
+                color='Urban %',
+                color_continuous_scale='Greens_r'
+            )
+            fig_rural.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_rural.update_yaxes(categoryorder='total descending')
+            fig_rural.update_xaxes(range=[0, 100])
+            st.plotly_chart(fig_rural, use_container_width=True)
+
+    with demo_tabs[5]:
+        st.subheader("Life Expectancy")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Highest Life Expectancy")
+            high_life_df = pd.DataFrame(LIFE_EXPECTANCY['Highest'], columns=['Country', 'Years'])
+
+            fig_high = px.bar(
+                high_life_df,
+                x='Years',
+                y='Country',
+                orientation='h',
+                title='Highest Life Expectancy',
+                color='Years',
+                color_continuous_scale='Greens'
+            )
+            fig_high.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_high.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_high, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Lowest Life Expectancy")
+            low_life_df = pd.DataFrame(LIFE_EXPECTANCY['Lowest'], columns=['Country', 'Years'])
+
+            fig_low = px.bar(
+                low_life_df,
+                x='Years',
+                y='Country',
+                orientation='h',
+                title='Lowest Life Expectancy',
+                color='Years',
+                color_continuous_scale='Reds_r'
+            )
+            fig_low.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_low.update_yaxes(categoryorder='total descending')
+            st.plotly_chart(fig_low, use_container_width=True)
+
+        st.markdown("---")
+        st.info("**Gap Alert:** There is a 36-year difference in life expectancy between Monaco (89.4) and Chad (53.1)")
+
+    st.markdown("---")
+    st.caption("Data sources: United Nations World Population Prospects 2024, World Bank, CIA World Factbook")
+    st.caption("Figures are 2024 estimates.")
+
+
+# ============================================================================
+# PAGE: DEBT & FISCAL
+# ============================================================================
+
+elif page == "Debt & Fiscal":
+    st.title("Government Debt & Fiscal Data")
+    st.markdown("*National debt, budget deficits, and sovereign credit ratings*")
+    st.markdown("---")
+
+    # Global debt overview
+    GLOBAL_DEBT = {
+        'total_government': 92,  # trillion USD
+        'total_global': 307,     # trillion USD (all debt)
+        'avg_debt_to_gdp': 92,   # percent
+    }
+
+    # Debt to GDP ratios (percent)
+    DEBT_TO_GDP = {
+        'Highest': [
+            ('Japan', 264),
+            ('Venezuela', 241),
+            ('Sudan', 186),
+            ('Greece', 177),
+            ('Singapore', 168),
+            ('Eritrea', 164),
+            ('Lebanon', 151),
+            ('Italy', 144),
+            ('Cape Verde', 143),
+            ('USA', 129),
+            ('Bahrain', 128),
+            ('Portugal', 127),
+            ('Spain', 112),
+            ('France', 111),
+            ('Belgium', 106),
+        ],
+        'Lowest': [
+            ('Brunei', 2),
+            ('Hong Kong', 4),
+            ('Timor-Leste', 6),
+            ('Afghanistan', 7),
+            ('Kuwait', 8),
+            ('Russia', 15),
+            ('Saudi Arabia', 26),
+            ('Taiwan', 28),
+            ('Indonesia', 40),
+            ('South Korea', 54),
+        ],
+    }
+
+    # Total national debt (trillion USD)
+    NATIONAL_DEBT = [
+        ('United States', 34.0, 129),
+        ('China', 14.0, 77),
+        ('Japan', 10.5, 264),
+        ('UK', 3.3, 104),
+        ('France', 3.2, 111),
+        ('Italy', 3.0, 144),
+        ('Germany', 2.8, 66),
+        ('India', 2.6, 83),
+        ('Canada', 1.8, 107),
+        ('Brazil', 1.6, 88),
+        ('Spain', 1.6, 112),
+        ('Australia', 0.9, 57),
+    ]
+
+    # Budget deficits (% of GDP, 2023)
+    BUDGET_BALANCE = {
+        'Largest Deficits': [
+            ('Libya', -24.0),
+            ('Venezuela', -15.0),
+            ('Sri Lanka', -10.2),
+            ('USA', -8.8),
+            ('UK', -6.1),
+            ('Japan', -5.8),
+            ('France', -5.5),
+            ('India', -5.9),
+            ('Italy', -5.3),
+            ('Spain', -4.8),
+        ],
+        'Largest Surpluses': [
+            ('Norway', 27.0),
+            ('Macau', 18.0),
+            ('Kuwait', 12.5),
+            ('Qatar', 10.2),
+            ('UAE', 9.8),
+            ('Singapore', 8.0),
+            ('Saudi Arabia', 6.5),
+            ('Ireland', 4.2),
+            ('Denmark', 3.0),
+            ('Switzerland', 2.5),
+        ],
+    }
+
+    # Credit ratings (simplified to major countries)
+    CREDIT_RATINGS = {
+        'AAA/Aaa': ['Germany', 'Netherlands', 'Switzerland', 'Norway', 'Singapore', 'Australia', 'Denmark', 'Sweden', 'Luxembourg'],
+        'AA+/Aa1': ['USA', 'Austria', 'Finland'],
+        'AA/Aa2': ['France', 'UK', 'Belgium', 'Czech Republic'],
+        'AA-/Aa3': ['South Korea', 'Taiwan', 'Estonia'],
+        'A+/A1': ['Japan', 'China', 'Slovakia', 'Ireland'],
+        'A/A2': ['Spain', 'Poland', 'Malta'],
+        'A-/A3': ['Italy', 'Mexico', 'Thailand'],
+        'BBB+/Baa1': ['Portugal', 'India', 'Indonesia'],
+        'BBB/Baa2': ['Brazil', 'South Africa', 'Romania'],
+        'BBB-/Baa3': ['Colombia', 'Hungary', 'Morocco'],
+        'BB+ or below': ['Turkey', 'Argentina', 'Russia', 'Pakistan', 'Egypt', 'Nigeria'],
+    }
+
+    # Create tabs
+    debt_tabs = st.tabs(["Overview", "Debt-to-GDP", "Total Debt", "Budget Balance", "Credit Ratings"])
+
+    with debt_tabs[0]:
+        st.subheader("Global Debt Overview")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Government Debt", f"${GLOBAL_DEBT['total_government']}T")
+        with col2:
+            st.metric("Total Global Debt", f"${GLOBAL_DEBT['total_global']}T", help="Includes household, corporate, government")
+        with col3:
+            st.metric("Avg Debt/GDP", f"{GLOBAL_DEBT['avg_debt_to_gdp']}%")
+
+        st.markdown("---")
+
+        st.markdown("""
+        **Key Insights:**
+        - **Global debt hit record $307 trillion** in 2023
+        - **US alone holds** $34 trillion in national debt (11% of global total)
+        - **Japan's debt/GDP at 264%** - highest in developed world
+        - **Low-debt countries** tend to be oil exporters or small city-states
+        - **Credit rating downgrades** can significantly increase borrowing costs
+        """)
+
+        st.markdown("---")
+        st.warning("**US Debt Clock:** Adding ~$1 trillion every 100 days as of 2024")
+
+    with debt_tabs[1]:
+        st.subheader("Debt-to-GDP Ratios")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Highest Debt-to-GDP")
+            high_df = pd.DataFrame(DEBT_TO_GDP['Highest'], columns=['Country', 'Debt/GDP %'])
+
+            fig_high = px.bar(
+                high_df,
+                x='Debt/GDP %',
+                y='Country',
+                orientation='h',
+                title='Highest Debt-to-GDP Ratios',
+                color='Debt/GDP %',
+                color_continuous_scale='Reds'
+            )
+            fig_high.update_layout(**get_clean_plotly_layout(), height=500)
+            fig_high.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_high, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Lowest Debt-to-GDP")
+            low_df = pd.DataFrame(DEBT_TO_GDP['Lowest'], columns=['Country', 'Debt/GDP %'])
+
+            fig_low = px.bar(
+                low_df,
+                x='Debt/GDP %',
+                y='Country',
+                orientation='h',
+                title='Lowest Debt-to-GDP Ratios',
+                color='Debt/GDP %',
+                color_continuous_scale='Greens'
+            )
+            fig_low.update_layout(**get_clean_plotly_layout(), height=500)
+            fig_low.update_yaxes(categoryorder='total descending')
+            st.plotly_chart(fig_low, use_container_width=True)
+
+    with debt_tabs[2]:
+        st.subheader("Total National Debt")
+        st.markdown("*Absolute debt in trillion USD*")
+
+        debt_df = pd.DataFrame(NATIONAL_DEBT, columns=['Country', 'Debt (T$)', 'Debt/GDP %'])
+
+        fig_debt = px.bar(
+            debt_df,
+            x='Debt (T$)',
+            y='Country',
+            orientation='h',
+            title='National Debt by Country (Trillion USD)',
+            color='Debt/GDP %',
+            color_continuous_scale='RdYlGn_r'
+        )
+        fig_debt.update_layout(**get_clean_plotly_layout(), height=450)
+        fig_debt.update_yaxes(categoryorder='total ascending')
+        st.plotly_chart(fig_debt, use_container_width=True)
+
+        st.dataframe(debt_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.info("**Note:** High absolute debt doesn't always mean crisis - it depends on GDP, growth rate, and interest costs. Japan has 264% debt/GDP but very low interest rates.")
+
+    with debt_tabs[3]:
+        st.subheader("Budget Balance")
+        st.markdown("*Annual surplus (+) or deficit (-) as % of GDP*")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("##### Largest Deficits")
+            deficit_df = pd.DataFrame(BUDGET_BALANCE['Largest Deficits'], columns=['Country', 'Balance %'])
+
+            fig_deficit = px.bar(
+                deficit_df,
+                x='Balance %',
+                y='Country',
+                orientation='h',
+                title='Largest Budget Deficits (% of GDP)',
+                color='Balance %',
+                color_continuous_scale='Reds'
+            )
+            fig_deficit.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_deficit.update_yaxes(categoryorder='total descending')
+            st.plotly_chart(fig_deficit, use_container_width=True)
+
+        with col2:
+            st.markdown("##### Largest Surpluses")
+            surplus_df = pd.DataFrame(BUDGET_BALANCE['Largest Surpluses'], columns=['Country', 'Balance %'])
+
+            fig_surplus = px.bar(
+                surplus_df,
+                x='Balance %',
+                y='Country',
+                orientation='h',
+                title='Largest Budget Surpluses (% of GDP)',
+                color='Balance %',
+                color_continuous_scale='Greens'
+            )
+            fig_surplus.update_layout(**get_clean_plotly_layout(), height=400)
+            fig_surplus.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_surplus, use_container_width=True)
+
+    with debt_tabs[4]:
+        st.subheader("Sovereign Credit Ratings")
+        st.markdown("*S&P/Moody's ratings - affects borrowing costs*")
+
+        for rating, countries in CREDIT_RATINGS.items():
+            if rating == 'AAA/Aaa':
+                color = '🟢'
+            elif rating.startswith('AA'):
+                color = '🟢'
+            elif rating.startswith('A'):
+                color = '🟡'
+            elif rating.startswith('BBB'):
+                color = '🟠'
+            else:
+                color = '🔴'
+
+            st.markdown(f"**{color} {rating}:** {', '.join(countries)}")
+
+        st.markdown("---")
+        st.markdown("""
+        **Rating Scale:**
+        - 🟢 **AAA to A-** - Investment grade (low risk)
+        - 🟡 **BBB+ to BBB-** - Lower investment grade (moderate risk)
+        - 🔴 **BB+ and below** - Speculative/Junk (high risk)
+
+        **Impact:** A one-notch downgrade can increase borrowing costs by 0.25-0.50%
+        """)
+
+    st.markdown("---")
+    st.caption("Data sources: IMF, World Bank, S&P Global, Moody's, US Treasury, national finance ministries")
+    st.caption("Figures are 2023/2024 estimates. Ratings as of December 2024.")
 
 
 # ============================================================================
