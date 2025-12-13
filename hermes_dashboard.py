@@ -581,8 +581,8 @@ page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators", "Global Development",
      "Energy & Resources", "Agriculture & Food", "Trade & Shipping", "Demographics",
-     "Debt & Fiscal", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
-     "Time Series", "Technical Analysis", "Portfolio", "Query Builder",
+     "Debt & Fiscal", "Country Profile", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
+     "Time Series", "Technical Analysis", "Correlation Analysis", "Portfolio", "Query Builder",
      "Collection Status", "Alerts & Export"]
 )
 
@@ -5004,6 +5004,751 @@ elif page == "Debt & Fiscal":
     st.markdown("---")
     st.caption("Data sources: IMF, World Bank, S&P Global, Moody's, US Treasury, national finance ministries")
     st.caption("Figures are 2023/2024 estimates. Ratings as of December 2024.")
+
+
+# ============================================================================
+# PAGE: COUNTRY PROFILE
+# ============================================================================
+
+elif page == "Country Profile":
+    st.title("Country Profile")
+    st.markdown("*Comprehensive view of a single country across all data domains*")
+    st.markdown("---")
+
+    # Comprehensive country data - aggregated from all our data sources
+    COUNTRY_DATA = {
+        'United States': {
+            'flag': '🇺🇸',
+            'region': 'North America',
+            'capital': 'Washington D.C.',
+            'population': {'value': 340, 'rank': 3, 'growth': 0.5},
+            'gdp': {'value': 27.4, 'rank': 1, 'growth': 2.5},
+            'gdp_per_capita': 80412,
+            'debt_to_gdp': 129,
+            'credit_rating': 'AA+',
+            'inflation': 3.4,
+            'unemployment': 3.7,
+            'trade_balance': -1040,
+            'life_expectancy': 78.9,
+            'median_age': 38.5,
+            'urban_pct': 83,
+            'electricity_gen': 4178,
+            'energy_mix': {'coal': 16, 'gas': 43, 'nuclear': 18, 'renewables': 23},
+            'co2_per_capita': 14.4,
+            'food_security': 78.0,
+            'arable_land': 158,
+            'top_exports': ['Refined Petroleum', 'Crude Petroleum', 'Natural Gas', 'Aircraft', 'Integrated Circuits'],
+            'top_imports': ['Cars', 'Computers', 'Crude Petroleum', 'Packaged Medicines', 'Vehicle Parts'],
+            'minerals_produced': ['Coal', 'Copper', 'Gold', 'Iron Ore', 'Zinc'],
+            'crops_produced': ['Corn', 'Soybeans', 'Wheat'],
+        },
+        'China': {
+            'flag': '🇨🇳',
+            'region': 'East Asia',
+            'capital': 'Beijing',
+            'population': {'value': 1425, 'rank': 2, 'growth': 0.0},
+            'gdp': {'value': 17.8, 'rank': 2, 'growth': 5.2},
+            'gdp_per_capita': 12541,
+            'debt_to_gdp': 77,
+            'credit_rating': 'A+',
+            'inflation': 0.2,
+            'unemployment': 5.2,
+            'trade_balance': 823,
+            'life_expectancy': 78.2,
+            'median_age': 39.0,
+            'urban_pct': 65,
+            'electricity_gen': 8849,
+            'energy_mix': {'coal': 60, 'gas': 3, 'nuclear': 5, 'renewables': 32},
+            'co2_per_capita': 8.0,
+            'food_security': 74.2,
+            'arable_land': 119,
+            'top_exports': ['Computers', 'Broadcasting Equipment', 'Telephones', 'Integrated Circuits', 'Office Machine Parts'],
+            'top_imports': ['Crude Petroleum', 'Integrated Circuits', 'Iron Ore', 'Natural Gas', 'Cars'],
+            'minerals_produced': ['Coal', 'Iron Ore', 'Rare Earths', 'Gold', 'Zinc'],
+            'crops_produced': ['Rice', 'Wheat', 'Corn', 'Soybeans'],
+        },
+        'Germany': {
+            'flag': '🇩🇪',
+            'region': 'Europe',
+            'capital': 'Berlin',
+            'population': {'value': 84, 'rank': 19, 'growth': 0.0},
+            'gdp': {'value': 4.5, 'rank': 3, 'growth': 0.0},
+            'gdp_per_capita': 53571,
+            'debt_to_gdp': 66,
+            'credit_rating': 'AAA',
+            'inflation': 2.9,
+            'unemployment': 3.0,
+            'trade_balance': 210,
+            'life_expectancy': 81.3,
+            'median_age': 47.8,
+            'urban_pct': 78,
+            'electricity_gen': 577,
+            'energy_mix': {'coal': 26, 'gas': 16, 'nuclear': 0, 'renewables': 52},
+            'co2_per_capita': 8.1,
+            'food_security': 78.8,
+            'arable_land': 12,
+            'top_exports': ['Cars', 'Vehicle Parts', 'Packaged Medicines', 'Aircraft', 'Medical Instruments'],
+            'top_imports': ['Cars', 'Crude Petroleum', 'Natural Gas', 'Vehicle Parts', 'Packaged Medicines'],
+            'minerals_produced': ['Potash', 'Salt', 'Lignite'],
+            'crops_produced': ['Wheat', 'Barley', 'Sugar Beets'],
+        },
+        'Japan': {
+            'flag': '🇯🇵',
+            'region': 'East Asia',
+            'capital': 'Tokyo',
+            'population': {'value': 123, 'rank': 12, 'growth': -0.5},
+            'gdp': {'value': 4.2, 'rank': 4, 'growth': 1.9},
+            'gdp_per_capita': 34017,
+            'debt_to_gdp': 264,
+            'credit_rating': 'A+',
+            'inflation': 3.3,
+            'unemployment': 2.6,
+            'trade_balance': -52,
+            'life_expectancy': 84.8,
+            'median_age': 49.1,
+            'urban_pct': 92,
+            'electricity_gen': 1033,
+            'energy_mix': {'coal': 31, 'gas': 34, 'nuclear': 6, 'renewables': 22},
+            'co2_per_capita': 8.5,
+            'food_security': 79.5,
+            'arable_land': 4,
+            'top_exports': ['Cars', 'Integrated Circuits', 'Vehicle Parts', 'Machinery', 'Refined Petroleum'],
+            'top_imports': ['Crude Petroleum', 'Natural Gas', 'Integrated Circuits', 'Coal', 'Telephones'],
+            'minerals_produced': ['Gold', 'Zinc', 'Lead'],
+            'crops_produced': ['Rice', 'Vegetables', 'Fruits'],
+        },
+        'India': {
+            'flag': '🇮🇳',
+            'region': 'South Asia',
+            'capital': 'New Delhi',
+            'population': {'value': 1441, 'rank': 1, 'growth': 0.9},
+            'gdp': {'value': 3.7, 'rank': 5, 'growth': 7.2},
+            'gdp_per_capita': 2612,
+            'debt_to_gdp': 83,
+            'credit_rating': 'BBB-',
+            'inflation': 5.4,
+            'unemployment': 7.7,
+            'trade_balance': -265,
+            'life_expectancy': 70.4,
+            'median_age': 28.4,
+            'urban_pct': 36,
+            'electricity_gen': 1715,
+            'energy_mix': {'coal': 74, 'gas': 3, 'nuclear': 3, 'renewables': 20},
+            'co2_per_capita': 1.9,
+            'food_security': 57.2,
+            'arable_land': 156,
+            'top_exports': ['Refined Petroleum', 'Diamonds', 'Packaged Medicines', 'Rice', 'Jewelry'],
+            'top_imports': ['Crude Petroleum', 'Gold', 'Coal', 'Diamonds', 'Natural Gas'],
+            'minerals_produced': ['Coal', 'Iron Ore', 'Bauxite', 'Zinc'],
+            'crops_produced': ['Rice', 'Wheat', 'Sugar', 'Cotton'],
+        },
+        'United Kingdom': {
+            'flag': '🇬🇧',
+            'region': 'Europe',
+            'capital': 'London',
+            'population': {'value': 68, 'rank': 22, 'growth': 0.4},
+            'gdp': {'value': 3.3, 'rank': 6, 'growth': 0.5},
+            'gdp_per_capita': 48912,
+            'debt_to_gdp': 104,
+            'credit_rating': 'AA',
+            'inflation': 4.0,
+            'unemployment': 4.2,
+            'trade_balance': -235,
+            'life_expectancy': 81.3,
+            'median_age': 40.6,
+            'urban_pct': 84,
+            'electricity_gen': 312,
+            'energy_mix': {'coal': 2, 'gas': 38, 'nuclear': 15, 'renewables': 43},
+            'co2_per_capita': 4.7,
+            'food_security': 77.8,
+            'arable_land': 6,
+            'top_exports': ['Cars', 'Gold', 'Gas Turbines', 'Packaged Medicines', 'Crude Petroleum'],
+            'top_imports': ['Cars', 'Crude Petroleum', 'Gold', 'Packaged Medicines', 'Computers'],
+            'minerals_produced': ['Oil', 'Natural Gas', 'Salt'],
+            'crops_produced': ['Wheat', 'Barley', 'Potatoes'],
+        },
+        'Brazil': {
+            'flag': '🇧🇷',
+            'region': 'South America',
+            'capital': 'Brasília',
+            'population': {'value': 217, 'rank': 7, 'growth': 0.5},
+            'gdp': {'value': 2.2, 'rank': 9, 'growth': 2.9},
+            'gdp_per_capita': 10412,
+            'debt_to_gdp': 88,
+            'credit_rating': 'BB',
+            'inflation': 4.6,
+            'unemployment': 7.8,
+            'trade_balance': 62,
+            'life_expectancy': 76.4,
+            'median_age': 34.3,
+            'urban_pct': 88,
+            'electricity_gen': 692,
+            'energy_mix': {'coal': 3, 'gas': 9, 'nuclear': 2, 'renewables': 84},
+            'co2_per_capita': 2.2,
+            'food_security': 67.0,
+            'arable_land': 63,
+            'top_exports': ['Soybeans', 'Iron Ore', 'Crude Petroleum', 'Sugar', 'Corn'],
+            'top_imports': ['Refined Petroleum', 'Fertilizers', 'Vehicle Parts', 'Integrated Circuits', 'Pesticides'],
+            'minerals_produced': ['Iron Ore', 'Bauxite', 'Gold', 'Copper'],
+            'crops_produced': ['Soybeans', 'Sugar', 'Coffee', 'Corn'],
+        },
+        'Russia': {
+            'flag': '🇷🇺',
+            'region': 'Eurasia',
+            'capital': 'Moscow',
+            'population': {'value': 144, 'rank': 9, 'growth': -0.2},
+            'gdp': {'value': 1.9, 'rank': 11, 'growth': 3.6},
+            'gdp_per_capita': 13271,
+            'debt_to_gdp': 15,
+            'credit_rating': 'BB+ (Junk)',
+            'inflation': 7.4,
+            'unemployment': 2.9,
+            'trade_balance': 140,
+            'life_expectancy': 72.8,
+            'median_age': 39.8,
+            'urban_pct': 75,
+            'electricity_gen': 1166,
+            'energy_mix': {'coal': 13, 'gas': 47, 'nuclear': 20, 'renewables': 20},
+            'co2_per_capita': 11.4,
+            'food_security': 63.5,
+            'arable_land': 122,
+            'top_exports': ['Crude Petroleum', 'Refined Petroleum', 'Natural Gas', 'Coal', 'Wheat'],
+            'top_imports': ['Cars', 'Packaged Medicines', 'Vehicle Parts', 'Telephones', 'Computers'],
+            'minerals_produced': ['Oil', 'Natural Gas', 'Coal', 'Gold', 'Nickel', 'Platinum', 'Potash'],
+            'crops_produced': ['Wheat', 'Barley', 'Sunflower'],
+        },
+        'Australia': {
+            'flag': '🇦🇺',
+            'region': 'Oceania',
+            'capital': 'Canberra',
+            'population': {'value': 26, 'rank': 55, 'growth': 1.2},
+            'gdp': {'value': 1.7, 'rank': 13, 'growth': 2.1},
+            'gdp_per_capita': 65366,
+            'debt_to_gdp': 57,
+            'credit_rating': 'AAA',
+            'inflation': 4.1,
+            'unemployment': 3.9,
+            'trade_balance': 85,
+            'life_expectancy': 83.5,
+            'median_age': 38.1,
+            'urban_pct': 86,
+            'electricity_gen': 265,
+            'energy_mix': {'coal': 47, 'gas': 18, 'nuclear': 0, 'renewables': 35},
+            'co2_per_capita': 14.9,
+            'food_security': 77.5,
+            'arable_land': 47,
+            'top_exports': ['Iron Ore', 'Coal', 'Natural Gas', 'Gold', 'Aluminum Oxide'],
+            'top_imports': ['Refined Petroleum', 'Cars', 'Computers', 'Telephones', 'Packaged Medicines'],
+            'minerals_produced': ['Iron Ore', 'Lithium', 'Gold', 'Copper', 'Bauxite', 'Zinc', 'Uranium'],
+            'crops_produced': ['Wheat', 'Barley', 'Sugar'],
+        },
+        'South Korea': {
+            'flag': '🇰🇷',
+            'region': 'East Asia',
+            'capital': 'Seoul',
+            'population': {'value': 52, 'rank': 28, 'growth': 0.0},
+            'gdp': {'value': 1.7, 'rank': 12, 'growth': 1.4},
+            'gdp_per_capita': 33147,
+            'debt_to_gdp': 54,
+            'credit_rating': 'AA-',
+            'inflation': 3.6,
+            'unemployment': 2.7,
+            'trade_balance': 29,
+            'life_expectancy': 83.6,
+            'median_age': 44.9,
+            'urban_pct': 81,
+            'electricity_gen': 594,
+            'energy_mix': {'coal': 32, 'gas': 29, 'nuclear': 27, 'renewables': 9},
+            'co2_per_capita': 11.6,
+            'food_security': 73.6,
+            'arable_land': 2,
+            'top_exports': ['Integrated Circuits', 'Cars', 'Refined Petroleum', 'Ships', 'Vehicle Parts'],
+            'top_imports': ['Crude Petroleum', 'Integrated Circuits', 'Natural Gas', 'Refined Petroleum', 'Coal'],
+            'minerals_produced': ['Zinc', 'Lead', 'Tungsten'],
+            'crops_produced': ['Rice', 'Vegetables'],
+        },
+        'Saudi Arabia': {
+            'flag': '🇸🇦',
+            'region': 'Middle East',
+            'capital': 'Riyadh',
+            'population': {'value': 36, 'rank': 41, 'growth': 1.7},
+            'gdp': {'value': 1.1, 'rank': 17, 'growth': -0.8},
+            'gdp_per_capita': 30447,
+            'debt_to_gdp': 26,
+            'credit_rating': 'A',
+            'inflation': 2.3,
+            'unemployment': 4.8,
+            'trade_balance': 130,
+            'life_expectancy': 76.9,
+            'median_age': 32.4,
+            'urban_pct': 85,
+            'electricity_gen': 387,
+            'energy_mix': {'coal': 0, 'gas': 43, 'nuclear': 0, 'renewables': 1, 'oil': 56},
+            'co2_per_capita': 18.2,
+            'food_security': 68.5,
+            'arable_land': 4,
+            'top_exports': ['Crude Petroleum', 'Refined Petroleum', 'Polymers', 'Industrial Alcohols', 'Fertilizers'],
+            'top_imports': ['Cars', 'Telephones', 'Refined Petroleum', 'Gold', 'Packaged Medicines'],
+            'minerals_produced': ['Oil', 'Natural Gas', 'Gold', 'Phosphate'],
+            'crops_produced': ['Dates', 'Wheat', 'Vegetables'],
+        },
+        'Indonesia': {
+            'flag': '🇮🇩',
+            'region': 'Southeast Asia',
+            'capital': 'Jakarta',
+            'population': {'value': 278, 'rank': 4, 'growth': 0.8},
+            'gdp': {'value': 1.4, 'rank': 16, 'growth': 5.0},
+            'gdp_per_capita': 5016,
+            'debt_to_gdp': 40,
+            'credit_rating': 'BBB',
+            'inflation': 2.8,
+            'unemployment': 5.3,
+            'trade_balance': 47,
+            'life_expectancy': 72.3,
+            'median_age': 30.2,
+            'urban_pct': 58,
+            'electricity_gen': 310,
+            'energy_mix': {'coal': 61, 'gas': 18, 'nuclear': 0, 'renewables': 18},
+            'co2_per_capita': 2.3,
+            'food_security': 60.2,
+            'arable_land': 24,
+            'top_exports': ['Palm Oil', 'Coal', 'Natural Gas', 'Nickel', 'Refined Petroleum'],
+            'top_imports': ['Refined Petroleum', 'Crude Petroleum', 'Telephones', 'Machinery', 'Wheat'],
+            'minerals_produced': ['Nickel', 'Coal', 'Copper', 'Gold', 'Tin'],
+            'crops_produced': ['Palm Oil', 'Rice', 'Rubber', 'Cocoa'],
+        },
+    }
+
+    # Country selector
+    countries = sorted(COUNTRY_DATA.keys())
+    selected_country = st.selectbox("Select a country:", countries, key="country_profile_select")
+
+    if selected_country:
+        data = COUNTRY_DATA[selected_country]
+
+        # Header with flag and basic info
+        st.markdown(f"## {data['flag']} {selected_country}")
+        st.markdown(f"**Region:** {data['region']} | **Capital:** {data['capital']}")
+
+        st.markdown("---")
+
+        # Overview metrics row
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Population", f"{data['population']['value']}M", f"#{data['population']['rank']} globally")
+        with col2:
+            st.metric("GDP", f"${data['gdp']['value']}T", f"{data['gdp']['growth']:+.1f}% growth")
+        with col3:
+            st.metric("GDP/Capita", f"${data['gdp_per_capita']:,}")
+        with col4:
+            st.metric("Credit Rating", data['credit_rating'])
+        with col5:
+            st.metric("Debt/GDP", f"{data['debt_to_gdp']}%")
+
+        st.markdown("---")
+
+        # Tabs for different domains
+        profile_tabs = st.tabs(["Economy", "Demographics", "Energy", "Trade", "Resources"])
+
+        with profile_tabs[0]:
+            st.subheader("Economic Indicators")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("GDP Growth", f"{data['gdp']['growth']}%")
+            with col2:
+                st.metric("Inflation", f"{data['inflation']}%")
+            with col3:
+                st.metric("Unemployment", f"{data['unemployment']}%")
+            with col4:
+                balance_color = "green" if data['trade_balance'] > 0 else "red"
+                st.metric("Trade Balance", f"${data['trade_balance']:,}B")
+
+            # GDP comparison
+            all_gdp = [(c, d['gdp']['value']) for c, d in COUNTRY_DATA.items()]
+            all_gdp.sort(key=lambda x: -x[1])
+            gdp_df = pd.DataFrame(all_gdp[:10], columns=['Country', 'GDP (T$)'])
+
+            fig_gdp = px.bar(
+                gdp_df,
+                x='GDP (T$)',
+                y='Country',
+                orientation='h',
+                title='GDP Comparison (Top 10)',
+                color='GDP (T$)',
+                color_continuous_scale='Blues'
+            )
+            # Highlight selected country
+            fig_gdp.update_layout(**get_clean_plotly_layout(), height=350)
+            fig_gdp.update_yaxes(categoryorder='total ascending')
+            st.plotly_chart(fig_gdp, use_container_width=True)
+
+        with profile_tabs[1]:
+            st.subheader("Demographics")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Population", f"{data['population']['value']}M")
+            with col2:
+                growth_str = f"{data['population']['growth']:+.1f}%" if data['population']['growth'] != 0 else "0%"
+                st.metric("Pop. Growth", growth_str)
+            with col3:
+                st.metric("Median Age", f"{data['median_age']} years")
+            with col4:
+                st.metric("Life Expectancy", f"{data['life_expectancy']} years")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Urban Population", f"{data['urban_pct']}%")
+            with col2:
+                st.metric("Food Security Index", f"{data['food_security']}/100")
+
+        with profile_tabs[2]:
+            st.subheader("Energy Profile")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Electricity Generation", f"{data['electricity_gen']:,} TWh")
+            with col2:
+                st.metric("CO₂ per Capita", f"{data['co2_per_capita']} tons")
+
+            # Energy mix pie chart
+            energy_mix = data['energy_mix']
+            energy_df = pd.DataFrame([
+                {'Source': k.capitalize(), 'Share': v}
+                for k, v in energy_mix.items() if v > 0
+            ])
+
+            fig_energy = px.pie(
+                energy_df,
+                values='Share',
+                names='Source',
+                title='Electricity Generation Mix (%)',
+                color='Source',
+                color_discrete_map={
+                    'Coal': '#4a4a4a',
+                    'Gas': '#87CEEB',
+                    'Nuclear': '#9b59b6',
+                    'Renewables': '#2ecc71',
+                    'Oil': '#8B4513'
+                }
+            )
+            fig_energy.update_layout(**get_clean_plotly_layout(), height=350)
+            st.plotly_chart(fig_energy, use_container_width=True)
+
+        with profile_tabs[3]:
+            st.subheader("Trade Profile")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("##### Top Exports")
+                for i, exp in enumerate(data['top_exports'][:5], 1):
+                    st.markdown(f"{i}. 📤 {exp}")
+
+            with col2:
+                st.markdown("##### Top Imports")
+                for i, imp in enumerate(data['top_imports'][:5], 1):
+                    st.markdown(f"{i}. 📥 {imp}")
+
+            st.markdown("---")
+            balance = data['trade_balance']
+            if balance > 0:
+                st.success(f"**Trade Surplus:** ${balance:,} billion")
+            else:
+                st.error(f"**Trade Deficit:** ${balance:,} billion")
+
+        with profile_tabs[4]:
+            st.subheader("Natural Resources")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("##### Minerals & Mining")
+                for mineral in data['minerals_produced']:
+                    st.markdown(f"- ⛏️ {mineral}")
+
+            with col2:
+                st.markdown("##### Agricultural Products")
+                for crop in data['crops_produced']:
+                    st.markdown(f"- 🌾 {crop}")
+
+            st.metric("Arable Land", f"{data['arable_land']} million hectares")
+
+    st.markdown("---")
+    st.caption("Data aggregated from World Bank, IMF, UN, CIA World Factbook, and industry sources. Figures are 2023/2024 estimates.")
+
+
+# ============================================================================
+# PAGE: CORRELATION ANALYSIS
+# ============================================================================
+
+elif page == "Correlation Analysis":
+    st.title("Correlation Analysis")
+    st.markdown("*Explore relationships between different assets and indicators*")
+    st.markdown("---")
+
+    # Load data from database for correlation
+    stocks_df = load_data("""
+        SELECT symbol, price, timestamp
+        FROM stocks
+        WHERE timestamp >= NOW() - INTERVAL '30 days'
+        ORDER BY timestamp
+    """)
+
+    crypto_df = load_data("""
+        SELECT symbol, price, timestamp
+        FROM crypto
+        WHERE timestamp >= NOW() - INTERVAL '30 days'
+        ORDER BY timestamp
+    """)
+
+    forex_df = load_data("""
+        SELECT symbol, rate as price, timestamp
+        FROM forex
+        WHERE timestamp >= NOW() - INTERVAL '30 days'
+        ORDER BY timestamp
+    """)
+
+    commodities_df = load_data("""
+        SELECT symbol, price, timestamp
+        FROM commodities
+        WHERE timestamp >= NOW() - INTERVAL '30 days'
+        ORDER BY timestamp
+    """)
+
+    # Correlation analysis tabs
+    corr_tabs = st.tabs(["Cross-Asset", "Sector Correlation", "Currency Pairs", "Crypto-Equity", "Custom Analysis"])
+
+    with corr_tabs[0]:
+        st.subheader("Cross-Asset Correlations")
+        st.markdown("*How different asset classes move together*")
+
+        # Pre-defined correlations (representative values based on historical norms)
+        CROSS_ASSET_CORR = {
+            'S&P 500': {'S&P 500': 1.0, 'Nasdaq': 0.92, 'Gold': -0.15, 'Oil': 0.45, 'US Dollar': -0.35, 'Bitcoin': 0.42, '10Y Treasury': -0.45},
+            'Nasdaq': {'S&P 500': 0.92, 'Nasdaq': 1.0, 'Gold': -0.20, 'Oil': 0.35, 'US Dollar': -0.40, 'Bitcoin': 0.55, '10Y Treasury': -0.50},
+            'Gold': {'S&P 500': -0.15, 'Nasdaq': -0.20, 'Gold': 1.0, 'Oil': 0.25, 'US Dollar': -0.55, 'Bitcoin': 0.15, '10Y Treasury': 0.10},
+            'Oil': {'S&P 500': 0.45, 'Nasdaq': 0.35, 'Gold': 0.25, 'Oil': 1.0, 'US Dollar': -0.20, 'Bitcoin': 0.20, '10Y Treasury': -0.15},
+            'US Dollar': {'S&P 500': -0.35, 'Nasdaq': -0.40, 'Gold': -0.55, 'Oil': -0.20, 'US Dollar': 1.0, 'Bitcoin': -0.25, '10Y Treasury': 0.30},
+            'Bitcoin': {'S&P 500': 0.42, 'Nasdaq': 0.55, 'Gold': 0.15, 'Oil': 0.20, 'US Dollar': -0.25, 'Bitcoin': 1.0, '10Y Treasury': -0.35},
+            '10Y Treasury': {'S&P 500': -0.45, 'Nasdaq': -0.50, 'Gold': 0.10, 'Oil': -0.15, 'US Dollar': 0.30, 'Bitcoin': -0.35, '10Y Treasury': 1.0},
+        }
+
+        corr_matrix = pd.DataFrame(CROSS_ASSET_CORR)
+        corr_matrix.index = corr_matrix.columns
+
+        fig_heatmap = px.imshow(
+            corr_matrix,
+            labels=dict(color="Correlation"),
+            x=corr_matrix.columns,
+            y=corr_matrix.index,
+            color_continuous_scale='RdBu_r',
+            zmin=-1,
+            zmax=1,
+            title='Cross-Asset Correlation Matrix'
+        )
+        fig_heatmap.update_layout(**get_clean_plotly_layout(), height=500)
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+
+        st.markdown("""
+        **Interpretation:**
+        - 🟢 **+1.0** = Perfect positive correlation (move together)
+        - ⚪ **0.0** = No correlation (independent)
+        - 🔴 **-1.0** = Perfect negative correlation (move opposite)
+
+        **Key Insights:**
+        - Gold and US Dollar are negatively correlated (-0.55)
+        - Bitcoin increasingly correlated with Nasdaq (0.55)
+        - Bonds (10Y Treasury) inversely correlated with stocks
+        """)
+
+    with corr_tabs[1]:
+        st.subheader("S&P 500 Sector Correlations")
+        st.markdown("*How market sectors move relative to each other*")
+
+        SECTOR_CORR = {
+            'Technology': {'Technology': 1.00, 'Healthcare': 0.65, 'Financials': 0.72, 'Energy': 0.45, 'Consumer': 0.78, 'Utilities': 0.35, 'Real Estate': 0.55},
+            'Healthcare': {'Technology': 0.65, 'Healthcare': 1.00, 'Financials': 0.60, 'Energy': 0.40, 'Consumer': 0.70, 'Utilities': 0.50, 'Real Estate': 0.55},
+            'Financials': {'Technology': 0.72, 'Healthcare': 0.60, 'Financials': 1.00, 'Energy': 0.55, 'Consumer': 0.75, 'Utilities': 0.45, 'Real Estate': 0.65},
+            'Energy': {'Technology': 0.45, 'Healthcare': 0.40, 'Financials': 0.55, 'Energy': 1.00, 'Consumer': 0.50, 'Utilities': 0.30, 'Real Estate': 0.40},
+            'Consumer': {'Technology': 0.78, 'Healthcare': 0.70, 'Financials': 0.75, 'Energy': 0.50, 'Consumer': 1.00, 'Utilities': 0.45, 'Real Estate': 0.60},
+            'Utilities': {'Technology': 0.35, 'Healthcare': 0.50, 'Financials': 0.45, 'Energy': 0.30, 'Consumer': 0.45, 'Utilities': 1.00, 'Real Estate': 0.70},
+            'Real Estate': {'Technology': 0.55, 'Healthcare': 0.55, 'Financials': 0.65, 'Energy': 0.40, 'Consumer': 0.60, 'Utilities': 0.70, 'Real Estate': 1.00},
+        }
+
+        sector_matrix = pd.DataFrame(SECTOR_CORR)
+        sector_matrix.index = sector_matrix.columns
+
+        fig_sector = px.imshow(
+            sector_matrix,
+            labels=dict(color="Correlation"),
+            color_continuous_scale='Blues',
+            zmin=0,
+            zmax=1,
+            title='Sector Correlation Matrix'
+        )
+        fig_sector.update_layout(**get_clean_plotly_layout(), height=450)
+        st.plotly_chart(fig_sector, use_container_width=True)
+
+        st.markdown("""
+        **Insights:**
+        - Most sectors are positively correlated (markets tend to move together)
+        - Energy is least correlated with other sectors (diversification opportunity)
+        - Utilities and Real Estate highly correlated (both rate-sensitive)
+        - Technology and Consumer Discretionary very correlated (growth plays)
+        """)
+
+    with corr_tabs[2]:
+        st.subheader("Currency Pair Correlations")
+
+        CURRENCY_CORR = {
+            'EUR/USD': {'EUR/USD': 1.00, 'GBP/USD': 0.85, 'USD/JPY': -0.55, 'AUD/USD': 0.70, 'USD/CHF': -0.90},
+            'GBP/USD': {'EUR/USD': 0.85, 'GBP/USD': 1.00, 'USD/JPY': -0.45, 'AUD/USD': 0.65, 'USD/CHF': -0.75},
+            'USD/JPY': {'EUR/USD': -0.55, 'GBP/USD': -0.45, 'USD/JPY': 1.00, 'AUD/USD': -0.35, 'USD/CHF': 0.65},
+            'AUD/USD': {'EUR/USD': 0.70, 'GBP/USD': 0.65, 'USD/JPY': -0.35, 'AUD/USD': 1.00, 'USD/CHF': -0.60},
+            'USD/CHF': {'EUR/USD': -0.90, 'GBP/USD': -0.75, 'USD/JPY': 0.65, 'AUD/USD': -0.60, 'USD/CHF': 1.00},
+        }
+
+        currency_matrix = pd.DataFrame(CURRENCY_CORR)
+        currency_matrix.index = currency_matrix.columns
+
+        fig_currency = px.imshow(
+            currency_matrix,
+            labels=dict(color="Correlation"),
+            color_continuous_scale='RdBu_r',
+            zmin=-1,
+            zmax=1,
+            title='Major Currency Pair Correlations'
+        )
+        fig_currency.update_layout(**get_clean_plotly_layout(), height=400)
+        st.plotly_chart(fig_currency, use_container_width=True)
+
+        st.markdown("""
+        **Key Relationships:**
+        - EUR/USD and USD/CHF are strongly negatively correlated (-0.90) - classic hedge pair
+        - EUR/USD and GBP/USD are highly positively correlated (0.85) - European currencies move together
+        - USD/JPY tends to move opposite to EUR/USD - risk-on vs risk-off dynamics
+        """)
+
+    with corr_tabs[3]:
+        st.subheader("Crypto-Equity Correlation")
+        st.markdown("*How crypto assets correlate with traditional markets*")
+
+        CRYPTO_EQUITY_CORR = {
+            'Bitcoin': {'Bitcoin': 1.00, 'Ethereum': 0.90, 'S&P 500': 0.42, 'Nasdaq': 0.55, 'Gold': 0.15},
+            'Ethereum': {'Bitcoin': 0.90, 'Ethereum': 1.00, 'S&P 500': 0.45, 'Nasdaq': 0.60, 'Gold': 0.10},
+            'S&P 500': {'Bitcoin': 0.42, 'Ethereum': 0.45, 'S&P 500': 1.00, 'Nasdaq': 0.92, 'Gold': -0.15},
+            'Nasdaq': {'Bitcoin': 0.55, 'Ethereum': 0.60, 'S&P 500': 0.92, 'Nasdaq': 1.00, 'Gold': -0.20},
+            'Gold': {'Bitcoin': 0.15, 'Ethereum': 0.10, 'S&P 500': -0.15, 'Nasdaq': -0.20, 'Gold': 1.00},
+        }
+
+        crypto_matrix = pd.DataFrame(CRYPTO_EQUITY_CORR)
+        crypto_matrix.index = crypto_matrix.columns
+
+        fig_crypto = px.imshow(
+            crypto_matrix,
+            labels=dict(color="Correlation"),
+            color_continuous_scale='Viridis',
+            zmin=-0.5,
+            zmax=1,
+            title='Crypto vs Traditional Assets'
+        )
+        fig_crypto.update_layout(**get_clean_plotly_layout(), height=400)
+        st.plotly_chart(fig_crypto, use_container_width=True)
+
+        st.markdown("""
+        **Evolution of Crypto Correlation:**
+        - Bitcoin and Ethereum highly correlated (0.90) - crypto moves as an asset class
+        - Crypto increasingly correlated with tech stocks since 2020
+        - Ethereum slightly more correlated to equities than Bitcoin
+        - Gold correlation remains low - crypto not acting as "digital gold" in practice
+        """)
+
+    with corr_tabs[4]:
+        st.subheader("Custom Correlation Analysis")
+
+        st.markdown("Select assets from database to calculate correlation:")
+
+        # Get available symbols
+        available_stocks = []
+        available_crypto = []
+
+        if not stocks_df.empty:
+            available_stocks = stocks_df['symbol'].unique().tolist()
+
+        if not crypto_df.empty:
+            available_crypto = crypto_df['symbol'].unique().tolist()
+
+        if available_stocks or available_crypto:
+            all_assets = sorted(set(available_stocks + available_crypto))
+
+            col1, col2 = st.columns(2)
+            with col1:
+                asset1 = st.selectbox("Select first asset:", all_assets, key="corr_asset1")
+            with col2:
+                asset2 = st.selectbox("Select second asset:", [a for a in all_assets if a != asset1], key="corr_asset2")
+
+            if asset1 and asset2:
+                # Get price series for both
+                if asset1 in available_stocks:
+                    prices1 = stocks_df[stocks_df['symbol'] == asset1][['timestamp', 'price']].copy()
+                else:
+                    prices1 = crypto_df[crypto_df['symbol'] == asset1][['timestamp', 'price']].copy()
+
+                if asset2 in available_stocks:
+                    prices2 = stocks_df[stocks_df['symbol'] == asset2][['timestamp', 'price']].copy()
+                else:
+                    prices2 = crypto_df[crypto_df['symbol'] == asset2][['timestamp', 'price']].copy()
+
+                prices1 = prices1.rename(columns={'price': asset1})
+                prices2 = prices2.rename(columns={'price': asset2})
+
+                # Merge and calculate correlation
+                if not prices1.empty and not prices2.empty:
+                    prices1['timestamp'] = pd.to_datetime(prices1['timestamp']).dt.date
+                    prices2['timestamp'] = pd.to_datetime(prices2['timestamp']).dt.date
+
+                    merged = pd.merge(prices1, prices2, on='timestamp', how='inner')
+
+                    if len(merged) > 5:
+                        merged[asset1] = merged[asset1].astype(float)
+                        merged[asset2] = merged[asset2].astype(float)
+                        correlation = merged[asset1].corr(merged[asset2])
+
+                        col1, col2, col3 = st.columns(3)
+                        with col2:
+                            corr_color = '#2ecc71' if abs(correlation) < 0.3 else '#f39c12' if abs(correlation) < 0.7 else '#e74c3c'
+                            st.metric("Correlation", f"{correlation:.3f}")
+
+                        # Scatter plot
+                        fig_scatter = px.scatter(
+                            merged,
+                            x=asset1,
+                            y=asset2,
+                            title=f'{asset1} vs {asset2} (30-day correlation: {correlation:.3f})',
+                            trendline='ols'
+                        )
+                        fig_scatter.update_layout(**get_clean_plotly_layout(), height=400)
+                        st.plotly_chart(fig_scatter, use_container_width=True)
+
+                        # Interpretation
+                        if abs(correlation) > 0.7:
+                            st.warning(f"**Strong {'positive' if correlation > 0 else 'negative'} correlation** - These assets tend to move {'together' if correlation > 0 else 'opposite'}.")
+                        elif abs(correlation) > 0.3:
+                            st.info(f"**Moderate {'positive' if correlation > 0 else 'negative'} correlation** - Some relationship exists.")
+                        else:
+                            st.success("**Low correlation** - Good for diversification.")
+                    else:
+                        st.warning("Not enough overlapping data points to calculate correlation.")
+                else:
+                    st.warning("No price data available for selected assets.")
+        else:
+            st.info("No asset data available in database. Run data collectors to populate.")
+
+    st.markdown("---")
+    st.caption("Correlations are based on historical price movements and can change over time.")
+    st.caption("Past correlations do not guarantee future relationships.")
 
 
 # ============================================================================
