@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.18
+Hermes Intelligence Platform Dashboard v6.19
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -897,15 +897,8 @@ def get_commodity_icon(name):
     return COMMODITY_ICONS['default']
 
 def format_forex_pair(pair):
-    """Format a forex pair with flags for both currencies."""
-    if not pair or '/' not in pair:
-        return pair
-    parts = pair.split('/')
-    if len(parts) == 2:
-        base_flag = get_country_flag(parts[0])
-        quote_flag = get_country_flag(parts[1])
-        return f"{base_flag} {parts[0]}/{parts[1]} {quote_flag}"
-    return pair
+    """Format a forex pair (flags removed - don't render reliably)."""
+    return pair if pair else ""
 
 def get_city_flag(city):
     """Get a flag emoji for a city based on its country."""
@@ -3079,15 +3072,12 @@ elif page == "Economic Indicators":
         econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
         countries = sorted(econ_df['country'].unique().tolist())
 
-        # Create display options with flags
-        country_display = [f"{get_country_flag(c)} {c}" for c in countries]
-        selected_idx = st.selectbox(
+        # Simple country selector (emoji flags don't render in dropdowns)
+        selected_country = st.selectbox(
             "Select Country",
-            range(len(countries)),
-            format_func=lambda i: country_display[i],
+            countries,
             key="econ_country_select"
         )
-        selected_country = countries[selected_idx]
 
         if selected_country:
             country_data = econ_df[econ_df['country'] == selected_country]
@@ -3193,20 +3183,17 @@ elif page == "Global Development":
                 with tab1:
                     st.subheader("Country Profile")
                     countries = sorted(latest_wb['country_name'].dropna().unique().tolist())
-                    # Create display options with flags
-                    country_display = [f"{get_country_flag(c)} {c}" for c in countries]
-                    selected_idx = st.selectbox(
+                    # Simple country selector (emoji flags don't render in dropdowns)
+                    selected_country = st.selectbox(
                         "Select Country",
-                        range(len(countries)),
-                        format_func=lambda i: country_display[i],
+                        countries,
                         key="wb_country"
                     )
-                    selected_country = countries[selected_idx]
 
                     if selected_country:
                         country_data = latest_wb[latest_wb['country_name'] == selected_country]
-                        flag = get_country_flag(selected_country)
-                        st.markdown(f"### {flag} {selected_country}")
+                        flag_html = get_flag_html(selected_country, size=24)
+                        st.markdown(f"### {flag_html}{selected_country}", unsafe_allow_html=True)
 
                         # Group by category
                         categories = country_data['category'].unique().tolist()
@@ -3250,23 +3237,20 @@ elif page == "Global Development":
                     if selected_indicator:
                         ind_data = latest_wb[latest_wb['indicator_name'] == selected_indicator].copy()
                         ind_data = ind_data.sort_values('value', ascending=False)
-                        # Add flags to country names
-                        ind_data['country_display'] = ind_data['country_name'].apply(
-                            lambda c: f"{get_country_flag(c)} {c}"
-                        )
 
-                        # Bar chart of all countries
+                        # Bar chart of all countries (no flags in Plotly - they don't render)
                         fig = px.bar(
                             ind_data,
-                            x='country_display',
+                            x='country_name',
                             y='value',
                             title=f"{selected_indicator} by Country",
                             color='value',
-                            color_continuous_scale='Viridis'
+                            color_continuous_scale='Viridis',
+                            text='value'
                         )
                         fig.update_layout(**get_clean_plotly_layout(), height=500)
-                        fig.update_xaxes(title_text="Country")
-                        fig.update_xaxes(tickangle=45)
+                        fig.update_xaxes(title_text="Country", tickangle=45)
+                        fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
                         st.plotly_chart(fig, use_container_width=True)
 
                         # Data table
@@ -5348,26 +5332,26 @@ elif page == "Trade & Shipping":
         )
 
         trade_df = pd.DataFrame(TOP_TRADERS[trade_type], columns=['Country', 'Value (T$)', 'Share %'])
-        # Add flags to country names for display
-        trade_df['Country Display'] = trade_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_trade = px.bar(
             trade_df,
             x='Value (T$)',
-            y='Country Display',
+            y='Country',
             orientation='h',
             title=f'{trade_type} by Country (Trillion USD)',
             color='Share %',
-            color_continuous_scale='Blues'
+            color_continuous_scale='Blues',
+            text='Value (T$)'
         )
         fig_trade.update_layout(**get_clean_plotly_layout(), height=400)
         fig_trade.update_yaxes(categoryorder='total ascending', title_text='Country')
+        fig_trade.update_traces(texttemplate='$%{text:.1f}T', textposition='outside')
         st.plotly_chart(fig_trade, use_container_width=True)
 
         fig_pie = px.pie(
             trade_df,
             values='Value (T$)',
-            names='Country Display',
+            names='Country',
             title=f'{trade_type} - Market Share'
         )
         fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
@@ -5379,20 +5363,20 @@ elif page == "Trade & Shipping":
 
         balance_df = pd.DataFrame(TRADE_BALANCES, columns=['Country', 'Balance ($B)', 'Type'])
         balance_df['Color'] = balance_df['Type'].map({'surplus': '#2ecc71', 'deficit': '#e74c3c'})
-        # Add flags
-        balance_df['Country Display'] = balance_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_balance = px.bar(
             balance_df.sort_values('Balance ($B)'),
             x='Balance ($B)',
-            y='Country Display',
+            y='Country',
             orientation='h',
             title='Trade Balance by Country (Billion USD)',
             color='Type',
-            color_discrete_map={'surplus': '#2ecc71', 'deficit': '#e74c3c'}
+            color_discrete_map={'surplus': '#2ecc71', 'deficit': '#e74c3c'},
+            text='Balance ($B)'
         )
         fig_balance.update_layout(**get_clean_plotly_layout(), height=450)
         fig_balance.update_yaxes(title_text='Country')
+        fig_balance.update_traces(texttemplate='$%{text:+,}B', textposition='outside')
         st.plotly_chart(fig_balance, use_container_width=True)
 
         col1, col2 = st.columns(2)
@@ -5400,15 +5384,15 @@ elif page == "Trade & Shipping":
             st.markdown("##### Largest Surpluses")
             surplus_df = balance_df[balance_df['Type'] == 'surplus'].sort_values('Balance ($B)', ascending=False)
             for _, row in surplus_df.iterrows():
-                flag = get_country_flag(row['Country'])
-                st.markdown(f"- {flag} **{row['Country']}**: +${row['Balance ($B)']:,}B")
+                flag_html = get_flag_html(row['Country'], size=16)
+                st.markdown(f"- {flag_html}**{row['Country']}**: +${row['Balance ($B)']:,}B", unsafe_allow_html=True)
 
         with col2:
             st.markdown("##### Largest Deficits")
             deficit_df = balance_df[balance_df['Type'] == 'deficit'].sort_values('Balance ($B)')
             for _, row in deficit_df.iterrows():
-                flag = get_country_flag(row['Country'])
-                st.markdown(f"- {flag} **{row['Country']}**: ${row['Balance ($B)']:,}B")
+                flag_html = get_flag_html(row['Country'], size=16)
+                st.markdown(f"- {flag_html}**{row['Country']}**: ${row['Balance ($B)']:,}B", unsafe_allow_html=True)
 
     with trade_tabs[3]:
         st.subheader("Container Shipping Rates")
@@ -5447,31 +5431,29 @@ elif page == "Trade & Shipping":
         st.markdown("*Container throughput in million TEU (Twenty-foot Equivalent Units)*")
 
         ports_df = pd.DataFrame(TOP_PORTS, columns=['Port', 'TEU (M)', 'Country'])
-        # Add flags
-        ports_df['Port Display'] = ports_df.apply(lambda r: f"{get_country_flag(r['Country'])} {r['Port']}", axis=1)
-        ports_df['Country Display'] = ports_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_ports = px.bar(
             ports_df,
             x='TEU (M)',
-            y='Port Display',
+            y='Port',
             orientation='h',
             title='Top Container Ports by Volume (Million TEU)',
-            color='Country Display',
+            color='Country',
+            text='TEU (M)'
         )
         fig_ports.update_layout(**get_clean_plotly_layout(), height=450)
         fig_ports.update_yaxes(categoryorder='total ascending', title_text='Port')
+        fig_ports.update_traces(texttemplate='%{text:.1f}M', textposition='outside')
         st.plotly_chart(fig_ports, use_container_width=True)
 
         # Port distribution by country
         country_ports = ports_df.groupby('Country')['TEU (M)'].sum().reset_index()
         country_ports = country_ports.sort_values('TEU (M)', ascending=False)
-        country_ports['Country Display'] = country_ports['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_country = px.pie(
             country_ports,
             values='TEU (M)',
-            names='Country Display',
+            names='Country',
             title='Container Traffic by Country'
         )
         fig_country.update_layout(**get_clean_plotly_layout(), height=350)
@@ -5995,37 +5977,39 @@ elif page == "Debt & Fiscal":
         with col1:
             st.markdown("##### Highest Debt-to-GDP")
             high_df = pd.DataFrame(DEBT_TO_GDP['Highest'], columns=['Country', 'Debt/GDP %'])
-            high_df['Country Display'] = high_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_high = px.bar(
                 high_df,
                 x='Debt/GDP %',
-                y='Country Display',
+                y='Country',
                 orientation='h',
                 title='Highest Debt-to-GDP Ratios',
                 color='Debt/GDP %',
-                color_continuous_scale='Reds'
+                color_continuous_scale='Reds',
+                text='Debt/GDP %'
             )
             fig_high.update_layout(**get_clean_plotly_layout(), height=500)
             fig_high.update_yaxes(categoryorder='total ascending', title_text='Country')
+            fig_high.update_traces(texttemplate='%{text:.0f}%', textposition='outside')
             st.plotly_chart(fig_high, use_container_width=True)
 
         with col2:
             st.markdown("##### Lowest Debt-to-GDP")
             low_df = pd.DataFrame(DEBT_TO_GDP['Lowest'], columns=['Country', 'Debt/GDP %'])
-            low_df['Country Display'] = low_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_low = px.bar(
                 low_df,
                 x='Debt/GDP %',
-                y='Country Display',
+                y='Country',
                 orientation='h',
                 title='Lowest Debt-to-GDP Ratios',
                 color='Debt/GDP %',
-                color_continuous_scale='Greens'
+                color_continuous_scale='Greens',
+                text='Debt/GDP %'
             )
             fig_low.update_layout(**get_clean_plotly_layout(), height=500)
             fig_low.update_yaxes(categoryorder='total descending', title_text='Country')
+            fig_low.update_traces(texttemplate='%{text:.0f}%', textposition='outside')
             st.plotly_chart(fig_low, use_container_width=True)
 
     with debt_tabs[2]:
@@ -6033,24 +6017,23 @@ elif page == "Debt & Fiscal":
         st.markdown("*Absolute debt in trillion USD*")
 
         debt_df = pd.DataFrame(NATIONAL_DEBT, columns=['Country', 'Debt (T$)', 'Debt/GDP %'])
-        debt_df['Country Display'] = debt_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
         fig_debt = px.bar(
             debt_df,
             x='Debt (T$)',
-            y='Country Display',
+            y='Country',
             orientation='h',
             title='National Debt by Country (Trillion USD)',
             color='Debt/GDP %',
-            color_continuous_scale='RdYlGn_r'
+            color_continuous_scale='RdYlGn_r',
+            text='Debt (T$)'
         )
         fig_debt.update_layout(**get_clean_plotly_layout(), height=450)
         fig_debt.update_yaxes(categoryorder='total ascending', title_text='Country')
+        fig_debt.update_traces(texttemplate='$%{text:.1f}T', textposition='outside')
         st.plotly_chart(fig_debt, use_container_width=True)
 
-        # Display with flags
-        display_debt_df = debt_df[['Country Display', 'Debt (T$)', 'Debt/GDP %']].rename(columns={'Country Display': 'Country'})
-        st.dataframe(display_debt_df, use_container_width=True, hide_index=True)
+        st.dataframe(debt_df, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         st.info("**Note:** High absolute debt doesn't always mean crisis - it depends on GDP, growth rate, and interest costs. Japan has 264% debt/GDP but very low interest rates.")
@@ -6064,37 +6047,39 @@ elif page == "Debt & Fiscal":
         with col1:
             st.markdown("##### Largest Deficits")
             deficit_df = pd.DataFrame(BUDGET_BALANCE['Largest Deficits'], columns=['Country', 'Balance %'])
-            deficit_df['Country Display'] = deficit_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_deficit = px.bar(
                 deficit_df,
                 x='Balance %',
-                y='Country Display',
+                y='Country',
                 orientation='h',
                 title='Largest Budget Deficits (% of GDP)',
                 color='Balance %',
-                color_continuous_scale='Reds'
+                color_continuous_scale='Reds',
+                text='Balance %'
             )
             fig_deficit.update_layout(**get_clean_plotly_layout(), height=400)
             fig_deficit.update_yaxes(categoryorder='total descending', title_text='Country')
+            fig_deficit.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
             st.plotly_chart(fig_deficit, use_container_width=True)
 
         with col2:
             st.markdown("##### Largest Surpluses")
             surplus_df = pd.DataFrame(BUDGET_BALANCE['Largest Surpluses'], columns=['Country', 'Balance %'])
-            surplus_df['Country Display'] = surplus_df['Country'].apply(lambda c: f"{get_country_flag(c)} {c}")
 
             fig_surplus = px.bar(
                 surplus_df,
                 x='Balance %',
-                y='Country Display',
+                y='Country',
                 orientation='h',
                 title='Largest Budget Surpluses (% of GDP)',
                 color='Balance %',
-                color_continuous_scale='Greens'
+                color_continuous_scale='Greens',
+                text='Balance %'
             )
             fig_surplus.update_layout(**get_clean_plotly_layout(), height=400)
             fig_surplus.update_yaxes(categoryorder='total ascending', title_text='Country')
+            fig_surplus.update_traces(texttemplate='+%{text:.1f}%', textposition='outside')
             st.plotly_chart(fig_surplus, use_container_width=True)
 
     with debt_tabs[4]:
@@ -6113,9 +6098,8 @@ elif page == "Debt & Fiscal":
             else:
                 color = '🔴'
 
-            # Add flags to country names
-            countries_with_flags = [f"{get_country_flag(c)} {c}" for c in countries]
-            st.markdown(f"**{color} {rating}:** {', '.join(countries_with_flags)}")
+            # Just list country names (flags don't render reliably)
+            st.markdown(f"**{color} {rating}:** {', '.join(countries)}")
 
         st.markdown("---")
         st.markdown("""
