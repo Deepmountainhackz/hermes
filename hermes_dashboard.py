@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.29
+Hermes Intelligence Platform Dashboard v6.30
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -964,6 +964,31 @@ def format_change(value):
     return f"+{value:.2f}%" if value > 0 else f"{value:.2f}%"
 
 
+def currency_input(label, default_value, key, min_value=0, help_text=None):
+    """
+    Create a currency input with thousand separators (e.g., 10,000.00).
+    Uses text input for display formatting, returns float value.
+    """
+    # Format default with commas
+    formatted_default = f"{default_value:,.2f}"
+
+    # Get user input
+    user_input = st.text_input(
+        label,
+        value=formatted_default,
+        key=key,
+        help=help_text
+    )
+
+    # Parse the input (remove commas and convert to float)
+    try:
+        cleaned = user_input.replace(",", "").replace(" ", "").replace("$", "").replace("€", "").replace("£", "")
+        value = float(cleaned)
+        return max(value, min_value)
+    except ValueError:
+        return float(default_value)
+
+
 # Optimized Plotly config for faster rendering
 PLOTLY_CONFIG = {
     'displayModeBar': False,  # Hide toolbar for cleaner look
@@ -1434,7 +1459,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.29 - Multi-Currency Calculators")
+st.sidebar.caption("v6.30 - Multi-Currency Calculators")
 
 
 # ============================================================================
@@ -8368,22 +8393,18 @@ elif page == "Calculators":
 
         with col1:
             st.markdown("**Initial Investment**")
-            initial_investment = st.number_input(
+            initial_investment = currency_input(
                 f"Principal Amount ({calc_curr_symbol})",
-                min_value=0,
-                value=10000,
-                step=1000,
-                format="%d",
-                help="The starting amount you're investing"
+                10000,
+                "compound_principal",
+                help_text="The starting amount you're investing"
             )
 
-            monthly_contribution = st.number_input(
+            monthly_contribution = currency_input(
                 f"Monthly Contribution ({calc_curr_symbol})",
-                min_value=0,
-                value=500,
-                step=100,
-                format="%d",
-                help="Additional amount you'll add each month"
+                500,
+                "compound_monthly",
+                help_text="Additional amount you'll add each month"
             )
 
             st.markdown("**Investment Period**")
@@ -8567,8 +8588,8 @@ elif page == "Calculators":
             retirement_age = st.number_input("Retirement Age", min_value=current_age + 1, max_value=90, value=65)
             life_expectancy = st.number_input("Life Expectancy", min_value=retirement_age + 1, max_value=110, value=90)
 
-            current_savings = st.number_input("Current Retirement Savings ($)", min_value=0, value=50000, step=1000, format="%d")
-            monthly_savings = st.number_input("Monthly Contribution ($)", min_value=0, value=1000, step=100, format="%d")
+            current_savings = currency_input("Current Retirement Savings ($)", 50000, "retire_savings")
+            monthly_savings = currency_input("Monthly Contribution ($)", 1000, "retire_monthly")
 
             pre_retire_return = st.slider("Pre-Retirement Return (%)", 0.0, 15.0, 7.0, 0.5)
             post_retire_return = st.slider("Post-Retirement Return (%)", 0.0, 10.0, 4.0, 0.5)
@@ -8676,12 +8697,12 @@ elif page == "Calculators":
         col1, col2 = st.columns(2)
 
         with col1:
-            loan_amount = st.number_input(f"Loan Amount ({loan_curr_symbol})", min_value=1000, value=int(default_amount), step=1000, format="%d")
+            loan_amount = currency_input(f"Loan Amount ({loan_curr_symbol})", default_amount, "loan_amount", min_value=1000)
             interest_rate = st.number_input("Annual Interest Rate (%)", min_value=0.1, max_value=30.0, value=default_rate, step=0.1)
             loan_term_years = st.number_input("Loan Term (Years)", min_value=1, max_value=40, value=default_years)
 
             # Extra payment option
-            extra_payment = st.number_input(f"Extra Monthly Payment ({loan_curr_symbol})", min_value=0, value=0, step=50, format="%d")
+            extra_payment = currency_input(f"Extra Monthly Payment ({loan_curr_symbol})", 0, "loan_extra")
 
         with col2:
             # Calculate monthly payment
@@ -8785,18 +8806,16 @@ elif page == "Calculators":
         col1, col2 = st.columns(2)
 
         with col1:
-            initial_value = st.number_input(f"Initial Investment ({curr_symbol})", min_value=0, value=10000, step=1000, format="%d")
-            final_value = st.number_input(f"Current/Final Value ({curr_symbol})", min_value=0, value=15000, step=1000, format="%d")
+            initial_value = currency_input(f"Initial Investment ({curr_symbol})", 10000, "invest_initial")
+            final_value = currency_input(f"Current/Final Value ({curr_symbol})", 15000, "invest_final")
             investment_period = st.number_input("Investment Period (Years)", min_value=0.1, max_value=100.0, value=5.0, step=0.5)
 
             # Additional contributions
-            total_contributions = st.number_input(
+            total_contributions = currency_input(
                 f"Total Additional Contributions ({curr_symbol})",
-                min_value=0,
-                value=0,
-                step=1000,
-                format="%d",
-                help="Sum of all additional money invested during the period"
+                0,
+                "invest_contributions",
+                help_text="Sum of all additional money invested during the period"
             )
 
         with col2:
