@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.12
+Hermes Intelligence Platform Dashboard v6.14
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -133,7 +133,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling - Modern Dashboard Design v6.12
+# Custom CSS for styling - Modern Dashboard Design v6.14
 CUSTOM_CSS = """
 <style>
     /* ========================================
@@ -641,6 +641,51 @@ COLORS = {
     'cat_tools': '#64748b',        # Slate - Tools & Utilities
 }
 
+# Commodity icons - tasteful representations
+COMMODITY_ICONS = {
+    # Energy
+    'oil': '\U0001F6E2\uFE0F', 'crude': '\U0001F6E2\uFE0F', 'wti': '\U0001F6E2\uFE0F', 'brent': '\U0001F6E2\uFE0F',
+    'gas': '\U0001F525', 'natural gas': '\U0001F525', 'lng': '\U0001F525',
+    'coal': '\u26AB', 'electricity': '\u26A1', 'power': '\u26A1',
+    'nuclear': '\u269B\uFE0F', 'uranium': '\u269B\uFE0F',
+    'solar': '\u2600\uFE0F', 'wind': '\U0001F32C\uFE0F', 'hydro': '\U0001F4A7',
+    # Precious Metals
+    'gold': '\U0001F947', 'xau': '\U0001F947',
+    'silver': '\U0001F948', 'xag': '\U0001F948',
+    'platinum': '\u2B1C', 'palladium': '\u2B1C',
+    # Base Metals
+    'copper': '\U0001F536', 'aluminum': '\U0001F537', 'aluminium': '\U0001F537',
+    'zinc': '\u2699\uFE0F', 'nickel': '\u2699\uFE0F', 'lead': '\u2699\uFE0F',
+    'iron': '\U0001F529', 'steel': '\U0001F529', 'tin': '\U0001F96B',
+    # Agriculture - Grains
+    'wheat': '\U0001F33E', 'corn': '\U0001F33D', 'maize': '\U0001F33D',
+    'rice': '\U0001F35A', 'oats': '\U0001F33E', 'barley': '\U0001F33E',
+    'soybeans': '\U0001FAD8', 'soybean': '\U0001FAD8', 'soy': '\U0001FAD8',
+    # Agriculture - Softs
+    'coffee': '\u2615', 'cocoa': '\U0001F36B', 'sugar': '\U0001F36C',
+    'cotton': '\U0001F9F6', 'orange juice': '\U0001F34A', 'oj': '\U0001F34A',
+    # Agriculture - Livestock
+    'cattle': '\U0001F404', 'beef': '\U0001F969', 'live cattle': '\U0001F404',
+    'hogs': '\U0001F437', 'pork': '\U0001F953', 'lean hogs': '\U0001F437',
+    'feeder': '\U0001F42E',
+    # Agriculture - Other
+    'palm oil': '\U0001F334', 'rubber': '\U0001F333', 'lumber': '\U0001FAB5', 'wood': '\U0001FAB5',
+    # Shipping
+    'shipping': '\U0001F6A2', 'freight': '\U0001F6A2', 'baltic': '\U0001F6A2',
+    # Default
+    'default': '\U0001F4E6',
+}
+
+def get_commodity_icon(name):
+    """Get an icon for a commodity based on its name."""
+    if not name:
+        return COMMODITY_ICONS['default']
+    name_lower = name.lower()
+    for key, icon in COMMODITY_ICONS.items():
+        if key in name_lower:
+            return icon
+    return COMMODITY_ICONS['default']
+
 # Page to category mapping
 PAGE_CATEGORIES = {
     # Markets
@@ -1141,7 +1186,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.13 - Performance Optimizations")
+st.sidebar.caption("v6.14 - Commodity Icons")
 
 
 # ============================================================================
@@ -1703,8 +1748,10 @@ if page == "Overview":
             for _, row in commodities.iterrows():
                 change = row.get('change_percent', 0) or 0
                 color = "positive" if change >= 0 else "negative"
-                name = row.get('name', row['symbol'])[:15]
-                st.markdown(f"**{name}** ${row['price']:.2f} "
+                name = row.get('name', row['symbol'])
+                icon = get_commodity_icon(name)
+                display_name = name[:12] if len(name) > 12 else name
+                st.markdown(f"{icon} **{display_name}** ${row['price']:.2f} "
                            f"<span class='{color}'>{change:+.2f}%</span>",
                            unsafe_allow_html=True)
         else:
@@ -2164,22 +2211,28 @@ elif page == "Markets":
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.markdown("**Energy**")
+                st.markdown(f"**{get_commodity_icon('oil')} Energy**")
                 for _, row in energy.iterrows():
                     change = row.get('change_percent', 0) or 0
-                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
+                    name = row['name'] or row['symbol']
+                    icon = get_commodity_icon(name)
+                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
 
             with col2:
-                st.markdown("**Metals**")
+                st.markdown(f"**{get_commodity_icon('gold')} Metals**")
                 for _, row in metals.iterrows():
                     change = row.get('change_percent', 0) or 0
-                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
+                    name = row['name'] or row['symbol']
+                    icon = get_commodity_icon(name)
+                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
 
             with col3:
-                st.markdown("**Agriculture**")
+                st.markdown(f"**{get_commodity_icon('wheat')} Agriculture**")
                 for _, row in agriculture.iterrows():
                     change = row.get('change_percent', 0) or 0
-                    st.metric(row['name'] or row['symbol'], f"${row['price']:.2f}", f"{change:+.2f}%")
+                    name = row['name'] or row['symbol']
+                    icon = get_commodity_icon(name)
+                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
 
     with tab3:
         st.subheader("Foreign Exchange Rates")
@@ -3107,9 +3160,16 @@ elif page == "Energy & Resources":
         # Get latest year with good data
         latest_year = energy_df[energy_df['electricity_generation'].notna()]['year'].max()
 
-        # Create tabs for different views
+        # Create tabs for different views with icons
         energy_tab1, energy_tab2, energy_tab3, energy_tab4, energy_tab5, energy_tab6, energy_tab7, energy_tab8 = st.tabs([
-            "Electricity Generation", "Energy Mix", "Oil & Gas", "Nuclear", "Renewables", "CO2 Emissions", "Per Capita", "Mining & Resources"
+            f"{get_commodity_icon('electricity')} Electricity",
+            f"{get_commodity_icon('solar')} Energy Mix",
+            f"{get_commodity_icon('oil')} Oil & Gas",
+            f"{get_commodity_icon('nuclear')} Nuclear",
+            f"{get_commodity_icon('wind')} Renewables",
+            f"{get_commodity_icon('coal')} CO2 Emissions",
+            "Per Capita",
+            f"{get_commodity_icon('copper')} Mining"
         ])
 
         with energy_tab1:
@@ -4585,17 +4645,24 @@ elif page == "Agriculture & Food":
     with ag_tabs[0]:
         st.subheader("Global Crop Production")
 
-        selected_crop = st.selectbox(
+        # Create crop options with icons
+        crop_options = list(CROP_PRODUCTION.keys())
+        crop_display = [f"{get_commodity_icon(c)} {c}" for c in crop_options]
+
+        selected_idx = st.selectbox(
             "Select crop:",
-            list(CROP_PRODUCTION.keys()),
+            range(len(crop_options)),
+            format_func=lambda i: crop_display[i],
             key="crop_select"
         )
+        selected_crop = crop_options[selected_idx]
 
         crop_data = CROP_PRODUCTION[selected_crop]
+        crop_icon = get_commodity_icon(selected_crop)
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("World Production", f"{crop_data['world_total']:,} MT")
+            st.metric(f"{crop_icon} World Production", f"{crop_data['world_total']:,} MT")
         with col2:
             top_producer = crop_data['producers'][0]
             st.metric("Top Producer", f"{top_producer[0]}")
@@ -4635,7 +4702,7 @@ elif page == "Agriculture & Food":
         all_crops = []
         for crop_name, data in CROP_PRODUCTION.items():
             all_crops.append({
-                'Crop': crop_name,
+                'Crop': f"{get_commodity_icon(crop_name)} {crop_name}",
                 'World Production (MT)': f"{data['world_total']:,}",
                 'Top Producer': data['producers'][0][0],
                 'Top Producer Share': f"{data['producers'][0][2]:.1f}%"
@@ -4647,11 +4714,16 @@ elif page == "Agriculture & Food":
         st.subheader("Agricultural Trade Flows")
         st.markdown("*Who feeds the world - major exporters and importers*")
 
-        selected_trade_crop = st.selectbox(
+        trade_crop_options = list(CROP_PRODUCTION.keys())
+        trade_crop_display = [f"{get_commodity_icon(c)} {c}" for c in trade_crop_options]
+
+        selected_trade_idx = st.selectbox(
             "Select crop:",
-            list(CROP_PRODUCTION.keys()),
+            range(len(trade_crop_options)),
+            format_func=lambda i: trade_crop_display[i],
             key="trade_crop_select"
         )
+        selected_trade_crop = trade_crop_options[selected_trade_idx]
 
         trade_data = CROP_PRODUCTION[selected_trade_crop]
 
