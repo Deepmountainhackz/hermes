@@ -589,7 +589,7 @@ NAV_STRUCTURE = {
     "🏭 Commodities": ["Energy & Resources", "Agriculture & Food", "Trade & Shipping"],
     "🌐 Global": ["Demographics", "Debt & Fiscal", "Weather & Globe", "Space"],
     "📰 News & Events": ["News", "Market Sentiment", "Global Events"],
-    "🛠️ Tools": ["Portfolio", "Watchlist", "Query Builder", "Alerts & Export", "Collection Status"],
+    "🛠️ Tools": ["Portfolio", "Watchlist", "Calculators", "Query Builder", "Alerts & Export", "Collection Status"],
 }
 
 # Helper function to create navigation button
@@ -6472,6 +6472,451 @@ elif page == "Watchlist":
         with col4:
             avg_change = all_data['change_percent'].mean() if not all_data.empty else 0
             st.metric("Avg Change", f"{avg_change:+.2f}%")
+
+
+# ============================================================================
+# PAGE: CALCULATORS
+# ============================================================================
+
+elif page == "Calculators":
+    st.title("Financial Calculators")
+    st.markdown("*Investment planning and financial analysis tools*")
+    st.markdown("---")
+
+    calc_tab1, calc_tab2, calc_tab3, calc_tab4 = st.tabs([
+        "Compound Interest", "Retirement Planner", "Loan Calculator", "Investment Returns"
+    ])
+
+    with calc_tab1:
+        st.subheader("Compound Interest Calculator")
+        st.markdown("*See how your investments can grow over time with the power of compounding*")
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Initial Investment**")
+            initial_investment = st.number_input(
+                "Principal Amount ($)",
+                min_value=0.0,
+                value=10000.0,
+                step=1000.0,
+                help="The starting amount you're investing"
+            )
+
+            monthly_contribution = st.number_input(
+                "Monthly Contribution ($)",
+                min_value=0.0,
+                value=500.0,
+                step=100.0,
+                help="Additional amount you'll add each month"
+            )
+
+            st.markdown("**Investment Period**")
+            years = st.slider("Years to Grow", min_value=1, max_value=50, value=20)
+
+            st.markdown("**Expected Return**")
+            annual_rate = st.slider(
+                "Annual Interest Rate (%)",
+                min_value=0.0,
+                max_value=20.0,
+                value=7.0,
+                step=0.5,
+                help="Historical S&P 500 average is ~10%, conservative estimate is 6-7%"
+            )
+
+            compound_frequency = st.selectbox(
+                "Compounding Frequency",
+                ["Annually", "Semi-Annually", "Quarterly", "Monthly", "Daily"],
+                index=3  # Default to Monthly
+            )
+
+            # Map frequency to number of periods per year
+            freq_map = {
+                "Annually": 1,
+                "Semi-Annually": 2,
+                "Quarterly": 4,
+                "Monthly": 12,
+                "Daily": 365
+            }
+            n = freq_map[compound_frequency]
+
+        with col2:
+            # Calculate compound interest
+            r = annual_rate / 100  # Convert to decimal
+            t = years
+
+            # Future Value of initial principal
+            # FV = P(1 + r/n)^(nt)
+            fv_principal = initial_investment * ((1 + r/n) ** (n * t))
+
+            # Future Value of monthly contributions (annuity)
+            # FV = PMT * [((1 + r/n)^(nt) - 1) / (r/n)]
+            if r > 0:
+                # Adjust for monthly contributions with different compounding
+                monthly_rate = r / 12
+                total_months = years * 12
+                fv_contributions = monthly_contribution * (((1 + monthly_rate) ** total_months - 1) / monthly_rate)
+            else:
+                fv_contributions = monthly_contribution * years * 12
+
+            total_future_value = fv_principal + fv_contributions
+            total_contributions = initial_investment + (monthly_contribution * 12 * years)
+            total_interest = total_future_value - total_contributions
+
+            # Display results
+            st.markdown("### Results")
+
+            st.metric(
+                "Future Value",
+                f"${total_future_value:,.2f}",
+                f"+${total_interest:,.2f} interest earned"
+            )
+
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Total Contributions", f"${total_contributions:,.2f}")
+            with col_b:
+                st.metric("Interest Earned", f"${total_interest:,.2f}")
+
+            # Return percentage
+            if total_contributions > 0:
+                total_return_pct = ((total_future_value - total_contributions) / total_contributions) * 100
+                st.metric("Total Return", f"{total_return_pct:.1f}%")
+
+            # Breakdown pie chart
+            breakdown_df = pd.DataFrame({
+                'Component': ['Initial Investment', 'Monthly Contributions', 'Interest Earned'],
+                'Amount': [initial_investment, monthly_contribution * 12 * years, total_interest]
+            })
+
+            fig_pie = px.pie(
+                breakdown_df,
+                values='Amount',
+                names='Component',
+                title='Investment Breakdown',
+                color_discrete_sequence=['#3498db', '#2ecc71', '#9b59b6'],
+                hole=0.4
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        # Growth chart over time
+        st.markdown("---")
+        st.subheader("Growth Over Time")
+
+        # Calculate year-by-year growth
+        growth_data = []
+        for year in range(0, years + 1):
+            if year == 0:
+                balance = initial_investment
+                total_contrib = initial_investment
+            else:
+                # Principal growth
+                fv_p = initial_investment * ((1 + r/n) ** (n * year))
+                # Contributions growth
+                if r > 0:
+                    months = year * 12
+                    fv_c = monthly_contribution * (((1 + r/12) ** months - 1) / (r/12))
+                else:
+                    fv_c = monthly_contribution * year * 12
+                balance = fv_p + fv_c
+                total_contrib = initial_investment + (monthly_contribution * 12 * year)
+
+            growth_data.append({
+                'Year': year,
+                'Balance': balance,
+                'Contributions': total_contrib,
+                'Interest': balance - total_contrib
+            })
+
+        growth_df = pd.DataFrame(growth_data)
+
+        # Area chart showing contributions vs interest
+        fig_growth = go.Figure()
+
+        fig_growth.add_trace(go.Scatter(
+            x=growth_df['Year'],
+            y=growth_df['Contributions'],
+            fill='tozeroy',
+            name='Total Contributions',
+            line=dict(color='#3498db'),
+            fillcolor='rgba(52, 152, 219, 0.5)'
+        ))
+
+        fig_growth.add_trace(go.Scatter(
+            x=growth_df['Year'],
+            y=growth_df['Balance'],
+            fill='tonexty',
+            name='Interest Earned',
+            line=dict(color='#9b59b6'),
+            fillcolor='rgba(155, 89, 182, 0.5)'
+        ))
+
+        fig_growth.update_layout(
+            title='Investment Growth Over Time',
+            xaxis_title='Years',
+            yaxis_title='Value ($)',
+            hovermode='x unified',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02)
+        )
+
+        st.plotly_chart(fig_growth, use_container_width=True)
+
+        # Year-by-year table
+        with st.expander("View Year-by-Year Breakdown"):
+            display_df = growth_df.copy()
+            display_df['Balance'] = display_df['Balance'].apply(lambda x: f"${x:,.2f}")
+            display_df['Contributions'] = display_df['Contributions'].apply(lambda x: f"${x:,.2f}")
+            display_df['Interest'] = display_df['Interest'].apply(lambda x: f"${x:,.2f}")
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+        # Tips section
+        st.markdown("---")
+        st.info("""
+        **Tips for Maximizing Compound Interest:**
+        - **Start early**: Time is your biggest advantage
+        - **Be consistent**: Regular contributions add up significantly
+        - **Reinvest dividends**: Let your earnings generate more earnings
+        - **Minimize fees**: High fees can significantly reduce returns over time
+        - **Stay invested**: Avoid withdrawing during market downturns
+        """)
+
+    with calc_tab2:
+        st.subheader("Retirement Planner")
+        st.markdown("*Plan your retirement savings and estimate your retirement income*")
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            current_age = st.number_input("Current Age", min_value=18, max_value=80, value=30)
+            retirement_age = st.number_input("Retirement Age", min_value=current_age + 1, max_value=90, value=65)
+            life_expectancy = st.number_input("Life Expectancy", min_value=retirement_age + 1, max_value=110, value=90)
+
+            current_savings = st.number_input("Current Retirement Savings ($)", min_value=0.0, value=50000.0, step=10000.0)
+            monthly_savings = st.number_input("Monthly Contribution ($)", min_value=0.0, value=1000.0, step=100.0)
+
+            pre_retire_return = st.slider("Pre-Retirement Return (%)", 0.0, 15.0, 7.0, 0.5)
+            post_retire_return = st.slider("Post-Retirement Return (%)", 0.0, 10.0, 4.0, 0.5)
+            inflation_rate = st.slider("Expected Inflation (%)", 0.0, 8.0, 2.5, 0.5)
+
+        with col2:
+            years_to_retire = retirement_age - current_age
+            years_in_retirement = life_expectancy - retirement_age
+
+            # Calculate retirement nest egg
+            r = pre_retire_return / 100
+            if r > 0:
+                fv_savings = current_savings * ((1 + r) ** years_to_retire)
+                fv_contributions = monthly_savings * 12 * (((1 + r) ** years_to_retire - 1) / r)
+            else:
+                fv_savings = current_savings
+                fv_contributions = monthly_savings * 12 * years_to_retire
+
+            retirement_nest_egg = fv_savings + fv_contributions
+
+            # Calculate annual withdrawal (4% rule adjusted)
+            safe_withdrawal_rate = 0.04
+            annual_withdrawal = retirement_nest_egg * safe_withdrawal_rate
+            monthly_income = annual_withdrawal / 12
+
+            # Inflation-adjusted values
+            inflation_factor = (1 + inflation_rate/100) ** years_to_retire
+            real_nest_egg = retirement_nest_egg / inflation_factor
+            real_monthly_income = monthly_income / inflation_factor
+
+            st.markdown("### Retirement Projections")
+
+            st.metric("Nest Egg at Retirement", f"${retirement_nest_egg:,.0f}")
+            st.metric("Monthly Retirement Income", f"${monthly_income:,.0f}", help="Based on 4% safe withdrawal rate")
+
+            st.markdown("---")
+            st.markdown("**Inflation-Adjusted (Today's Dollars)**")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Real Nest Egg", f"${real_nest_egg:,.0f}")
+            with col_b:
+                st.metric("Real Monthly Income", f"${real_monthly_income:,.0f}")
+
+            # Retirement readiness gauge
+            target_replacement = 0.80  # 80% income replacement
+            assumed_current_income = monthly_savings / 0.15 if monthly_savings > 0 else 5000  # Assume 15% savings rate
+            target_monthly = assumed_current_income * target_replacement
+            readiness_pct = min((real_monthly_income / target_monthly) * 100, 150) if target_monthly > 0 else 0
+
+            st.markdown("---")
+            st.markdown(f"**Retirement Readiness: {readiness_pct:.0f}%**")
+            st.progress(min(readiness_pct / 100, 1.0))
+
+            if readiness_pct >= 100:
+                st.success("You're on track for a comfortable retirement!")
+            elif readiness_pct >= 75:
+                st.warning("You're making good progress. Consider increasing contributions.")
+            else:
+                st.error("Consider increasing your savings rate or adjusting retirement age.")
+
+    with calc_tab3:
+        st.subheader("Loan Calculator")
+        st.markdown("*Calculate monthly payments and total interest for loans*")
+        st.markdown("---")
+
+        loan_type = st.selectbox("Loan Type", ["Mortgage", "Auto Loan", "Personal Loan", "Student Loan", "Custom"])
+
+        # Pre-fill based on loan type
+        defaults = {
+            "Mortgage": (300000, 6.5, 30),
+            "Auto Loan": (35000, 7.5, 5),
+            "Personal Loan": (15000, 10.0, 3),
+            "Student Loan": (50000, 5.5, 10),
+            "Custom": (10000, 8.0, 5),
+        }
+        default_amount, default_rate, default_years = defaults[loan_type]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            loan_amount = st.number_input("Loan Amount ($)", min_value=1000.0, value=float(default_amount), step=1000.0)
+            interest_rate = st.number_input("Annual Interest Rate (%)", min_value=0.1, max_value=30.0, value=default_rate, step=0.1)
+            loan_term_years = st.number_input("Loan Term (Years)", min_value=1, max_value=40, value=default_years)
+
+            # Extra payment option
+            extra_payment = st.number_input("Extra Monthly Payment ($)", min_value=0.0, value=0.0, step=50.0)
+
+        with col2:
+            # Calculate monthly payment
+            monthly_rate = interest_rate / 100 / 12
+            num_payments = loan_term_years * 12
+
+            if monthly_rate > 0:
+                monthly_payment = loan_amount * (monthly_rate * (1 + monthly_rate)**num_payments) / ((1 + monthly_rate)**num_payments - 1)
+            else:
+                monthly_payment = loan_amount / num_payments
+
+            total_payment = monthly_payment * num_payments
+            total_interest = total_payment - loan_amount
+
+            st.markdown("### Loan Summary")
+
+            st.metric("Monthly Payment", f"${monthly_payment:,.2f}")
+            st.metric("Total Interest", f"${total_interest:,.2f}")
+            st.metric("Total Cost", f"${total_payment:,.2f}")
+
+            # With extra payments
+            if extra_payment > 0:
+                st.markdown("---")
+                st.markdown("**With Extra Payments**")
+
+                # Calculate payoff with extra payments
+                balance = loan_amount
+                months_paid = 0
+                total_paid_extra = 0
+
+                while balance > 0 and months_paid < num_payments * 2:
+                    interest_payment = balance * monthly_rate
+                    principal_payment = monthly_payment - interest_payment + extra_payment
+                    balance = max(0, balance - principal_payment)
+                    total_paid_extra += monthly_payment + extra_payment
+                    months_paid += 1
+
+                years_saved = (num_payments - months_paid) / 12
+                interest_saved = total_payment - total_paid_extra
+
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.metric("New Payoff Time", f"{months_paid // 12}y {months_paid % 12}m")
+                with col_b:
+                    st.metric("Interest Saved", f"${interest_saved:,.2f}")
+
+        # Amortization schedule
+        st.markdown("---")
+        with st.expander("View Amortization Schedule"):
+            schedule = []
+            balance = loan_amount
+
+            for month in range(1, min(num_payments + 1, 361)):  # Limit to 30 years
+                interest_payment = balance * monthly_rate
+                principal_payment = monthly_payment - interest_payment
+                balance = max(0, balance - principal_payment)
+
+                if month <= 12 or month % 12 == 0 or balance == 0:  # Show first year, then yearly
+                    schedule.append({
+                        'Month': month,
+                        'Payment': f"${monthly_payment:,.2f}",
+                        'Principal': f"${principal_payment:,.2f}",
+                        'Interest': f"${interest_payment:,.2f}",
+                        'Balance': f"${balance:,.2f}"
+                    })
+
+                if balance == 0:
+                    break
+
+            st.dataframe(pd.DataFrame(schedule), use_container_width=True, hide_index=True)
+
+    with calc_tab4:
+        st.subheader("Investment Returns Calculator")
+        st.markdown("*Calculate returns on your investment portfolio*")
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            initial_value = st.number_input("Initial Investment ($)", min_value=0.0, value=10000.0, step=1000.0)
+            final_value = st.number_input("Current/Final Value ($)", min_value=0.0, value=15000.0, step=1000.0)
+            investment_period = st.number_input("Investment Period (Years)", min_value=0.1, max_value=100.0, value=5.0, step=0.5)
+
+            # Additional contributions
+            total_contributions = st.number_input(
+                "Total Additional Contributions ($)",
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+                help="Sum of all additional money invested during the period"
+            )
+
+        with col2:
+            total_invested = initial_value + total_contributions
+            absolute_return = final_value - total_invested
+            percentage_return = ((final_value - total_invested) / total_invested * 100) if total_invested > 0 else 0
+
+            # CAGR calculation
+            if initial_value > 0 and investment_period > 0:
+                cagr = ((final_value / initial_value) ** (1 / investment_period) - 1) * 100
+            else:
+                cagr = 0
+
+            # Time-weighted return approximation (simplified)
+            if total_contributions == 0 and initial_value > 0:
+                twr = ((final_value / initial_value) - 1) * 100
+            else:
+                twr = percentage_return  # Simplified
+
+            st.markdown("### Returns Analysis")
+
+            st.metric("Total Return", f"${absolute_return:,.2f}", f"{percentage_return:+.2f}%")
+            st.metric("CAGR", f"{cagr:.2f}%", help="Compound Annual Growth Rate")
+
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Total Invested", f"${total_invested:,.2f}")
+            with col_b:
+                st.metric("Final Value", f"${final_value:,.2f}")
+
+            # Compare to benchmarks
+            st.markdown("---")
+            st.markdown("**Benchmark Comparison**")
+
+            benchmarks = {
+                'S&P 500 (10% avg)': 10.0,
+                'Bonds (5% avg)': 5.0,
+                'Inflation (3% avg)': 3.0,
+                'Savings Account (4%)': 4.0,
+            }
+
+            for name, rate in benchmarks.items():
+                benchmark_value = initial_value * ((1 + rate/100) ** investment_period)
+                vs_benchmark = final_value - benchmark_value
+                icon = "✅" if vs_benchmark >= 0 else "❌"
+                st.markdown(f"{icon} vs {name}: {'+' if vs_benchmark >= 0 else ''}{vs_benchmark:,.0f}")
 
 
 # ============================================================================
