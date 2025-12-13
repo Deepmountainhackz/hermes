@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.27
+Hermes Intelligence Platform Dashboard v6.28
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -203,11 +203,27 @@ CUSTOM_CSS = """
     /* ========================================
        GLOBAL FONT SETTING
        ======================================== */
-    html, body, [class*="st-"], .stMarkdown, .stText, p, span, div, label,
+    /* Apply Times New Roman to text content only, preserve icons */
+    html, body, p, h1, h2, h3, h4, h5, h6,
+    .stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th,
     [data-testid="stMetricValue"], [data-testid="stMetricLabel"],
-    [data-testid="stMetricDelta"], .stSelectbox, .stMultiSelect,
-    .stTextInput, .stNumberInput, .stDataFrame, h1, h2, h3, h4, h5, h6 {
+    .stDataFrame td, .stDataFrame th,
+    .stTextInput input, .stNumberInput input,
+    .stTextArea textarea,
+    [data-testid="stExpanderDetails"] p {
         font-family: 'Times New Roman', Times, serif !important;
+    }
+
+    /* Keep system font for navigation, buttons, icons */
+    .stButton button,
+    [data-testid="stSidebarNav"],
+    [data-testid="stSidebarNavItems"],
+    [data-baseweb="select"],
+    .stSelectbox label,
+    .stMultiSelect label,
+    .stRadio label,
+    .stCheckbox label {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif !important;
     }
 
     /* ========================================
@@ -1418,7 +1434,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.27 - Multi-Currency Calculators")
+st.sidebar.caption("v6.28 - Multi-Currency Calculators")
 
 
 # ============================================================================
