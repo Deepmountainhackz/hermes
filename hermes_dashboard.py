@@ -1268,14 +1268,16 @@ elif page == "Markets":
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with cols[i % 4]:
-                status_color = "#00a86b" if is_open else "#ff6b6b"
-                status_icon = "🟢" if is_open else "🔴"
+                status_color = "#00a86b" if is_open else "#dc3545"
+                bg_color = "#d4edda" if is_open else "#f8f9fa"
+                border_color = "#28a745" if is_open else "#dc3545"
+                text_color = "#155724" if is_open else "#333"
                 st.markdown(
-                    f"""<div style="background-color:#1e1e1e; padding:8px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
-                    <b>{info['flag']} {market}</b><br>
-                    <span style="color:{status_color};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
-                    <small>{status_text}</small><br>
-                    <small style="color:#888;">Local: {local_time}</small>
+                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#555; font-size:12px;">{status_text}</div>
+                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
@@ -1286,14 +1288,16 @@ elif page == "Markets":
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with cols2[i % 4]:
-                status_color = "#00a86b" if is_open else "#ff6b6b"
-                status_icon = "🟢" if is_open else "🔴"
+                status_color = "#00a86b" if is_open else "#dc3545"
+                bg_color = "#d4edda" if is_open else "#f8f9fa"
+                border_color = "#28a745" if is_open else "#dc3545"
+                text_color = "#155724" if is_open else "#333"
                 st.markdown(
-                    f"""<div style="background-color:#1e1e1e; padding:8px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
-                    <b>{info['flag']} {market}</b><br>
-                    <span style="color:{status_color};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
-                    <small>{status_text}</small><br>
-                    <small style="color:#888;">Local: {local_time}</small>
+                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#555; font-size:12px;">{status_text}</div>
+                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
@@ -1304,14 +1308,15 @@ elif page == "Markets":
         for i, (market, info) in enumerate(METAL_MARKETS.items()):
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with metal_cols[i % 3]:
-                status_color = "#FFD700" if is_open else "#666"  # Gold color for open
-                status_icon = "🟢" if is_open else "🔴"
+                status_color = "#b8860b" if is_open else "#dc3545"  # Dark gold for open
+                bg_color = "#fff8dc" if is_open else "#f8f9fa"  # Cornsilk for open
+                border_color = "#daa520" if is_open else "#dc3545"
                 st.markdown(
-                    f"""<div style="background-color:#1e1e1e; padding:10px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
-                    <b>{info['flag']} {market}</b><br>
-                    <span style="color:{'#FFD700' if is_open else '#ff6b6b'};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
-                    <small>{status_text}</small><br>
-                    <small style="color:#888;">Local: {local_time}</small>
+                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#555; font-size:12px;">{status_text}</div>
+                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
