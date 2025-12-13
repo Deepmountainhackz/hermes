@@ -51,7 +51,8 @@ jobs:
               DisastersCollector,
               NewsCollector,
               CryptoCollector,
-              GdeltCollector
+              GdeltCollector,
+              WorldBankCollector
           )
           from core import Config
 
@@ -69,6 +70,7 @@ jobs:
               ('Disasters', DisastersCollector),
               ('News', NewsCollector),
               ('GDELT', GdeltCollector),
+              ('WorldBank', WorldBankCollector),
           ]
 
           for name, CollectorClass in collectors:

@@ -8,9 +8,17 @@ A comprehensive, automated data collection and analysis platform that integrates
 
 ---
 
-## ✨ What's New in v4.3
+## ✨ What's New in v4.4
 
 ### New Features
+- **🌍 World Bank Integration** - Global development indicators from World Bank API (free, no key)
+- **🏛️ 20 G20 Countries** - US, China, Japan, Germany, UK, France, India, Brazil, and more
+- **📊 20+ Development Indicators** - GDP, inflation, trade, demographics, labor, environment
+- **📈 Country Profiles** - View all indicators for any country at a glance
+- **🔄 Global Rankings** - Compare countries across any indicator
+- **🎯 Multi-Country Comparison** - Normalized heatmaps for cross-country analysis
+
+### v4.3 Features
 - **📊 Portfolio Correlation** - Build custom portfolios and analyze correlations
 - **🔍 Query Builder** - Custom SQL query interface with templates
 - **🤖 AI Sentiment Analysis** - Keyword-based sentiment classification for news
@@ -48,6 +56,7 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 - **Financial Markets** - Stocks, commodities, and forex rates
 - **Cryptocurrency** - Top 15 cryptos by market cap with price tracking
 - **Economic Indicators** - GDP, unemployment, inflation across major economies
+- **Global Development** - World Bank data for 20 G20 countries (NEW in v4.4)
 - **Environmental Events** - Weather, earthquakes, wildfires, storms
 - **Space Events** - ISS tracking, near-Earth objects, solar activity
 - **News Intelligence** - Premium financial news sources
@@ -90,6 +99,21 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
   - Japan: GDP, Unemployment, Inflation, Consumer Confidence, Industrial Production
   - China: GDP, Inflation, Industrial Production
 
+### **World Bank Global Development** (NEW in v4.4)
+- **20 G20 Countries** tracked with comprehensive indicators
+  - Americas: US, Canada, Mexico, Brazil, Argentina
+  - Europe: Germany, UK, France, Italy, Russia, Switzerland, Turkey
+  - Asia-Pacific: China, Japan, South Korea, India, Indonesia, Australia, Saudi Arabia
+  - Africa: South Africa
+- **20+ Development Indicators** across 6 categories:
+  - Economy: GDP, GDP Growth, GDP Per Capita, Inflation, Government Debt, Current Account
+  - Trade: Exports, Imports, Trade Balance, Foreign Direct Investment
+  - Demographics: Population, Population Growth, Urban Population, Life Expectancy
+  - Labor: Unemployment Rate, Labor Force Participation
+  - Social: Poverty Rate, Literacy Rate
+  - Environment: Energy Use, CO2 Emissions
+- **Free API** - No authentication required
+
 ### **Market Sentiment & Risk**
 - **Treasury Yields** - 3-Month, 2-Year, 5-Year, 10-Year, 30-Year
 - **Yield Curve Spread** - 10Y-2Y spread (recession indicator)
@@ -124,9 +148,9 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 ## 🚀 Automated Data Collection
 
 **Frequency:** Every 6 hours via GitHub Actions
-**Total Collectors:** 11 independent data collectors
+**Total Collectors:** 12 independent data collectors
 **Database:** PostgreSQL (hosted on Railway)
-**Storage:** 16 normalized tables with proper indexing
+**Storage:** 17 normalized tables with proper indexing
 
 ### Collection Schedule
 ```
@@ -155,11 +179,12 @@ All data is automatically collected, validated, and stored without manual interv
 1. **Alpha Vantage** - Stocks, commodities, forex
 2. **CoinGecko** - Cryptocurrency data (free, no key required)
 3. **FRED (Federal Reserve)** - Economic indicators
-4. **USGS** - Earthquake data
-5. **NASA EONET** - Wildfires and storms
-6. **NASA APIs** - NEO, solar activity, ISS tracking
-7. **OpenWeatherMap** - Global weather data
-8. **NewsAPI** - Premium news sources
+4. **World Bank** - Global development indicators (free, no key required)
+5. **USGS** - Earthquake data
+6. **NASA EONET** - Wildfires and storms
+7. **NASA APIs** - NEO, solar activity, ISS tracking
+8. **OpenWeatherMap** - Global weather data
+9. **NewsAPI** - Premium news sources
 
 ---
 
@@ -175,8 +200,9 @@ hermes/
 │   ├── markets_service.py    # Stocks data
 │   ├── forex_service.py      # Currency exchange
 │   ├── commodities_service.py # Commodities
-│   ├── crypto_service.py     # Cryptocurrency (NEW)
+│   ├── crypto_service.py     # Cryptocurrency
 │   ├── economics_service.py  # Economic indicators
+│   ├── worldbank_service.py  # World Bank development data (NEW)
 │   ├── weather_service.py    # Weather data
 │   ├── space_service.py      # Space events
 │   ├── disasters_service.py  # Earthquakes, wildfires, storms
@@ -320,6 +346,7 @@ Add all API keys as repository secrets:
 - `commodities` - Commodity prices and units
 - `forex` - Exchange rates with bid/ask
 - `economic_indicators` - Country-level economic data
+- `worldbank_indicators` - World Bank development data (NEW)
 - `weather` - 50 cities with temperature, conditions, wind
 - `earthquakes` - Seismic activity with location and magnitude
 - `wildfires` - Active fires with geocoded positions
