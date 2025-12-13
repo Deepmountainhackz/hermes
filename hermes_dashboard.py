@@ -923,6 +923,13 @@ elif page == "🛰️ Space":
     if neo_df.empty:
         st.info("No Near-Earth Object data yet. Run the space collector to populate data.")
     else:
+        # Convert Decimal types to float for Plotly compatibility
+        neo_df['date'] = pd.to_datetime(neo_df['date'])
+        neo_df['estimated_diameter_min'] = pd.to_numeric(neo_df['estimated_diameter_min'], errors='coerce')
+        neo_df['estimated_diameter_max'] = pd.to_numeric(neo_df['estimated_diameter_max'], errors='coerce')
+        neo_df['relative_velocity'] = pd.to_numeric(neo_df['relative_velocity'], errors='coerce')
+        neo_df['miss_distance'] = pd.to_numeric(neo_df['miss_distance'], errors='coerce')
+
         # Summary
         col1, col2, col3 = st.columns(3)
 
@@ -931,7 +938,7 @@ elif page == "🛰️ Space":
         with col1:
             st.metric("Total NEOs", len(neo_df))
         with col2:
-            st.metric("⚠️ Potentially Hazardous", int(hazardous_count))
+            st.metric("Potentially Hazardous", int(hazardous_count))
         with col3:
             if 'estimated_diameter_max' in neo_df.columns:
                 largest = neo_df['estimated_diameter_max'].max()
@@ -943,7 +950,7 @@ elif page == "🛰️ Space":
 
         # NEO Table
         display_neo = neo_df.copy()
-        display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: '⚠️ YES' if x else '✅ No')
+        display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: 'YES' if x else 'No')
         display_neo['Diameter (m)'] = display_neo.apply(
             lambda r: f"{r['estimated_diameter_min']:.0f} - {r['estimated_diameter_max']:.0f}"
             if pd.notna(r['estimated_diameter_min']) else "N/A", axis=1
@@ -963,18 +970,23 @@ elif page == "🛰️ Space":
         # Size visualization
         if not neo_df.empty and 'estimated_diameter_max' in neo_df.columns:
             st.markdown("---")
-            st.subheader("📊 NEO Size Distribution")
+            st.subheader("NEO Size Distribution")
 
-            fig = px.scatter(
-                neo_df, x='date', y='estimated_diameter_max',
-                size='estimated_diameter_max',
-                color='is_potentially_hazardous',
-                hover_data=['name', 'relative_velocity'],
-                title="Near-Earth Objects by Date and Size",
-                labels={'estimated_diameter_max': 'Max Diameter (m)', 'is_potentially_hazardous': 'Hazardous'}
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            # Filter out rows with missing data for the chart
+            chart_df = neo_df.dropna(subset=['date', 'estimated_diameter_max'])
+            if not chart_df.empty:
+                fig = px.scatter(
+                    chart_df, x='date', y='estimated_diameter_max',
+                    size='estimated_diameter_max',
+                    color='is_potentially_hazardous',
+                    hover_data=['name', 'relative_velocity'],
+                    title="Near-Earth Objects by Date and Size",
+                    labels={'estimated_diameter_max': 'Max Diameter (m)', 'is_potentially_hazardous': 'Hazardous'}
+                )
+                fig.update_layout(height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Not enough data to display chart")
 
     st.markdown("---")
 
