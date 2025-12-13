@@ -2415,7 +2415,7 @@ elif page == "Markets":
             st.warning("No forex data. Run: `python scheduler.py --collector forex`")
         else:
             # ========== CURRENCY STRENGTH METER ==========
-            st.markdown("### 💪 Currency Strength Meter")
+            st.markdown("### Currency Strength Meter")
 
             # Calculate relative strength based on pair movements
             # For each currency, check how it performs against others
