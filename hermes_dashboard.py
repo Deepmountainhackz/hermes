@@ -1,10 +1,13 @@
+"""
+Hermes Intelligence Platform Dashboard
+Complete multi-layer intelligence visualization
+"""
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
-import h3
-from config_cities import CITY_COORDS  # Move city data to separate file
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import psycopg
@@ -13,6 +16,64 @@ from psycopg.rows import dict_row
 # Load environment variables (for local development)
 load_dotenv()
 
+# City coordinates for weather visualization
+CITY_COORDS = {
+    'New York': {'lat': 40.7128, 'lon': -74.0060},
+    'Los Angeles': {'lat': 34.0522, 'lon': -118.2437},
+    'Chicago': {'lat': 41.8781, 'lon': -87.6298},
+    'Toronto': {'lat': 43.6532, 'lon': -79.3832},
+    'Mexico City': {'lat': 19.4326, 'lon': -99.1332},
+    'Miami': {'lat': 25.7617, 'lon': -80.1918},
+    'Vancouver': {'lat': 49.2827, 'lon': -123.1207},
+    'San Francisco': {'lat': 37.7749, 'lon': -122.4194},
+    'São Paulo': {'lat': -23.5505, 'lon': -46.6333},
+    'Rio de Janeiro': {'lat': -22.9068, 'lon': -43.1729},
+    'Buenos Aires': {'lat': -34.6037, 'lon': -58.3816},
+    'Lima': {'lat': -12.0464, 'lon': -77.0428},
+    'Bogotá': {'lat': 4.7110, 'lon': -74.0721},
+    'Santiago': {'lat': -33.4489, 'lon': -70.6693},
+    'London': {'lat': 51.5074, 'lon': -0.1278},
+    'Paris': {'lat': 48.8566, 'lon': 2.3522},
+    'Berlin': {'lat': 52.5200, 'lon': 13.4050},
+    'Madrid': {'lat': 40.4168, 'lon': -3.7038},
+    'Rome': {'lat': 41.9028, 'lon': 12.4964},
+    'Amsterdam': {'lat': 52.3676, 'lon': 4.9041},
+    'Moscow': {'lat': 55.7558, 'lon': 37.6173},
+    'Istanbul': {'lat': 41.0082, 'lon': 28.9784},
+    'Athens': {'lat': 37.9838, 'lon': 23.7275},
+    'Stockholm': {'lat': 59.3293, 'lon': 18.0686},
+    'Dubai': {'lat': 25.2048, 'lon': 55.2708},
+    'Cairo': {'lat': 30.0444, 'lon': 31.2357},
+    'Tel Aviv': {'lat': 32.0853, 'lon': 34.7818},
+    'Riyadh': {'lat': 24.7136, 'lon': 46.6753},
+    'Johannesburg': {'lat': -26.2041, 'lon': 28.0473},
+    'Cape Town': {'lat': -33.9249, 'lon': 18.4241},
+    'Nairobi': {'lat': -1.2921, 'lon': 36.8219},
+    'Lagos': {'lat': 6.5244, 'lon': 3.3792},
+    'Tokyo': {'lat': 35.6762, 'lon': 139.6503},
+    'Beijing': {'lat': 39.9042, 'lon': 116.4074},
+    'Shanghai': {'lat': 31.2304, 'lon': 121.4737},
+    'Hong Kong': {'lat': 22.3193, 'lon': 114.1694},
+    'Singapore': {'lat': 1.3521, 'lon': 103.8198},
+    'Mumbai': {'lat': 19.0760, 'lon': 72.8777},
+    'Delhi': {'lat': 28.7041, 'lon': 77.1025},
+    'Bangkok': {'lat': 13.7563, 'lon': 100.5018},
+    'Seoul': {'lat': 37.5665, 'lon': 126.9780},
+    'Jakarta': {'lat': -6.2088, 'lon': 106.8456},
+    'Manila': {'lat': 14.5995, 'lon': 120.9842},
+    'Kuala Lumpur': {'lat': 3.1390, 'lon': 101.6869},
+    'Taipei': {'lat': 25.0330, 'lon': 121.5654},
+    'Sydney': {'lat': -33.8688, 'lon': 151.2093},
+    'Melbourne': {'lat': -37.8136, 'lon': 144.9631},
+    'Auckland': {'lat': -36.8485, 'lon': 174.7633},
+    'Perth': {'lat': -31.9505, 'lon': 115.8605},
+    'Brisbane': {'lat': -27.4698, 'lon': 153.0251}
+}
+
+
+# ============================================================================
+# DATABASE CONFIGURATION
+# ============================================================================
 
 def get_db_config():
     """Get database configuration from Streamlit secrets or environment variables."""
@@ -48,8 +109,9 @@ def get_db_connection():
         row_factory=dict_row
     )
 
+
 # ============================================================================
-# CONFIGURATION & SETUP
+# PAGE CONFIGURATION
 # ============================================================================
 
 st.set_page_config(
@@ -63,11 +125,14 @@ st.markdown("""
     <style>
     .main { padding: 0rem 1rem; }
     .stMetric { background-color: #f0f2f6; padding: 10px; border-radius: 5px; }
+    .metric-positive { color: #00c853; }
+    .metric-negative { color: #ff1744; }
     </style>
     """, unsafe_allow_html=True)
 
+
 # ============================================================================
-# DATABASE & HELPER FUNCTIONS
+# DATA LOADING FUNCTIONS
 # ============================================================================
 
 @st.cache_data(ttl=60)
@@ -80,77 +145,72 @@ def load_data(query):
                 rows = cur.fetchall()
                 if not rows:
                     return pd.DataFrame()
-                # dict_row returns list of dicts
                 return pd.DataFrame(rows)
     except Exception as e:
         st.error(f"Database error: {e}")
         return pd.DataFrame()
 
-def render_metric_row(metrics_data, columns=4):
-    """Render a row of metrics with consistent styling"""
-    cols = st.columns(columns)
-    for col, (label, value, delta) in zip(cols, metrics_data):
-        with col:
-            st.metric(label, value, delta if delta else None)
 
-def create_comparison_chart(df, date_col, value_col, group_col, title, normalize=False):
-    """Create a line chart comparing multiple series"""
-    pivot_df = df.pivot(index=date_col, columns=group_col, values=value_col)
-    if normalize:
-        pivot_df = (pivot_df / pivot_df.iloc[0] * 100)
-    
-    fig = go.Figure()
-    for col in pivot_df.columns:
-        fig.add_trace(go.Scatter(
-            x=pivot_df.index, y=pivot_df[col],
-            name=col, mode='lines'
-        ))
-    
-    fig.update_layout(
-        title=title,
-        xaxis_title=date_col.title(),
-        yaxis_title="Normalized Price" if normalize else value_col.title(),
-        height=500,
-        hovermode='x unified'
-    )
-    return fig
+def get_count(table):
+    """Safely get count from a table"""
+    try:
+        df = load_data(f'SELECT COUNT(*) as c FROM {table}')
+        if df.empty:
+            return 0
+        if 'c' in df.columns:
+            return int(df['c'].iloc[0])
+        return int(df.iloc[0, 0])
+    except Exception:
+        return 0
 
-def create_globe_map(df, lat_col, lon_col, color_col, text_col, title):
-    """Create a 3D globe visualization"""
-    fig = go.Figure(go.Scattergeo(
-        lon=df[lon_col],
-        lat=df[lat_col],
-        text=df[text_col],
-        mode='markers+text',
-        marker=dict(
-            size=df[color_col].apply(lambda x: abs(x) + 10),
-            color=df[color_col],
-            colorscale=[[0, 'rgb(0,0,255)'], [0.5, 'rgb(128,0,128)'], [1, 'rgb(255,0,0)']],
-            cmin=-20, cmax=50,
-            colorbar=dict(title="Temperature (°C)", thickness=15, len=0.7),
-            line=dict(width=1, color='white')
-        ),
-        textfont=dict(size=10, color='white'),
-        textposition='top center',
-        hovertemplate='<b>%{text}</b><br>%{marker.color:.1f}°C<extra></extra>'
+
+def get_latest_timestamp(table, timestamp_col='timestamp'):
+    """Get the latest timestamp from a table"""
+    try:
+        df = load_data(f'SELECT MAX({timestamp_col}) as latest FROM {table}')
+        if df.empty or df['latest'].iloc[0] is None:
+            return "No data"
+        return df['latest'].iloc[0]
+    except Exception:
+        return "No data"
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def format_change(value):
+    """Format a change value with color"""
+    if value is None:
+        return "N/A"
+    if value > 0:
+        return f"+{value:.2f}%"
+    return f"{value:.2f}%"
+
+
+def get_change_color(value):
+    """Get color based on change value"""
+    if value is None:
+        return "gray"
+    return "green" if value >= 0 else "red"
+
+
+def create_sparkline(data, height=50):
+    """Create a simple sparkline chart"""
+    if data.empty or len(data) < 2:
+        return None
+    fig = go.Figure(go.Scatter(
+        y=data, mode='lines',
+        line=dict(color='#1f77b4', width=1),
+        fill='tozeroy', fillcolor='rgba(31, 119, 180, 0.1)'
     ))
-    
-    fig.update_geos(
-        projection_type='orthographic',
-        showcountries=True, countrycolor='rgba(255,255,255,0.3)',
-        showcoastlines=True, coastlinecolor='rgba(255,255,255,0.5)',
-        showland=True, landcolor='rgb(30,30,30)',
-        showocean=True, oceancolor='rgb(10,10,30)',
-        projection_rotation=dict(lon=0, lat=30, roll=0)
-    )
-    
     fig.update_layout(
-        title=title, height=700,
-        paper_bgcolor='rgb(0,0,0)', plot_bgcolor='rgb(0,0,0)',
-        font=dict(color='white'), geo=dict(bgcolor='rgb(0,0,0)'),
-        dragmode='pan'
+        height=height, margin=dict(l=0, r=0, t=0, b=0),
+        xaxis=dict(visible=False), yaxis=dict(visible=False),
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
     )
     return fig
+
 
 # ============================================================================
 # SIDEBAR NAVIGATION
@@ -161,11 +221,20 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigate to:",
-    ["🏠 Overview", "📈 Markets", "🛰️ Space", "🌍 Geography", "🌦️ Environment", "📰 News"]
+    ["🏠 Overview", "📈 Markets", "💹 Economic Indicators",
+     "🌦️ Weather & Environment", "🛰️ Space", "📰 News"]
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info(f"**Last Updated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+# Refresh button
+if st.sidebar.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.info(f"**Last Refresh:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
 
 # ============================================================================
 # PAGE: OVERVIEW
@@ -175,135 +244,602 @@ if page == "🏠 Overview":
     st.title("🌐 Hermes Intelligence Platform")
     st.markdown("### Real-time Multi-Layer Intelligence Dashboard")
     st.markdown("---")
-    
-    # System metrics - helper function to safely get count
-    def get_count(table):
-        try:
-            df = load_data(f'SELECT COUNT(*) as c FROM {table}')
-            if df.empty:
-                return 0
-            # Handle different return formats from psycopg3/pandas
-            if 'c' in df.columns:
-                return int(df['c'].iloc[0])
-            # Fallback: get first column, first row
-            return int(df.iloc[0, 0])
-        except Exception:
-            return 0
 
-    metrics = [
-        ("📈 Stock Records", f"{get_count('stocks'):,}", None),
-        ("☄️ NEO Records", f"{get_count('near_earth_objects'):,}", None),
-        ("🌦️ Weather Records", f"{get_count('weather'):,}", None),
-        ("📰 News Articles", f"{get_count('news'):,}", None)
-    ]
-    render_metric_row(metrics)
-    
-    st.markdown("---")
-    
-    # Latest stock prices
-    st.subheader("📈 Latest Stock Prices")
-    stocks = load_data("""
-        SELECT symbol, price, change_percent as change
-        FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
-        ORDER BY symbol
-    """)
-    
-    if not stocks.empty:
-        stock_metrics = [(row['symbol'], f"${row['price']:.2f}", f"{row['change']:+.2f}%") 
-                        for _, row in stocks.iterrows()]
-        render_metric_row(stock_metrics, len(stocks))
-    
-    st.markdown("---")
-    
-    # ISS & Weather side by side
-    col1, col2 = st.columns(2)
-    
+    # System Stats
+    st.subheader("📊 System Statistics")
+    col1, col2, col3, col4 = st.columns(4)
+
     with col1:
-        st.subheader("🛰️ ISS Position")
+        st.metric("📈 Stock Records", f"{get_count('stocks'):,}")
+    with col2:
+        st.metric("💱 Forex Records", f"{get_count('forex'):,}")
+    with col3:
+        st.metric("🛢️ Commodity Records", f"{get_count('commodities'):,}")
+    with col4:
+        st.metric("🌦️ Weather Records", f"{get_count('weather'):,}")
+
+    col5, col6, col7, col8 = st.columns(4)
+
+    with col5:
+        st.metric("☄️ NEO Records", f"{get_count('near_earth_objects'):,}")
+    with col6:
+        st.metric("🛰️ ISS Positions", f"{get_count('iss_positions'):,}")
+    with col7:
+        st.metric("📰 News Articles", f"{get_count('news'):,}")
+    with col8:
+        st.metric("💹 Economic Indicators", f"{get_count('economic_indicators'):,}")
+
+    st.markdown("---")
+
+    # Market Overview
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📈 Latest Stock Prices")
+        stocks = load_data("""
+            SELECT symbol, price, change_percent
+            FROM stocks
+            WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
+            ORDER BY symbol
+            LIMIT 10
+        """)
+
+        if not stocks.empty:
+            for _, row in stocks.iterrows():
+                change = row.get('change_percent', 0) or 0
+                color = "🟢" if change >= 0 else "🔴"
+                st.write(f"{color} **{row['symbol']}**: ${row['price']:.2f} ({format_change(change)})")
+        else:
+            st.info("No stock data yet")
+
+    with col2:
+        st.subheader("💱 Forex Rates")
+        forex = load_data("""
+            SELECT pair, rate
+            FROM forex
+            WHERE timestamp = (SELECT MAX(timestamp) FROM forex)
+            ORDER BY pair
+            LIMIT 7
+        """)
+
+        if not forex.empty:
+            for _, row in forex.iterrows():
+                st.write(f"**{row['pair']}**: {row['rate']:.4f}")
+        else:
+            st.info("No forex data yet")
+
+    st.markdown("---")
+
+    # Quick Stats
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.subheader("🛰️ ISS Current Position")
         iss = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 1")
         if not iss.empty:
-            st.write(f"**📍 Location:** {iss['latitude'][0]:.4f}°, {iss['longitude'][0]:.4f}°")
-            st.write(f"**🚀 Altitude:** {iss['altitude'][0]:.2f} km")
-            st.write(f"**⚡ Speed:** {iss['velocity'][0]:,.2f} km/h")
-    
+            latest = iss.iloc[0]
+            st.write(f"**Latitude:** {latest['latitude']:.4f}°")
+            st.write(f"**Longitude:** {latest['longitude']:.4f}°")
+            st.write(f"**Altitude:** {latest['altitude']:.2f} km")
+            st.write(f"**Velocity:** {latest['velocity']:,.0f} km/h")
+        else:
+            st.info("No ISS data yet")
+
     with col2:
-        st.subheader("🌦️ Weather Snapshot")
+        st.subheader("🌦️ Weather Sample")
         weather = load_data("""
             SELECT city, temperature, description
-            FROM weather WHERE timestamp = (SELECT MAX(timestamp) FROM weather)
-            LIMIT 3
+            FROM weather
+            WHERE timestamp = (SELECT MAX(timestamp) FROM weather)
+            LIMIT 5
         """)
-        for _, row in weather.iterrows():
-            st.write(f"**{row['city']}:** {row['temperature']:.1f}°C - {row['description']}")
-    
-    st.markdown("---")
-    
-    # Latest news
-    st.subheader("📰 Latest Headlines")
-    news = load_data("SELECT source, title, published_at FROM news ORDER BY published_at DESC LIMIT 5")
-    for _, row in news.iterrows():
-        st.write(f"**[{row['source']}]** {row['title']}")
-        st.caption(str(row['published_at']))
+        if not weather.empty:
+            for _, row in weather.iterrows():
+                temp = row.get('temperature')
+                if temp is not None:
+                    st.write(f"**{row['city']}**: {temp:.1f}°C - {row['description'] or 'N/A'}")
+        else:
+            st.info("No weather data yet")
+
+    with col3:
+        st.subheader("📰 Latest Headlines")
+        news = load_data("SELECT source, title FROM news ORDER BY published_at DESC LIMIT 5")
+        if not news.empty:
+            for _, row in news.iterrows():
+                st.write(f"**[{row['source']}]** {row['title'][:60]}...")
+        else:
+            st.info("No news data yet")
+
 
 # ============================================================================
 # PAGE: MARKETS
 # ============================================================================
 
 elif page == "📈 Markets":
-    st.title("📈 Stock Market Analysis")
+    st.title("📈 Market Intelligence")
     st.markdown("---")
 
-    stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp, symbol")
+    tab1, tab2, tab3 = st.tabs(["📊 Stocks", "🛢️ Commodities", "💱 Forex"])
 
-    if stocks_df.empty:
-        st.warning("No stock data available")
+    # === STOCKS TAB ===
+    with tab1:
+        st.subheader("Stock Market Overview")
+
+        stocks_df = load_data("""
+            SELECT symbol, name, price, change, change_percent, volume, timestamp
+            FROM stocks
+            ORDER BY timestamp DESC, symbol
+        """)
+
+        if stocks_df.empty:
+            st.warning("No stock data available. Run the stock collector to populate data.")
+        else:
+            # Get latest data for each symbol
+            stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
+            latest_stocks = stocks_df.groupby('symbol').first().reset_index()
+
+            # Metrics row
+            col1, col2, col3, col4 = st.columns(4)
+
+            gainers = latest_stocks[latest_stocks['change_percent'] > 0]
+            losers = latest_stocks[latest_stocks['change_percent'] < 0]
+
+            with col1:
+                st.metric("Total Stocks", len(latest_stocks))
+            with col2:
+                st.metric("Gainers", len(gainers), delta=f"{len(gainers)}" if len(gainers) > 0 else None)
+            with col3:
+                st.metric("Losers", len(losers), delta=f"-{len(losers)}" if len(losers) > 0 else None)
+            with col4:
+                if not latest_stocks.empty and 'change_percent' in latest_stocks.columns:
+                    avg_change = latest_stocks['change_percent'].mean()
+                    st.metric("Avg Change", f"{avg_change:.2f}%")
+                else:
+                    st.metric("Avg Change", "N/A")
+
+            st.markdown("---")
+
+            # Stock table with color coding
+            st.subheader("📋 All Stocks")
+
+            # Prepare display dataframe
+            display_df = latest_stocks[['symbol', 'name', 'price', 'change', 'change_percent', 'volume']].copy()
+            display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}" if x else "N/A")
+            display_df['change'] = display_df['change'].apply(lambda x: f"${x:.2f}" if x else "N/A")
+            display_df['change_percent'] = display_df['change_percent'].apply(format_change)
+            display_df['volume'] = display_df['volume'].apply(lambda x: f"{x:,.0f}" if x else "N/A")
+            display_df.columns = ['Symbol', 'Name', 'Price', 'Change', 'Change %', 'Volume']
+
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # Individual stock analysis
+            st.subheader("📈 Stock Analysis")
+            selected_stock = st.selectbox("Select Stock", sorted(latest_stocks['symbol'].unique()))
+
+            if selected_stock:
+                stock_history = stocks_df[stocks_df['symbol'] == selected_stock].sort_values('timestamp')
+
+                if len(stock_history) > 1:
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=stock_history['timestamp'],
+                        y=stock_history['price'],
+                        mode='lines+markers',
+                        name=selected_stock,
+                        line=dict(color='#1f77b4', width=2)
+                    ))
+                    fig.update_layout(
+                        title=f"{selected_stock} Price History",
+                        xaxis_title="Date",
+                        yaxis_title="Price (USD)",
+                        height=400
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info(f"Not enough historical data for {selected_stock} to show chart")
+
+            # Comparison chart
+            st.markdown("---")
+            st.subheader("📊 Stock Comparison (Normalized)")
+
+            if len(latest_stocks) > 1:
+                # Normalize prices to base 100
+                fig = go.Figure()
+                for symbol in stocks_df['symbol'].unique():
+                    symbol_data = stocks_df[stocks_df['symbol'] == symbol].sort_values('timestamp')
+                    if len(symbol_data) > 1 and symbol_data['price'].iloc[0] != 0:
+                        normalized = (symbol_data['price'] / symbol_data['price'].iloc[0]) * 100
+                        fig.add_trace(go.Scatter(
+                            x=symbol_data['timestamp'],
+                            y=normalized,
+                            mode='lines',
+                            name=symbol
+                        ))
+
+                fig.update_layout(
+                    title="Normalized Performance (Base 100)",
+                    xaxis_title="Date",
+                    yaxis_title="Normalized Price",
+                    height=500,
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+    # === COMMODITIES TAB ===
+    with tab2:
+        st.subheader("Commodity Prices")
+
+        commodities_df = load_data("""
+            SELECT symbol, name, price, change, change_percent, unit, timestamp
+            FROM commodities
+            ORDER BY timestamp DESC, symbol
+        """)
+
+        if commodities_df.empty:
+            st.warning("No commodity data available. Run the commodity collector to populate data.")
+        else:
+            commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
+            latest_commodities = commodities_df.groupby('symbol').first().reset_index()
+
+            # Display as cards
+            cols = st.columns(3)
+            for idx, (_, row) in enumerate(latest_commodities.iterrows()):
+                with cols[idx % 3]:
+                    change = row.get('change_percent', 0) or 0
+                    delta_color = "normal" if change >= 0 else "inverse"
+
+                    st.metric(
+                        label=f"{row['name'] or row['symbol']}",
+                        value=f"${row['price']:.2f}" if row['price'] else "N/A",
+                        delta=format_change(change)
+                    )
+                    if row.get('unit'):
+                        st.caption(f"Unit: {row['unit']}")
+
+            st.markdown("---")
+
+            # Commodity price chart
+            st.subheader("📈 Commodity Price History")
+            selected_commodity = st.selectbox("Select Commodity", sorted(latest_commodities['symbol'].unique()))
+
+            if selected_commodity:
+                commodity_history = commodities_df[commodities_df['symbol'] == selected_commodity].sort_values('timestamp')
+
+                if len(commodity_history) > 1:
+                    fig = px.line(commodity_history, x='timestamp', y='price',
+                                 title=f"{selected_commodity} Price History")
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info(f"Not enough historical data for {selected_commodity}")
+
+    # === FOREX TAB ===
+    with tab3:
+        st.subheader("Foreign Exchange Rates")
+
+        forex_df = load_data("""
+            SELECT pair, from_currency, to_currency, rate, bid, ask, timestamp
+            FROM forex
+            ORDER BY timestamp DESC, pair
+        """)
+
+        if forex_df.empty:
+            st.warning("No forex data available. Run the forex collector to populate data.")
+        else:
+            forex_df['timestamp'] = pd.to_datetime(forex_df['timestamp'])
+            latest_forex = forex_df.groupby('pair').first().reset_index()
+
+            # Display forex table
+            display_forex = latest_forex[['pair', 'rate', 'bid', 'ask']].copy()
+            display_forex['rate'] = display_forex['rate'].apply(lambda x: f"{x:.4f}" if x else "N/A")
+            display_forex['bid'] = display_forex['bid'].apply(lambda x: f"{x:.4f}" if x else "N/A")
+            display_forex['ask'] = display_forex['ask'].apply(lambda x: f"{x:.4f}" if x else "N/A")
+            display_forex.columns = ['Pair', 'Rate', 'Bid', 'Ask']
+
+            st.dataframe(display_forex, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # Forex rate history
+            st.subheader("📈 Forex Rate History")
+            selected_pair = st.selectbox("Select Currency Pair", sorted(latest_forex['pair'].unique()))
+
+            if selected_pair:
+                pair_history = forex_df[forex_df['pair'] == selected_pair].sort_values('timestamp')
+
+                if len(pair_history) > 1:
+                    fig = px.line(pair_history, x='timestamp', y='rate',
+                                 title=f"{selected_pair} Exchange Rate History")
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info(f"Not enough historical data for {selected_pair}")
+
+
+# ============================================================================
+# PAGE: ECONOMIC INDICATORS
+# ============================================================================
+
+elif page == "💹 Economic Indicators":
+    st.title("💹 Economic Indicators")
+    st.markdown("---")
+
+    econ_df = load_data("""
+        SELECT indicator, country, name, value, unit, timestamp
+        FROM economic_indicators
+        ORDER BY timestamp DESC, country, indicator
+    """)
+
+    if econ_df.empty:
+        st.warning("No economic indicator data available. Run the economics collector to populate data.")
     else:
-        stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-        selected_symbol = st.selectbox("Select Stock:", stocks_df['symbol'].unique())
-        symbol_df = stocks_df[stocks_df['symbol'] == selected_symbol].copy()
+        econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
 
-        # Metrics
-        latest = symbol_df.iloc[-1]
-        prev = symbol_df.iloc[-2] if len(symbol_df) > 1 else latest
-        change = latest.get('change_percent', 0) or 0
+        # Get unique countries and indicators
+        countries = sorted(econ_df['country'].unique().tolist())
+        indicators = sorted(econ_df['indicator'].unique().tolist())
 
-        metrics = [
-            ("Current Price", f"${latest['price']:.2f}" if latest['price'] else "N/A", f"{change:+.2f}%"),
-            ("Change", f"${latest.get('change', 0) or 0:.2f}", None),
-            ("Volume", f"{latest.get('volume', 0) or 0:,.0f}", None),
-            ("Avg Volume", f"{symbol_df['volume'].mean():,.0f}" if symbol_df['volume'].notna().any() else "N/A", None)
-        ]
-        render_metric_row(metrics)
+        # Country selector
+        st.subheader("🌍 Select Country")
+        selected_country = st.selectbox("Country", countries)
+
+        if selected_country:
+            country_data = econ_df[econ_df['country'] == selected_country]
+            latest_country = country_data.groupby('indicator').first().reset_index()
+
+            st.markdown("---")
+            st.subheader(f"📊 {selected_country} Economic Indicators")
+
+            # Display indicators as metrics
+            cols = st.columns(min(4, len(latest_country)))
+            for idx, (_, row) in enumerate(latest_country.iterrows()):
+                with cols[idx % len(cols)]:
+                    unit_str = f" {row['unit']}" if row.get('unit') else ""
+                    st.metric(
+                        label=row['name'] or row['indicator'],
+                        value=f"{row['value']:.2f}{unit_str}" if row['value'] else "N/A"
+                    )
+
+            st.markdown("---")
+
+            # Historical chart for selected indicator
+            st.subheader("📈 Indicator History")
+            selected_indicator = st.selectbox("Select Indicator", sorted(latest_country['indicator'].unique()))
+
+            if selected_indicator:
+                indicator_history = country_data[country_data['indicator'] == selected_indicator].sort_values('timestamp')
+
+                if len(indicator_history) > 1:
+                    fig = px.line(indicator_history, x='timestamp', y='value',
+                                 title=f"{selected_indicator} - {selected_country}")
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info(f"Not enough historical data for {selected_indicator}")
 
         st.markdown("---")
 
-        # Price history line chart (replacing candlestick since we don't have OHLC data)
-        st.subheader(f"{selected_symbol} Price History")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=symbol_df['timestamp'],
-            y=symbol_df['price'],
-            mode='lines+markers',
-            name=selected_symbol
-        ))
-        fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)", height=500)
-        st.plotly_chart(fig, use_container_width=True)
+        # Country comparison
+        st.subheader("🌍 Country Comparison")
 
-        # Volume
-        if symbol_df['volume'].notna().any():
-            st.subheader("Trading Volume")
-            fig_vol = px.bar(symbol_df, x='timestamp', y='volume')
-            fig_vol.update_layout(height=300)
-            st.plotly_chart(fig_vol, use_container_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            compare_countries = st.multiselect("Select Countries to Compare", countries, default=countries[:3] if len(countries) >= 3 else countries)
+        with col2:
+            compare_indicator = st.selectbox("Select Indicator for Comparison", indicators, key="compare_ind")
 
-        # Comparison
-        st.markdown("---")
-        st.subheader("Compare All Stocks")
-        fig_comp = create_comparison_chart(
-            stocks_df, 'timestamp', 'price', 'symbol',
-            "Normalized Stock Performance (Base 100)", normalize=True
-        )
-        st.plotly_chart(fig_comp, use_container_width=True)
+        if compare_countries and compare_indicator:
+            comparison_data = econ_df[
+                (econ_df['country'].isin(compare_countries)) &
+                (econ_df['indicator'] == compare_indicator)
+            ]
+
+            if not comparison_data.empty:
+                # Get latest value for each country
+                latest_comparison = comparison_data.groupby('country').first().reset_index()
+
+                fig = px.bar(latest_comparison, x='country', y='value',
+                            color='country', title=f"{compare_indicator} by Country")
+                fig.update_layout(height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No data available for selected comparison")
+
+
+# ============================================================================
+# PAGE: WEATHER & ENVIRONMENT
+# ============================================================================
+
+elif page == "🌦️ Weather & Environment":
+    st.title("🌦️ Weather & Environmental Monitoring")
+    st.markdown("---")
+
+    tab1, tab2 = st.tabs(["🌡️ Weather", "🌋 Disasters"])
+
+    # === WEATHER TAB ===
+    with tab1:
+        weather_df = load_data("""
+            SELECT city, country, temperature, feels_like, humidity, pressure, wind_speed, description, timestamp
+            FROM weather
+            ORDER BY timestamp DESC
+        """)
+
+        if weather_df.empty:
+            st.warning("No weather data available. Run the weather collector to populate data.")
+        else:
+            weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+            weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
+            weather_df['feels_like'] = pd.to_numeric(weather_df['feels_like'], errors='coerce')
+            weather_df['humidity'] = pd.to_numeric(weather_df['humidity'], errors='coerce')
+
+            # Get latest weather for each city
+            latest_weather = weather_df.groupby('city').first().reset_index()
+            latest_weather = latest_weather[latest_weather['temperature'].notna()]
+
+            # Add coordinates
+            latest_weather['lat'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat'))
+            latest_weather['lon'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon'))
+
+            # Summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Cities Tracked", len(latest_weather))
+            with col2:
+                hottest = latest_weather.loc[latest_weather['temperature'].idxmax()]
+                st.metric("Hottest", f"{hottest['city']}", f"{hottest['temperature']:.1f}°C")
+            with col3:
+                coldest = latest_weather.loc[latest_weather['temperature'].idxmin()]
+                st.metric("Coldest", f"{coldest['city']}", f"{coldest['temperature']:.1f}°C")
+            with col4:
+                avg_temp = latest_weather['temperature'].mean()
+                st.metric("Avg Temperature", f"{avg_temp:.1f}°C")
+
+            st.markdown("---")
+
+            # 3D Globe Map
+            st.subheader("🌐 Global Weather Map")
+
+            map_data = latest_weather[latest_weather['lat'].notna() & latest_weather['lon'].notna()].copy()
+
+            if not map_data.empty:
+                fig = go.Figure(go.Scattergeo(
+                    lon=map_data['lon'],
+                    lat=map_data['lat'],
+                    text=map_data.apply(lambda r: f"{r['city']}: {r['temperature']:.1f}°C", axis=1),
+                    mode='markers',
+                    marker=dict(
+                        size=map_data['temperature'].apply(lambda x: max(abs(x) + 5, 8)),
+                        color=map_data['temperature'],
+                        colorscale=[[0, 'rgb(0,0,255)'], [0.5, 'rgb(128,0,128)'], [1, 'rgb(255,0,0)']],
+                        cmin=-20, cmax=45,
+                        colorbar=dict(title="Temp (°C)", thickness=15),
+                        line=dict(width=1, color='white')
+                    ),
+                    hovertemplate='<b>%{text}</b><extra></extra>'
+                ))
+
+                fig.update_geos(
+                    projection_type='orthographic',
+                    showcountries=True, countrycolor='rgba(255,255,255,0.3)',
+                    showcoastlines=True, coastlinecolor='rgba(255,255,255,0.5)',
+                    showland=True, landcolor='rgb(30,30,30)',
+                    showocean=True, oceancolor='rgb(10,10,30)',
+                    projection_rotation=dict(lon=0, lat=30, roll=0)
+                )
+
+                fig.update_layout(
+                    title="🌍 Global Weather - 3D Globe View",
+                    height=600,
+                    paper_bgcolor='rgb(0,0,0)',
+                    plot_bgcolor='rgb(0,0,0)',
+                    font=dict(color='white'),
+                    geo=dict(bgcolor='rgb(0,0,0)'),
+                    dragmode='pan'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("🌍 Drag to rotate the globe | Scroll to zoom")
+
+            st.markdown("---")
+
+            # Weather table
+            st.subheader("📊 Current Weather Conditions")
+
+            # Sortable table
+            sort_col = st.selectbox("Sort by", ["Temperature", "City", "Humidity"], key="weather_sort")
+            sort_map = {"Temperature": "temperature", "City": "city", "Humidity": "humidity"}
+            sorted_weather = latest_weather.sort_values(sort_map[sort_col], ascending=(sort_col == "City"))
+
+            display_weather = sorted_weather[['city', 'temperature', 'feels_like', 'humidity', 'description']].copy()
+            display_weather['temperature'] = display_weather['temperature'].apply(lambda x: f"{x:.1f}°C" if pd.notna(x) else "N/A")
+            display_weather['feels_like'] = display_weather['feels_like'].apply(lambda x: f"{x:.1f}°C" if pd.notna(x) else "N/A")
+            display_weather['humidity'] = display_weather['humidity'].apply(lambda x: f"{x:.0f}%" if pd.notna(x) else "N/A")
+            display_weather.columns = ['City', 'Temperature', 'Feels Like', 'Humidity', 'Conditions']
+
+            st.dataframe(display_weather, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+
+            # Temperature trends
+            st.subheader("📈 Temperature Trends")
+            selected_cities = st.multiselect("Select Cities", sorted(weather_df['city'].unique()),
+                                            default=sorted(weather_df['city'].unique())[:5])
+
+            if selected_cities:
+                fig = go.Figure()
+                for city in selected_cities:
+                    city_data = weather_df[weather_df['city'] == city].sort_values('timestamp')
+                    if not city_data.empty:
+                        fig.add_trace(go.Scatter(
+                            x=city_data['timestamp'],
+                            y=city_data['temperature'],
+                            name=city,
+                            mode='lines+markers'
+                        ))
+
+                fig.update_layout(
+                    title="Temperature Over Time",
+                    xaxis_title="Time",
+                    yaxis_title="Temperature (°C)",
+                    height=400,
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+    # === DISASTERS TAB ===
+    with tab2:
+        st.subheader("🌋 Natural Disasters & Earthquakes")
+
+        disasters_df = load_data("""
+            SELECT disaster_type, location, magnitude, description, timestamp
+            FROM disasters
+            ORDER BY timestamp DESC
+            LIMIT 50
+        """)
+
+        if disasters_df.empty:
+            st.info("No disaster data recorded yet.")
+        else:
+            disasters_df['timestamp'] = pd.to_datetime(disasters_df['timestamp'])
+
+            # Summary metrics
+            col1, col2, col3 = st.columns(3)
+
+            # Last 24 hours
+            last_24h = disasters_df[disasters_df['timestamp'] > datetime.now() - timedelta(hours=24)]
+            last_7d = disasters_df[disasters_df['timestamp'] > datetime.now() - timedelta(days=7)]
+
+            with col1:
+                st.metric("Events (24h)", len(last_24h))
+            with col2:
+                st.metric("Events (7d)", len(last_7d))
+            with col3:
+                if not disasters_df.empty and 'magnitude' in disasters_df.columns:
+                    max_mag = disasters_df['magnitude'].max()
+                    st.metric("Max Magnitude", f"{max_mag:.1f}" if pd.notna(max_mag) else "N/A")
+                else:
+                    st.metric("Max Magnitude", "N/A")
+
+            st.markdown("---")
+
+            # Recent events list
+            st.subheader("📋 Recent Events")
+
+            for _, event in disasters_df.head(20).iterrows():
+                mag = event.get('magnitude')
+                mag_str = f"M{mag:.1f}" if pd.notna(mag) else ""
+
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(f"**{event['disaster_type'] or 'Event'}** {mag_str}")
+                    st.write(f"📍 {event['location'] or 'Unknown location'}")
+                    if event.get('description'):
+                        st.caption(event['description'][:200])
+                with col2:
+                    st.caption(str(event['timestamp']))
+                st.markdown("---")
+
 
 # ============================================================================
 # PAGE: SPACE
@@ -312,269 +848,171 @@ elif page == "📈 Markets":
 elif page == "🛰️ Space":
     st.title("🛰️ Space Intelligence")
     st.markdown("---")
-    
-    # ISS Tracker
-    st.subheader("International Space Station")
+
+    # === ISS TRACKER ===
+    st.subheader("🛰️ International Space Station")
+
     iss_df = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 100")
-    
-    if not iss_df.empty:
+
+    if iss_df.empty:
+        st.info("No ISS position data yet. Run the space collector to populate data.")
+    else:
         latest = iss_df.iloc[0]
-        
+
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
-            fig = go.Figure(go.Scattergeo(
-                lon=[latest['longitude']], lat=[latest['latitude']],
-                mode='markers+text', marker=dict(size=15, color='red'),
-                text=['ISS'], textposition="top center"
+            # Map showing ISS position and recent path
+            fig = go.Figure()
+
+            # Add trail
+            if len(iss_df) > 1:
+                fig.add_trace(go.Scattergeo(
+                    lon=iss_df['longitude'].tolist(),
+                    lat=iss_df['latitude'].tolist(),
+                    mode='lines',
+                    line=dict(color='rgba(255, 0, 0, 0.5)', width=2),
+                    name='Recent Path'
+                ))
+
+            # Add current position
+            fig.add_trace(go.Scattergeo(
+                lon=[latest['longitude']],
+                lat=[latest['latitude']],
+                mode='markers+text',
+                marker=dict(size=15, color='red', symbol='star'),
+                text=['ISS'],
+                textposition="top center",
+                name='Current Position'
             ))
+
             fig.update_layout(
-                title="Current ISS Position",
-                geo=dict(projection_type='natural earth', showland=True, 
-                        landcolor='lightgreen', showocean=True, oceancolor='lightblue'),
+                title="ISS Current Position",
+                geo=dict(
+                    projection_type='natural earth',
+                    showland=True, landcolor='lightgreen',
+                    showocean=True, oceancolor='lightblue',
+                    showcountries=True
+                ),
                 height=400
             )
             st.plotly_chart(fig, use_container_width=True)
-        
+
         with col2:
-            metrics = [
-                ("📍 Latitude", f"{latest['latitude']:.4f}°", None),
-                ("📍 Longitude", f"{latest['longitude']:.4f}°", None),
-                ("🚀 Altitude", f"{latest['altitude']:.2f} km", None),
-                ("⚡ Speed", f"{latest['velocity']:,.0f} km/h", None)
-            ]
-            for label, value, _ in metrics:
-                st.metric(label, value)
-            st.caption(f"Updated: {latest['timestamp']}")
-    
+            st.metric("📍 Latitude", f"{latest['latitude']:.4f}°")
+            st.metric("📍 Longitude", f"{latest['longitude']:.4f}°")
+            st.metric("🚀 Altitude", f"{latest['altitude']:.2f} km")
+            st.metric("⚡ Velocity", f"{latest['velocity']:,.0f} km/h")
+            st.caption(f"Last update: {latest['timestamp']}")
+
     st.markdown("---")
-    
-    # Near-Earth Objects
+
+    # === NEAR-EARTH OBJECTS ===
     st.subheader("☄️ Near-Earth Objects")
+
     neo_df = load_data("""
-        SELECT name, 
-               ROUND((estimated_diameter_max/1000.0)::numeric, 3) as max_diameter_km,
-               ROUND(relative_velocity::numeric, 0) as velocity_kmh,
-               ROUND(miss_distance::numeric, 0) as miss_distance_km,
-               is_potentially_hazardous, date
+        SELECT name, date,
+               estimated_diameter_min, estimated_diameter_max,
+               relative_velocity, miss_distance, is_potentially_hazardous
         FROM near_earth_objects
-        WHERE date >= CURRENT_DATE
-        ORDER BY date LIMIT 20
+        WHERE date >= CURRENT_DATE - INTERVAL '7 days'
+        ORDER BY date DESC
+        LIMIT 30
     """)
-    
-    if not neo_df.empty:
-        neo_df['is_potentially_hazardous'] = neo_df['is_potentially_hazardous'].apply(lambda x: '⚠️ YES' if x else '✅ No')
-        st.dataframe(neo_df, use_container_width=True, hide_index=True)
-        
-        fig = px.scatter(neo_df, x='date', y='max_diameter_km', size='max_diameter_km',
-                        color='is_potentially_hazardous', hover_data=['name', 'velocity_kmh'],
-                        title="Upcoming Near-Earth Objects")
-        st.plotly_chart(fig, use_container_width=True)
+
+    if neo_df.empty:
+        st.info("No Near-Earth Object data yet. Run the space collector to populate data.")
     else:
-        st.info("No upcoming NEO data")
-    
-    st.markdown("---")
-    
-    # Solar Activity
-    st.subheader("☀️ Solar Activity")
-    solar_df = load_data("""
-        SELECT class_type, begin_time, peak_time, source_location
-        FROM solar_flares
-        WHERE begin_time >= CURRENT_DATE - INTERVAL '30 days'
-        ORDER BY begin_time DESC
-    """)
-    
-    if not solar_df.empty:
-        st.dataframe(solar_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No recent solar activity")
+        # Summary
+        col1, col2, col3 = st.columns(3)
 
-# ============================================================================
-# PAGE: GEOGRAPHY
-# ============================================================================
+        hazardous_count = neo_df['is_potentially_hazardous'].sum() if 'is_potentially_hazardous' in neo_df.columns else 0
 
-elif page == "🌍 Geography":
-    st.title("🌍 Country Intelligence")
-    st.markdown("---")
-    
-    try:
-        countries_df = load_data("""
-            SELECT name, code, region, subregion, population, area,
-                   capital, languages, currencies,
-                   latitude, longitude
-            FROM countries ORDER BY population DESC
-        """)
-        
-        if countries_df.empty:
-            st.warning("No country data. Run: `python services/geography/fetch_country_data.py`")
-        else:
-            # Convert numeric columns
-            countries_df['population'] = pd.to_numeric(countries_df['population'], errors='coerce').fillna(0)
-            countries_df['area'] = pd.to_numeric(countries_df['area'], errors='coerce').fillna(0)
-            countries_df['latitude'] = pd.to_numeric(countries_df['latitude'], errors='coerce')
-            countries_df['longitude'] = pd.to_numeric(countries_df['longitude'], errors='coerce')
+        with col1:
+            st.metric("Total NEOs", len(neo_df))
+        with col2:
+            st.metric("⚠️ Potentially Hazardous", int(hazardous_count))
+        with col3:
+            if 'estimated_diameter_max' in neo_df.columns:
+                largest = neo_df['estimated_diameter_max'].max()
+                st.metric("Largest Diameter", f"{largest:.0f} m" if pd.notna(largest) else "N/A")
+            else:
+                st.metric("Largest Diameter", "N/A")
 
-            # Stats
-            metrics = [
-                ("🗺️ Countries", f"{len(countries_df):,}", None),
-                ("👥 Total Population", f"{int(countries_df['population'].sum()):,}", None),
-                ("📊 Avg Area", f"{int(countries_df['area'].mean()):,} km²", None),
-                ("🌍 Regions", f"{countries_df['region'].nunique()}", None)
-            ]
-            render_metric_row(metrics)
-            
-            st.markdown("---")
-            
-            # Filter
-            regions = ['All'] + sorted(countries_df['region'].dropna().unique().tolist())
-            selected_region = st.selectbox("Region:", regions)
-            filtered = countries_df if selected_region == 'All' else countries_df[countries_df['region'] == selected_region]
-            
-            st.markdown("---")
-            
-            # Map
-            st.subheader("🌐 Country Map")
-            map_data = filtered[['name', 'latitude', 'longitude', 'population']].dropna(subset=['latitude', 'longitude'])
-            
-            if not map_data.empty:
-                fig = go.Figure(go.Scattergeo(
-                    lon=map_data['longitude'], lat=map_data['latitude'],
-                    text=map_data['name'], mode='markers',
-                    marker=dict(
-                        size=map_data['population'].apply(lambda x: min(max(x/5_000_000, 5), 30)),
-                        color=map_data['population'], colorscale='Viridis',
-                        showscale=True, colorbar=dict(title="Population")
-                    ),
-                    hovertemplate='<b>%{text}</b><br>Pop: %{marker.color:,.0f}<extra></extra>'
-                ))
-                fig.update_geos(projection_type='natural earth', showcountries=True, 
-                               showland=True, landcolor='white', showocean=True, oceancolor='lightblue')
-                fig.update_layout(title='Countries by Population', height=600)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("---")
-            
-            # Top charts
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("👥 Top by Population")
-                top_pop = filtered.nlargest(10, 'population')
-                fig = px.bar(top_pop, x='name', y='population', color='population', 
-                            color_continuous_scale='Blues')
-                fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                st.subheader("📊 Top by Area")
-                top_area = filtered.nlargest(10, 'area')
-                fig = px.bar(top_area, x='name', y='area', 
-                            color='area', color_continuous_scale='Greens')
-                fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("---")
-            
-            # Country profile
-            st.subheader("🗂️ Country Profile")
-            selected = st.selectbox("Select country:", sorted(filtered['name'].tolist()))
-            
-            if selected:
-                country = filtered[filtered['name'] == selected].iloc[0]
-                
-                col1, col2, col3 = st.columns([1, 2, 1])
-                
-                with col1:
-                    st.markdown(f"### {country['name']}")
-                    st.caption(country['code'])
-                
-                with col2:
-                    st.write(f"**Region:** {country['region']} - {country['subregion']}")
-                    st.write(f"**Capital:** {country['capital']}")
-                
-                with col3:
-                    st.metric("Population", f"{country['population']:,.0f}")
-                    st.metric("Area", f"{country['area']:,.0f} km²")
-    
-    except Exception as e:
-        st.error(f"Error: {e}")
+        st.markdown("---")
 
-# ============================================================================
-# PAGE: ENVIRONMENT
-# ============================================================================
-
-elif page == "🌦️ Environment":
-    st.title("🌦️ Environmental Monitoring")
-    st.markdown("---")
-    
-    weather_df = load_data("SELECT * FROM weather ORDER BY timestamp DESC")
-
-    if weather_df.empty:
-        st.warning("No weather data")
-    else:
-        # Convert numeric columns
-        weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
-        weather_df['feels_like'] = pd.to_numeric(weather_df['feels_like'], errors='coerce')
-        weather_df['humidity'] = pd.to_numeric(weather_df['humidity'], errors='coerce')
-
-        # Add coordinates
-        weather_df['lat'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat', 0))
-        weather_df['lon'] = weather_df['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon', 0))
-        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'], errors='coerce', utc=True)
-
-        latest = weather_df.groupby('city').first().reset_index()
-        # Filter out rows with missing temperature
-        latest = latest[latest['temperature'].notna()]
-        latest['h3'] = latest.apply(
-            lambda row: h3.latlng_to_cell(row['lat'], row['lon'], 4) if row['lat'] != 0 else None,
-            axis=1
+        # NEO Table
+        display_neo = neo_df.copy()
+        display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: '⚠️ YES' if x else '✅ No')
+        display_neo['Diameter (m)'] = display_neo.apply(
+            lambda r: f"{r['estimated_diameter_min']:.0f} - {r['estimated_diameter_max']:.0f}"
+            if pd.notna(r['estimated_diameter_min']) else "N/A", axis=1
         )
-        latest = latest[latest['h3'].notna()]
-        
-        # City selector
-        selected_cities = st.multiselect("Cities:", latest['city'].tolist(), 
-                                        default=latest['city'].tolist()[:10])  # Default to first 10
-        filtered = latest[latest['city'].isin(selected_cities)]
-        
-        if not filtered.empty:
+        display_neo['Velocity (km/h)'] = display_neo['relative_velocity'].apply(
+            lambda x: f"{x:,.0f}" if pd.notna(x) else "N/A"
+        )
+        display_neo['Miss Distance (km)'] = display_neo['miss_distance'].apply(
+            lambda x: f"{x:,.0f}" if pd.notna(x) else "N/A"
+        )
+
+        st.dataframe(
+            display_neo[['name', 'date', 'Diameter (m)', 'Velocity (km/h)', 'Miss Distance (km)', 'Hazardous']],
+            use_container_width=True, hide_index=True
+        )
+
+        # Size visualization
+        if not neo_df.empty and 'estimated_diameter_max' in neo_df.columns:
             st.markdown("---")
-            
-            # 3D Globe
-            st.subheader("🌐 Weather Globe")
-            fig = create_globe_map(filtered, 'lat', 'lon', 'temperature', 'city',
-                                  '🌍 Global Weather - 3D Sphere View')
+            st.subheader("📊 NEO Size Distribution")
+
+            fig = px.scatter(
+                neo_df, x='date', y='estimated_diameter_max',
+                size='estimated_diameter_max',
+                color='is_potentially_hazardous',
+                hover_data=['name', 'relative_velocity'],
+                title="Near-Earth Objects by Date and Size",
+                labels={'estimated_diameter_max': 'Max Diameter (m)', 'is_potentially_hazardous': 'Hazardous'}
+            )
+            fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
-            st.info("🌍 **Controls:** Drag to rotate | Scroll to zoom")
-            
-            st.markdown("---")
-            
-            # Weather cards
-            st.subheader("📊 Current Conditions")
-            cols = st.columns(min(3, len(filtered)))
-            for idx, (col, (_, row)) in enumerate(zip(cols * 10, filtered.iterrows())):
-                with col:
-                    st.markdown(f"### {row['city']}")
-                    temp = row['temperature'] if pd.notna(row['temperature']) else 0
-                    feels = row['feels_like'] if pd.notna(row['feels_like']) else 0
-                    humid = row['humidity'] if pd.notna(row['humidity']) else 0
-                    st.metric("Temperature", f"{temp:.1f}°C")
-                    st.write(f"**Feels like:** {feels:.1f}°C")
-                    st.write(f"**Conditions:** {row['description'] or 'N/A'}")
-                    st.write(f"**Humidity:** {humid}%")
-            
-            st.markdown("---")
-            
-            # Temperature trends
-            st.subheader("📈 Temperature Trends")
-            fig = go.Figure()
-            for city in selected_cities:
-                city_data = weather_df[weather_df['city'] == city]
-                fig.add_trace(go.Scatter(x=city_data['timestamp'], 
-                                        y=city_data['temperature'],
-                                        name=city, mode='lines+markers'))
-            fig.update_layout(xaxis_title="Time", yaxis_title="Temperature (°C)", 
-                            height=400, hovermode='x unified')
+
+    st.markdown("---")
+
+    # === SOLAR FLARES ===
+    st.subheader("☀️ Solar Activity")
+
+    solar_df = load_data("""
+        SELECT flare_id, class_type, begin_time, peak_time, source_location
+        FROM solar_flares
+        ORDER BY begin_time DESC
+        LIMIT 20
+    """)
+
+    if solar_df.empty:
+        st.info("No recent solar flare data. This may indicate a quiet sun or no data collected yet.")
+    else:
+        # Class type summary
+        class_counts = solar_df['class_type'].value_counts()
+
+        col1, col2 = st.columns([1, 2])
+
+        with col1:
+            st.write("**Flare Classes:**")
+            for cls, count in class_counts.items():
+                st.write(f"- {cls}: {count}")
+
+        with col2:
+            fig = px.pie(values=class_counts.values, names=class_counts.index,
+                        title="Solar Flare Distribution by Class")
+            fig.update_layout(height=300)
             st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("---")
+
+        # Recent flares table
+        st.subheader("📋 Recent Solar Flares")
+        st.dataframe(solar_df, use_container_width=True, hide_index=True)
+
 
 # ============================================================================
 # PAGE: NEWS
@@ -583,41 +1021,60 @@ elif page == "🌦️ Environment":
 elif page == "📰 News":
     st.title("📰 News Intelligence")
     st.markdown("---")
-    
-    news_df = load_data("SELECT * FROM news ORDER BY published_at DESC")
-    
+
+    news_df = load_data("""
+        SELECT title, source, url, description, published_at
+        FROM news
+        ORDER BY published_at DESC
+        LIMIT 100
+    """)
+
     if news_df.empty:
-        st.warning("No news data")
+        st.warning("No news data available. Run the news collector to populate data.")
     else:
-        # Filter
+        # Source filter
         sources = ['All'] + sorted(news_df['source'].unique().tolist())
-        selected_source = st.selectbox("Source:", sources)
-        filtered = news_df if selected_source == 'All' else news_df[news_df['source'] == selected_source]
-        
-        st.write(f"**{len(filtered)} articles**")
+        selected_source = st.selectbox("Filter by Source", sources)
+
+        filtered_news = news_df if selected_source == 'All' else news_df[news_df['source'] == selected_source]
+
+        st.write(f"**Showing {len(filtered_news)} articles**")
         st.markdown("---")
-        
-        # Articles
-        for _, article in filtered.iterrows():
+
+        # News articles
+        for _, article in filtered_news.iterrows():
             col1, col2 = st.columns([4, 1])
+
             with col1:
-                st.subheader(article['title'])
-                if pd.notna(article['description']) and article['description']:
-                    st.write(article['description'])
-                st.markdown(f"[Read more →]({article['url']})")
+                st.subheader(article['title'] or "Untitled")
+                if article.get('description'):
+                    st.write(article['description'][:300] + "..." if len(str(article['description'])) > 300 else article['description'])
+                if article.get('url'):
+                    st.markdown(f"[Read full article →]({article['url']})")
+
             with col2:
                 st.write(f"**{article['source']}**")
-                st.caption(str(article['published_at']))
+                if article.get('published_at'):
+                    st.caption(str(article['published_at'])[:19])
+
             st.markdown("---")
-        
-        # Distribution
-        st.subheader("Articles by Source")
+
+        # Source distribution
+        st.subheader("📊 Articles by Source")
         source_counts = news_df['source'].value_counts().reset_index()
-        source_counts.columns = ['source', 'count']
-        fig = px.bar(source_counts, x='source', y='count')
+        source_counts.columns = ['Source', 'Count']
+
+        fig = px.bar(source_counts, x='Source', y='Count', color='Source',
+                    title="News Distribution by Source")
+        fig.update_layout(height=400, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
-# Footer
+
+# ============================================================================
+# FOOTER
+# ============================================================================
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Hermes Intelligence Platform**")
-st.sidebar.caption("Multi-layer intelligence system")
+st.sidebar.caption("Multi-layer investment intelligence system")
+st.sidebar.caption("v2.0 - Complete Dashboard")
