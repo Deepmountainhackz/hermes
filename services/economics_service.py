@@ -40,6 +40,8 @@ class EconomicsService:
             'YIELD_CURVE_10Y2Y': {'series_id': 'T10Y2Y', 'name': '10Y-2Y Yield Spread', 'unit': '%'},
             # VIX Volatility Index
             'VIX': {'series_id': 'VIXCLS', 'name': 'VIX Volatility Index', 'unit': 'Index'},
+            # US Dollar Index (Trade Weighted)
+            'DXY': {'series_id': 'DTWEXBGS', 'name': 'US Dollar Index', 'unit': 'Index'},
         },
         'EU': {
             'GDP': {'series_id': 'CLVMNACSCAB1GQEA19', 'name': 'GDP', 'unit': 'Millions EUR'},

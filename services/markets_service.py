@@ -18,12 +18,49 @@ logger = logging.getLogger(__name__)
 class MarketsService:
     """Service for market data operations."""
     
+    # Major Index ETFs - Bloomberg-style indices at top
+    INDEX_SYMBOLS = [
+        'SPY',   # S&P 500
+        'QQQ',   # NASDAQ 100
+        'DIA',   # Dow Jones
+        'IWM',   # Russell 2000
+        'VGK',   # FTSE Europe
+        'EWJ',   # Japan (Nikkei proxy)
+    ]
+
+    # S&P 500 Sector ETFs for sector performance tracking
+    SECTOR_ETFS = {
+        'XLK': 'Technology',
+        'XLF': 'Financials',
+        'XLV': 'Healthcare',
+        'XLE': 'Energy',
+        'XLY': 'Consumer Disc',
+        'XLP': 'Consumer Staples',
+        'XLI': 'Industrials',
+        'XLB': 'Materials',
+        'XLU': 'Utilities',
+        'XLRE': 'Real Estate',
+        'XLC': 'Communication',
+    }
+
     # Default stock symbols to track
     DEFAULT_SYMBOLS = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META',
-        'TSLA', 'NVDA', 'JPM', 'V', 'JNJ',
-        'WMT', 'PG', 'MA', 'HD', 'DIS',
-        'BAC', 'XOM', 'KO', 'PFE', 'CSCO'
+        # Major Indices ETFs
+        'SPY', 'QQQ', 'DIA', 'IWM', 'VGK', 'EWJ',
+        # Sector ETFs
+        'XLK', 'XLF', 'XLV', 'XLE', 'XLY', 'XLP', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC',
+        # Tech
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA',
+        # Finance
+        'JPM', 'BAC', 'V', 'MA',
+        # Healthcare
+        'JNJ', 'PFE',
+        # Consumer
+        'WMT', 'PG', 'HD', 'DIS', 'KO',
+        # Energy
+        'XOM',
+        # Tech/Telecom
+        'TSLA', 'CSCO'
     ]
     
     def __init__(self, config: Config, repository: MarketsRepository):
@@ -331,6 +368,26 @@ class MarketsService:
         # In production, this would come from the OVERVIEW API call
         # For now, use a simplified mapping
         company_names = {
+            # Index ETFs
+            'SPY': 'S&P 500 ETF',
+            'QQQ': 'NASDAQ 100 ETF',
+            'DIA': 'Dow Jones ETF',
+            'IWM': 'Russell 2000 ETF',
+            'VGK': 'FTSE Europe ETF',
+            'EWJ': 'Japan ETF (Nikkei)',
+            # Sector ETFs
+            'XLK': 'Technology Sector ETF',
+            'XLF': 'Financials Sector ETF',
+            'XLV': 'Healthcare Sector ETF',
+            'XLE': 'Energy Sector ETF',
+            'XLY': 'Consumer Disc Sector ETF',
+            'XLP': 'Consumer Staples Sector ETF',
+            'XLI': 'Industrials Sector ETF',
+            'XLB': 'Materials Sector ETF',
+            'XLU': 'Utilities Sector ETF',
+            'XLRE': 'Real Estate Sector ETF',
+            'XLC': 'Communication Sector ETF',
+            # Tech
             'AAPL': 'Apple Inc.',
             'MSFT': 'Microsoft Corporation',
             'GOOGL': 'Alphabet Inc.',
@@ -338,18 +395,23 @@ class MarketsService:
             'META': 'Meta Platforms Inc.',
             'TSLA': 'Tesla Inc.',
             'NVDA': 'NVIDIA Corporation',
+            # Finance
             'JPM': 'JPMorgan Chase & Co.',
             'V': 'Visa Inc.',
+            'MA': 'Mastercard Inc.',
+            'BAC': 'Bank of America Corp.',
+            # Healthcare
             'JNJ': 'Johnson & Johnson',
+            'PFE': 'Pfizer Inc.',
+            # Consumer
             'WMT': 'Walmart Inc.',
             'PG': 'Procter & Gamble Co.',
-            'MA': 'Mastercard Inc.',
             'HD': 'Home Depot Inc.',
             'DIS': 'Walt Disney Co.',
-            'BAC': 'Bank of America Corp.',
-            'XOM': 'Exxon Mobil Corporation',
             'KO': 'Coca-Cola Company',
-            'PFE': 'Pfizer Inc.',
+            # Energy
+            'XOM': 'Exxon Mobil Corporation',
+            # Tech/Telecom
             'CSCO': 'Cisco Systems Inc.'
         }
         return company_names.get(symbol, symbol)

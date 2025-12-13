@@ -20,12 +20,20 @@ class CommoditiesService:
     
     # Default commodities to track with their Alpha Vantage symbols
     DEFAULT_COMMODITIES = {
+        # Precious Metals
+        'GOLD': {'name': 'Gold', 'unit': 'USD/oz', 'function': 'GOLD'},
+        'SILVER': {'name': 'Silver', 'unit': 'USD/oz', 'function': 'SILVER'},
+        # Energy
         'WTI': {'name': 'WTI Crude Oil', 'unit': 'USD/barrel'},
         'BRENT': {'name': 'Brent Crude Oil', 'unit': 'USD/barrel'},
         'NATURAL_GAS': {'name': 'Natural Gas', 'unit': 'USD/MMBtu'},
+        # Industrial Metals
         'COPPER': {'name': 'Copper', 'unit': 'USD/pound'},
+        'ALUMINUM': {'name': 'Aluminum', 'unit': 'USD/tonne'},
+        # Agricultural
         'WHEAT': {'name': 'Wheat', 'unit': 'USD/bushel'},
         'CORN': {'name': 'Corn', 'unit': 'USD/bushel'},
+        'COFFEE': {'name': 'Coffee', 'unit': 'USD/pound'},
     }
     
     def __init__(self, config: Config, repository: CommoditiesRepository):

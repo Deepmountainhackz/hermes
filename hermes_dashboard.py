@@ -601,7 +601,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.2 - Performance Optimized")
+st.sidebar.caption("v5.3 - Bloomberg Enhancement")
 
 
 # ============================================================================
@@ -611,6 +611,175 @@ st.sidebar.caption("v5.2 - Performance Optimized")
 if page == "Overview":
     st.title("Hermes Intelligence Platform")
     st.markdown("*Real-time Multi-Layer Intelligence Dashboard*")
+    st.markdown("---")
+
+    # Bloomberg-style Major Indices Section
+    st.subheader("📊 Major Indices")
+
+    # Index ETF mapping for display names
+    INDEX_NAMES = {
+        'SPY': 'S&P 500',
+        'QQQ': 'NASDAQ',
+        'DIA': 'DOW',
+        'IWM': 'Russell 2K',
+        'VGK': 'FTSE EU',
+        'EWJ': 'Nikkei'
+    }
+
+    indices_df = load_realtime_data("""
+        SELECT symbol, price, change_percent
+        FROM stocks
+        WHERE symbol IN ('SPY', 'QQQ', 'DIA', 'IWM', 'VGK', 'EWJ')
+        AND timestamp = (SELECT MAX(timestamp) FROM stocks WHERE symbol IN ('SPY', 'QQQ', 'DIA', 'IWM', 'VGK', 'EWJ'))
+        ORDER BY CASE symbol
+            WHEN 'SPY' THEN 1 WHEN 'QQQ' THEN 2 WHEN 'DIA' THEN 3
+            WHEN 'IWM' THEN 4 WHEN 'VGK' THEN 5 WHEN 'EWJ' THEN 6
+        END
+    """)
+
+    if not indices_df.empty:
+        cols = st.columns(len(indices_df))
+        for i, (_, row) in enumerate(indices_df.iterrows()):
+            with cols[i]:
+                change = row.get('change_percent', 0) or 0
+                delta_color = "normal" if change >= 0 else "inverse"
+                display_name = INDEX_NAMES.get(row['symbol'], row['symbol'])
+                st.metric(
+                    display_name,
+                    f"${row['price']:.2f}",
+                    f"{change:+.2f}%",
+                    delta_color=delta_color
+                )
+    else:
+        st.info("No index data available. Run: `python scheduler.py --collector markets`")
+
+    st.markdown("---")
+
+    # Treasury Yield Curve and Key Rates Row
+    yield_col, rates_col = st.columns([2, 1])
+
+    with yield_col:
+        st.subheader("📈 Treasury Yield Curve")
+
+        # Fetch Treasury yields
+        treasury_df = load_data("""
+            SELECT indicator, value
+            FROM economic_indicators
+            WHERE country = 'USA' AND indicator IN ('DGS3MO', 'DGS2', 'DGS5', 'DGS10', 'DGS30')
+            AND value IS NOT NULL
+            ORDER BY
+                CASE indicator
+                    WHEN 'DGS3MO' THEN 1
+                    WHEN 'DGS2' THEN 2
+                    WHEN 'DGS5' THEN 3
+                    WHEN 'DGS10' THEN 4
+                    WHEN 'DGS30' THEN 5
+                END
+        """)
+
+        if not treasury_df.empty:
+            import plotly.graph_objects as go
+
+            # Map to display names and maturities
+            maturity_map = {
+                'DGS3MO': ('3M', 0.25),
+                'DGS2': ('2Y', 2),
+                'DGS5': ('5Y', 5),
+                'DGS10': ('10Y', 10),
+                'DGS30': ('30Y', 30)
+            }
+
+            maturities = []
+            yields = []
+            labels = []
+
+            for _, row in treasury_df.iterrows():
+                indicator = row['indicator']
+                if indicator in maturity_map:
+                    label, maturity = maturity_map[indicator]
+                    maturities.append(maturity)
+                    yields.append(float(row['value']))
+                    labels.append(label)
+
+            if yields:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=maturities,
+                    y=yields,
+                    mode='lines+markers',
+                    name='Yield Curve',
+                    line=dict(color='#1f77b4', width=3),
+                    marker=dict(size=10),
+                    text=labels,
+                    hovertemplate='%{text}: %{y:.2f}%<extra></extra>'
+                ))
+
+                # Determine curve status
+                spread_10y2y = None
+                y_2y = next((y for i, y in zip(treasury_df['indicator'], treasury_df['value']) if i == 'DGS2'), None)
+                y_10y = next((y for i, y in zip(treasury_df['indicator'], treasury_df['value']) if i == 'DGS10'), None)
+                if y_2y and y_10y:
+                    spread_10y2y = float(y_10y) - float(y_2y)
+                    curve_status = "🟢 Normal" if spread_10y2y > 0 else "🔴 Inverted (Recession Signal)"
+                else:
+                    curve_status = ""
+
+                fig.update_layout(
+                    title=f"US Treasury Yield Curve {curve_status}",
+                    xaxis_title="Maturity (Years)",
+                    yaxis_title="Yield (%)",
+                    height=250,
+                    margin=dict(l=50, r=20, t=40, b=40),
+                    xaxis=dict(tickmode='array', tickvals=maturities, ticktext=labels),
+                    showlegend=False
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No Treasury yield data")
+        else:
+            st.info("No Treasury data. Run: `python scheduler.py --collector economics`")
+
+    with rates_col:
+        st.subheader("📊 Key Rates")
+
+        # Fed Funds Rate
+        fed_rate = load_data("""
+            SELECT value FROM economic_indicators
+            WHERE indicator = 'FEDFUNDS' AND country = 'USA'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not fed_rate.empty and fed_rate['value'].iloc[0]:
+            st.metric("Fed Funds Rate", f"{float(fed_rate['value'].iloc[0]):.2f}%")
+        else:
+            st.metric("Fed Funds Rate", "N/A")
+
+        # 10Y-2Y Spread (direct from FRED)
+        spread_direct = load_data("""
+            SELECT value FROM economic_indicators
+            WHERE indicator = 'T10Y2Y' AND country = 'USA'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not spread_direct.empty and spread_direct['value'].iloc[0]:
+            spread_val = float(spread_direct['value'].iloc[0])
+            spread_color = "normal" if spread_val > 0 else "inverse"
+            st.metric("10Y-2Y Spread", f"{spread_val:.2f}%",
+                     "Normal" if spread_val > 0 else "Inverted",
+                     delta_color=spread_color)
+        else:
+            st.metric("10Y-2Y Spread", "N/A")
+
+        # DXY Dollar Index (from FRED DTWEXBGS - Trade Weighted Dollar)
+        dxy_df = load_data("""
+            SELECT value FROM economic_indicators
+            WHERE indicator = 'DTWEXBGS' AND country = 'USA'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not dxy_df.empty and dxy_df['value'].iloc[0]:
+            st.metric("USD Index", f"{float(dxy_df['value'].iloc[0]):.2f}")
+        else:
+            st.metric("USD Index", "N/A", "Run economics")
+
     st.markdown("---")
 
     # Key Highlights Section - Top movers and sentiment
@@ -684,6 +853,93 @@ if page == "Overview":
 
     st.markdown("---")
 
+    # Bloomberg-style: Gold/Oil Ratio, 52-Week Stats, BTC Dominance
+    st.subheader("📊 Market Indicators")
+
+    ind_col1, ind_col2, ind_col3, ind_col4 = st.columns(4)
+
+    with ind_col1:
+        # Gold/Oil Ratio - key indicator of economic sentiment
+        gold_df = load_data("""
+            SELECT price FROM commodities WHERE symbol = 'GOLD'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        oil_df = load_data("""
+            SELECT price FROM commodities WHERE symbol = 'WTI'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not gold_df.empty and not oil_df.empty:
+            gold_price = gold_df['price'].iloc[0]
+            oil_price = oil_df['price'].iloc[0]
+            if gold_price and oil_price and oil_price > 0:
+                ratio = gold_price / oil_price
+                # Historical average is ~16. High ratio = risk-off
+                ratio_status = "Risk-Off" if ratio > 25 else "Risk-On" if ratio < 15 else "Neutral"
+                st.metric("Gold/Oil Ratio", f"{ratio:.1f}", ratio_status)
+            else:
+                st.metric("Gold/Oil Ratio", "N/A", "-")
+        else:
+            st.metric("Gold/Oil Ratio", "N/A", "Run commodities")
+
+    with ind_col2:
+        # S&P 500 52-Week High/Low proximity
+        spy_history = load_data("""
+            SELECT MIN(price) as low_52w, MAX(price) as high_52w
+            FROM stocks WHERE symbol = 'SPY'
+            AND timestamp >= NOW() - INTERVAL '365 days'
+        """)
+        spy_current = load_data("""
+            SELECT price FROM stocks WHERE symbol = 'SPY'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not spy_history.empty and not spy_current.empty:
+            high_52 = spy_history['high_52w'].iloc[0]
+            low_52 = spy_history['low_52w'].iloc[0]
+            current = spy_current['price'].iloc[0]
+            if high_52 and low_52 and current:
+                range_52 = high_52 - low_52
+                if range_52 > 0:
+                    pct_of_range = ((current - low_52) / range_52) * 100
+                    status = "Near High" if pct_of_range > 90 else "Near Low" if pct_of_range < 10 else f"{pct_of_range:.0f}% range"
+                    st.metric("SPY 52W Range", f"${current:.2f}", status)
+                else:
+                    st.metric("SPY 52W Range", f"${current:.2f}", "-")
+            else:
+                st.metric("SPY 52W Range", "N/A", "-")
+        else:
+            st.metric("SPY 52W Range", "N/A", "Need history")
+
+    with ind_col3:
+        # BTC Dominance
+        btc_df = load_data("""
+            SELECT market_cap FROM crypto WHERE symbol = 'BTC'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        total_crypto_df = load_data("""
+            SELECT SUM(market_cap) as total FROM crypto
+            WHERE timestamp = (SELECT MAX(timestamp) FROM crypto)
+        """)
+        if not btc_df.empty and not total_crypto_df.empty:
+            btc_cap = btc_df['market_cap'].iloc[0]
+            total_cap = total_crypto_df['total'].iloc[0]
+            if btc_cap and total_cap and total_cap > 0:
+                dominance = (btc_cap / total_cap) * 100
+                status = "High" if dominance > 55 else "Low" if dominance < 40 else "Normal"
+                st.metric("BTC Dominance", f"{dominance:.1f}%", status)
+            else:
+                st.metric("BTC Dominance", "N/A", "-")
+        else:
+            st.metric("BTC Dominance", "N/A", "Run crypto")
+
+    with ind_col4:
+        # Gold Price
+        if not gold_df.empty and gold_df['price'].iloc[0]:
+            st.metric("Gold", f"${gold_df['price'].iloc[0]:,.0f}/oz")
+        else:
+            st.metric("Gold", "N/A", "Run commodities")
+
+    st.markdown("---")
+
     # Data stats row
     st.subheader("Data Overview")
     col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -700,6 +956,89 @@ if page == "Overview":
         st.metric("Weather", f"{get_count('weather'):,}")
     with col6:
         st.metric("News", f"{get_count('news'):,}")
+
+    st.markdown("---")
+
+    # Sector Performance Heatmap
+    st.subheader("📊 S&P 500 Sector Performance")
+
+    # Sector ETF mapping
+    SECTOR_NAMES = {
+        'XLK': 'Tech', 'XLF': 'Financials', 'XLV': 'Healthcare',
+        'XLE': 'Energy', 'XLY': 'Cons Disc', 'XLP': 'Cons Staples',
+        'XLI': 'Industrials', 'XLB': 'Materials', 'XLU': 'Utilities',
+        'XLRE': 'Real Estate', 'XLC': 'Comm Svcs'
+    }
+
+    sector_df = load_data("""
+        SELECT symbol, price, change_percent
+        FROM stocks
+        WHERE symbol IN ('XLK', 'XLF', 'XLV', 'XLE', 'XLY', 'XLP', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC')
+        AND timestamp = (SELECT MAX(timestamp) FROM stocks WHERE symbol IN ('XLK', 'XLF', 'XLV', 'XLE', 'XLY', 'XLP', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC'))
+        ORDER BY change_percent DESC NULLS LAST
+    """)
+
+    if not sector_df.empty:
+        # Create a heatmap-style display
+        sector_cols = st.columns(len(sector_df) if len(sector_df) <= 6 else 6)
+        for i, (_, row) in enumerate(sector_df.iterrows()):
+            col_idx = i % 6
+            with sector_cols[col_idx]:
+                change = row.get('change_percent', 0) or 0
+                sector_name = SECTOR_NAMES.get(row['symbol'], row['symbol'])
+
+                # Color-code based on performance
+                if change >= 1.5:
+                    bg_color = "#00a86b"  # Strong green
+                elif change >= 0.5:
+                    bg_color = "#4caf50"  # Green
+                elif change > 0:
+                    bg_color = "#8bc34a"  # Light green
+                elif change > -0.5:
+                    bg_color = "#ff9800"  # Orange
+                elif change > -1.5:
+                    bg_color = "#f44336"  # Red
+                else:
+                    bg_color = "#b71c1c"  # Dark red
+
+                st.markdown(
+                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:5px; text-align:center; margin:2px;">
+                    <b style="color:white;">{sector_name}</b><br>
+                    <span style="color:white; font-size:1.2em;">{change:+.2f}%</span>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+        # Second row if more than 6 sectors
+        if len(sector_df) > 6:
+            sector_cols2 = st.columns(len(sector_df) - 6)
+            for i, (_, row) in enumerate(sector_df.iloc[6:].iterrows()):
+                with sector_cols2[i]:
+                    change = row.get('change_percent', 0) or 0
+                    sector_name = SECTOR_NAMES.get(row['symbol'], row['symbol'])
+
+                    if change >= 1.5:
+                        bg_color = "#00a86b"
+                    elif change >= 0.5:
+                        bg_color = "#4caf50"
+                    elif change > 0:
+                        bg_color = "#8bc34a"
+                    elif change > -0.5:
+                        bg_color = "#ff9800"
+                    elif change > -1.5:
+                        bg_color = "#f44336"
+                    else:
+                        bg_color = "#b71c1c"
+
+                    st.markdown(
+                        f"""<div style="background-color:{bg_color}; padding:10px; border-radius:5px; text-align:center; margin:2px;">
+                        <b style="color:white;">{sector_name}</b><br>
+                        <span style="color:white; font-size:1.2em;">{change:+.2f}%</span>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+    else:
+        st.info("No sector data. Run: `python scheduler.py --collector markets`")
 
     st.markdown("---")
 
