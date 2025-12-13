@@ -50,7 +50,8 @@ jobs:
               SpaceCollector,
               DisastersCollector,
               NewsCollector,
-              CryptoCollector
+              CryptoCollector,
+              GdeltCollector
           )
           from core import Config
 
@@ -67,6 +68,7 @@ jobs:
               ('Space', SpaceCollector),
               ('Disasters', DisastersCollector),
               ('News', NewsCollector),
+              ('GDELT', GdeltCollector),
           ]
 
           for name, CollectorClass in collectors:

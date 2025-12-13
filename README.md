@@ -8,13 +8,16 @@ A comprehensive, automated data collection and analysis platform that integrates
 
 ---
 
-## ✨ What's New in v3.0
+## ✨ What's New in v4.0
 
+- **🌐 3D Interactive Globe** - Rotating Earth visualization with weather data overlay
+- **📊 Time Series Analysis** - Historical trends for stocks, crypto, economics, and weather
+- **🔥 GDELT Integration** - Global events and social unrest tracking with sentiment analysis
+- **📈 Enhanced Economics** - PMI, Consumer Confidence, Industrial Production for 5 countries
 - **🌙 Dark Mode UI** - Sleek dark theme optimized for data visualization
 - **₿ Cryptocurrency Tracking** - Top 15 cryptos with real-time prices and 24h changes
 - **📥 Data Export** - Download any dataset as CSV with one click
-- **🚨 Smart Alerts** - Automatic detection of significant market moves, crypto volatility, and hazardous NEOs
-- **🎨 Enhanced Visualizations** - All charts optimized for dark mode with better readability
+- **🚨 Smart Alerts** - Stock moves, crypto volatility, hazardous NEOs, and social unrest
 
 ---
 
@@ -60,12 +63,18 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 - **Alerts:** Automatic detection of >10% price moves
 
 ### **Economic Indicators**
-- **15 Key Indicators** across 5 major economies
-  - United States: GDP, Unemployment, Inflation, Interest Rate
-  - Eurozone: GDP, Unemployment, Inflation
-  - China: GDP, Unemployment
-  - Japan: GDP, Unemployment, Inflation
-  - United Kingdom: GDP, Unemployment, Inflation
+- **25+ Key Indicators** across 5 major economies
+  - United States: GDP, Unemployment, Inflation, Interest Rate, PMI, Consumer Sentiment, Retail Sales, Industrial Production
+  - Eurozone: GDP, Unemployment, Inflation, Consumer Confidence, Industrial Production
+  - United Kingdom: GDP, Unemployment, Inflation, Consumer Confidence, Retail Sales
+  - Japan: GDP, Unemployment, Inflation, Consumer Confidence, Industrial Production
+  - China: GDP, Inflation, Industrial Production
+
+### **Global Events (GDELT)**
+- **Social Unrest Tracking** - Protests, riots, strikes worldwide
+- **Geopolitical Events** - Sanctions, military movements, diplomatic crises
+- **Sentiment Analysis** - Tone scoring for event severity
+- **20 Countries Monitored** - Major economies and emerging markets
 
 ### **Environmental Monitoring**
 - **50 Cities Worldwide** - Real-time weather with 3D globe visualization
@@ -87,9 +96,9 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 ## 🚀 Automated Data Collection
 
 **Frequency:** Every 6 hours via GitHub Actions
-**Total Collectors:** 10 independent data collectors
+**Total Collectors:** 11 independent data collectors
 **Database:** PostgreSQL (hosted on Railway)
-**Storage:** 15 normalized tables with proper indexing
+**Storage:** 16 normalized tables with proper indexing
 
 ### Collection Schedule
 ```

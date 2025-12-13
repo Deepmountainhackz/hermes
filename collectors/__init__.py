@@ -14,6 +14,7 @@ from .space_collector import SpaceCollector
 from .disasters_collector import DisastersCollector
 from .news_collector import NewsCollector
 from .crypto_collector import CryptoCollector
+from .gdelt_collector import GdeltCollector
 
 __all__ = [
     'MarketsCollector',
@@ -25,4 +26,5 @@ __all__ = [
     'DisastersCollector',
     'NewsCollector',
     'CryptoCollector',
+    'GdeltCollector',
 ]

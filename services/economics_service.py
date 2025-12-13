@@ -26,25 +26,36 @@ class EconomicsService:
             'UNEMPLOYMENT': {'series_id': 'UNRATE', 'name': 'Unemployment Rate', 'unit': '%'},
             'INFLATION': {'series_id': 'CPIAUCSL', 'name': 'CPI Inflation', 'unit': 'Index'},
             'INTEREST_RATE': {'series_id': 'FEDFUNDS', 'name': 'Federal Funds Rate', 'unit': '%'},
+            'PMI_MANUFACTURING': {'series_id': 'MANEMP', 'name': 'Manufacturing Employment', 'unit': 'Thousands'},
+            'CONSUMER_CONFIDENCE': {'series_id': 'UMCSENT', 'name': 'Consumer Sentiment', 'unit': 'Index'},
+            'RETAIL_SALES': {'series_id': 'RSXFS', 'name': 'Retail Sales', 'unit': 'Millions USD'},
+            'INDUSTRIAL_PRODUCTION': {'series_id': 'INDPRO', 'name': 'Industrial Production', 'unit': 'Index'},
         },
         'EU': {
             'GDP': {'series_id': 'CLVMNACSCAB1GQEA19', 'name': 'GDP', 'unit': 'Millions EUR'},
             'UNEMPLOYMENT': {'series_id': 'LRHUTTTTEZM156S', 'name': 'Unemployment Rate', 'unit': '%'},
             'INFLATION': {'series_id': 'EA19CPALTT01GYM', 'name': 'CPI Inflation', 'unit': '% Change'},
+            'CONSUMER_CONFIDENCE': {'series_id': 'CSCICP03EZM665S', 'name': 'Consumer Confidence', 'unit': 'Index'},
+            'INDUSTRIAL_PRODUCTION': {'series_id': 'EA19PRINTO01GYSAM', 'name': 'Industrial Production', 'unit': '% Change'},
         },
         'UK': {
             'GDP': {'series_id': 'CLVMNACSCAB1GQUK', 'name': 'GDP', 'unit': 'Millions GBP'},
             'UNEMPLOYMENT': {'series_id': 'LRHUTTTTGBM156S', 'name': 'Unemployment Rate', 'unit': '%'},
             'INFLATION': {'series_id': 'GBRCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+            'CONSUMER_CONFIDENCE': {'series_id': 'CSCICP03GBM665S', 'name': 'Consumer Confidence', 'unit': 'Index'},
+            'RETAIL_SALES': {'series_id': 'SLRTTO02GBM659S', 'name': 'Retail Sales', 'unit': '% Change'},
         },
         'Japan': {
             'GDP': {'series_id': 'JPNRGDPEXP', 'name': 'GDP', 'unit': 'Billions JPY'},
             'UNEMPLOYMENT': {'series_id': 'LRHUTTTTJPM156S', 'name': 'Unemployment Rate', 'unit': '%'},
             'INFLATION': {'series_id': 'JPNCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+            'CONSUMER_CONFIDENCE': {'series_id': 'CSCICP03JPM665S', 'name': 'Consumer Confidence', 'unit': 'Index'},
+            'INDUSTRIAL_PRODUCTION': {'series_id': 'JPNPROINDMISMEI', 'name': 'Industrial Production', 'unit': 'Index'},
         },
         'China': {
             'GDP': {'series_id': 'MKTGDPCNA646NWDB', 'name': 'GDP', 'unit': 'USD'},
             'INFLATION': {'series_id': 'CHNCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+            'INDUSTRIAL_PRODUCTION': {'series_id': 'CHNPROINDMISMEI', 'name': 'Industrial Production', 'unit': 'Index'},
         },
     }
     

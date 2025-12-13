@@ -1,6 +1,6 @@
 """
-Hermes Intelligence Platform Dashboard
-Complete multi-layer intelligence visualization with dark mode, exports, and alerts
+Hermes Intelligence Platform Dashboard v4.0
+Multi-layer intelligence with 3D globe, time-series analysis, and GDELT integration
 """
 
 import streamlit as st
@@ -12,7 +12,6 @@ import os
 from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
-import io
 
 # Load environment variables (for local development)
 load_dotenv()
@@ -122,61 +121,21 @@ st.set_page_config(
 # Dark mode CSS
 DARK_MODE_CSS = """
 <style>
-    /* Dark mode theme */
-    .stApp {
-        background-color: #0e1117;
-        color: #fafafa;
-    }
-    .stSidebar {
-        background-color: #161b22;
-    }
-    .stMetric {
-        background-color: #21262d;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #30363d;
-    }
-    .stDataFrame {
-        background-color: #161b22;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%);
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #30363d;
-        margin: 5px 0;
-    }
+    .stApp { background-color: #0e1117; color: #fafafa; }
+    .stSidebar { background-color: #161b22; }
+    .stMetric { background-color: #21262d; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
+    .stDataFrame { background-color: #161b22; }
+    .metric-card { background: linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%); padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin: 5px 0; }
     .positive { color: #00d26a; }
     .negative { color: #ff4757; }
     .neutral { color: #a0a0a0; }
     h1, h2, h3 { color: #58a6ff; }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #21262d;
-        border-radius: 8px;
-        color: #c9d1d9;
-        padding: 10px 20px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #388bfd;
-        color: white;
-    }
-    .alert-box {
-        background-color: #2d1f1f;
-        border: 1px solid #ff4757;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-    }
-    .success-box {
-        background-color: #1f2d1f;
-        border: 1px solid #00d26a;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { background-color: #21262d; border-radius: 8px; color: #c9d1d9; padding: 10px 20px; }
+    .stTabs [aria-selected="true"] { background-color: #388bfd; color: white; }
+    .alert-box { background-color: #2d1f1f; border: 1px solid #ff4757; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .success-box { background-color: #1f2d1f; border: 1px solid #00d26a; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .warning-box { background-color: #2d2d1f; border: 1px solid #ffa502; border-radius: 8px; padding: 15px; margin: 10px 0; }
 </style>
 """
 st.markdown(DARK_MODE_CSS, unsafe_allow_html=True)
@@ -211,6 +170,15 @@ def get_count(table):
         return int(df['c'].iloc[0]) if 'c' in df.columns else int(df.iloc[0, 0])
     except Exception:
         return 0
+
+
+def table_exists(table_name):
+    """Check if a table exists in the database"""
+    try:
+        df = load_data(f"SELECT 1 FROM {table_name} LIMIT 1")
+        return True
+    except Exception:
+        return False
 
 
 # ============================================================================
@@ -250,19 +218,15 @@ def export_csv(df, filename):
     )
 
 
-def check_alerts(df, column, threshold, above=True):
-    """Check for alert conditions"""
-    alerts = []
-    if df.empty or column not in df.columns:
-        return alerts
-    for _, row in df.iterrows():
-        val = row.get(column)
-        if val is not None:
-            if above and val > threshold:
-                alerts.append(row)
-            elif not above and val < threshold:
-                alerts.append(row)
-    return alerts
+def get_dark_plotly_layout():
+    """Standard dark theme layout for Plotly charts"""
+    return dict(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white'),
+        xaxis=dict(gridcolor='rgba(128,128,128,0.2)', zerolinecolor='rgba(128,128,128,0.2)'),
+        yaxis=dict(gridcolor='rgba(128,128,128,0.2)', zerolinecolor='rgba(128,128,128,0.2)')
+    )
 
 
 # ============================================================================
@@ -275,7 +239,8 @@ st.sidebar.markdown("---")
 page = st.sidebar.radio(
     "Navigate to:",
     ["Overview", "Markets", "Crypto", "Economic Indicators",
-     "Weather & Environment", "Space", "News", "Alerts & Export"]
+     "Weather & Globe", "Space", "Global Events", "News",
+     "Time Series", "Alerts & Export"]
 )
 
 st.sidebar.markdown("---")
@@ -286,7 +251,7 @@ if st.sidebar.button("Refresh Data"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Last Refresh: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-st.sidebar.caption("v3.0 - Dark Mode + Crypto + Export")
+st.sidebar.caption("v4.0 - Globe + Time Series + GDELT")
 
 
 # ============================================================================
@@ -380,7 +345,6 @@ if page == "Overview":
             latest = iss.iloc[0]
             st.write(f"Lat: {latest['latitude']:.4f}")
             st.write(f"Lon: {latest['longitude']:.4f}")
-            st.write(f"Alt: {latest['altitude']:.2f} km")
         else:
             st.info("No ISS data")
 
@@ -397,15 +361,12 @@ if page == "Overview":
             st.info("No weather data")
 
     with col3:
-        st.subheader("NEO Count")
-        neo_count = get_count('near_earth_objects')
-        hazardous = load_data("""
-            SELECT COUNT(*) as c FROM near_earth_objects
-            WHERE is_potentially_hazardous = true
-        """)
-        h_count = hazardous['c'].iloc[0] if not hazardous.empty else 0
-        st.metric("Total NEOs", neo_count)
-        st.metric("Hazardous", h_count)
+        st.subheader("Global Events")
+        if table_exists('gdelt_events'):
+            event_count = get_count('gdelt_events')
+            st.metric("Total Events", event_count)
+        else:
+            st.info("GDELT not active")
 
     with col4:
         st.subheader("Latest News")
@@ -526,9 +487,7 @@ elif page == "Crypto":
         crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
         latest_crypto = crypto_df.groupby('symbol').first().reset_index()
 
-        # Summary metrics
         col1, col2, col3, col4 = st.columns(4)
-
         total_market_cap = latest_crypto['market_cap'].sum() if 'market_cap' in latest_crypto.columns else 0
         gainers = latest_crypto[latest_crypto['change_percent_24h'] > 0] if 'change_percent_24h' in latest_crypto.columns else pd.DataFrame()
         losers = latest_crypto[latest_crypto['change_percent_24h'] < 0] if 'change_percent_24h' in latest_crypto.columns else pd.DataFrame()
@@ -544,17 +503,13 @@ elif page == "Crypto":
 
         st.markdown("---")
 
-        # Top gainers and losers
         col1, col2 = st.columns(2)
-
         with col1:
             st.subheader("Top Gainers")
             if not gainers.empty and 'change_percent_24h' in gainers.columns:
                 top_gainers = gainers.nlargest(5, 'change_percent_24h')
                 for _, row in top_gainers.iterrows():
-                    change = row.get('change_percent_24h', 0)
-                    st.markdown(f"**{row['symbol']}** ({row['name']}): "
-                               f"<span class='positive'>+{change:.2f}%</span>",
+                    st.markdown(f"**{row['symbol']}**: <span class='positive'>+{row['change_percent_24h']:.2f}%</span>",
                                unsafe_allow_html=True)
 
         with col2:
@@ -562,14 +517,10 @@ elif page == "Crypto":
             if not losers.empty and 'change_percent_24h' in losers.columns:
                 top_losers = losers.nsmallest(5, 'change_percent_24h')
                 for _, row in top_losers.iterrows():
-                    change = row.get('change_percent_24h', 0)
-                    st.markdown(f"**{row['symbol']}** ({row['name']}): "
-                               f"<span class='negative'>{change:.2f}%</span>",
+                    st.markdown(f"**{row['symbol']}**: <span class='negative'>{row['change_percent_24h']:.2f}%</span>",
                                unsafe_allow_html=True)
 
         st.markdown("---")
-
-        # Full table
         st.subheader("All Cryptocurrencies")
         display_crypto = latest_crypto[['symbol', 'name', 'price', 'change_percent_24h', 'market_cap', 'volume_24h']].copy()
         display_crypto['price'] = display_crypto['price'].apply(lambda x: f"${x:,.2f}" if pd.notna(x) else "N/A")
@@ -578,21 +529,6 @@ elif page == "Crypto":
         display_crypto['volume_24h'] = display_crypto['volume_24h'].apply(format_large_number)
         display_crypto.columns = ['Symbol', 'Name', 'Price', '24h Change', 'Market Cap', '24h Volume']
         st.dataframe(display_crypto, use_container_width=True, hide_index=True)
-
-        # Market cap chart
-        st.markdown("---")
-        st.subheader("Market Cap Distribution")
-        chart_data = latest_crypto[['symbol', 'market_cap']].dropna()
-        if not chart_data.empty:
-            fig = px.pie(chart_data, values='market_cap', names='symbol',
-                        title="Cryptocurrency Market Cap Distribution")
-            fig.update_layout(
-                height=400,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white')
-            )
-            st.plotly_chart(fig, use_container_width=True)
 
 
 # ============================================================================
@@ -632,85 +568,123 @@ elif page == "Economic Indicators":
                         value=f"{row['value']:.2f}{unit_str}" if row['value'] else "N/A"
                     )
 
+        # Comparison chart
+        st.markdown("---")
+        st.subheader("Cross-Country Comparison")
 
-# ============================================================================
-# PAGE: WEATHER & ENVIRONMENT
-# ============================================================================
+        indicator_options = econ_df['name'].unique().tolist()
+        selected_indicator = st.selectbox("Select Indicator for Comparison", indicator_options)
 
-elif page == "Weather & Environment":
-    st.title("Weather & Environmental Monitoring")
-    st.markdown("---")
+        if selected_indicator:
+            comparison_data = econ_df[econ_df['name'] == selected_indicator]
+            latest_comparison = comparison_data.groupby('country').first().reset_index()
 
-    tab1, tab2 = st.tabs(["Weather", "Disasters"])
-
-    with tab1:
-        weather_df = load_data("""
-            SELECT city, country, temperature, feels_like, humidity, description, timestamp
-            FROM weather ORDER BY timestamp DESC
-        """)
-
-        if weather_df.empty:
-            st.warning("No weather data available.")
-        else:
-            weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
-            weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
-            latest_weather = weather_df.groupby('city').first().reset_index()
-            latest_weather = latest_weather[latest_weather['temperature'].notna()]
-
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Cities Tracked", len(latest_weather))
-            with col2:
-                if not latest_weather.empty:
-                    hottest = latest_weather.loc[latest_weather['temperature'].idxmax()]
-                    st.metric("Hottest", f"{hottest['city']}", f"{hottest['temperature']:.1f}C")
-            with col3:
-                if not latest_weather.empty:
-                    coldest = latest_weather.loc[latest_weather['temperature'].idxmin()]
-                    st.metric("Coldest", f"{coldest['city']}", f"{coldest['temperature']:.1f}C")
-            with col4:
-                avg_temp = latest_weather['temperature'].mean()
-                st.metric("Average", f"{avg_temp:.1f}C")
-
-            st.markdown("---")
-
-            # Globe map
-            latest_weather['lat'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat'))
-            latest_weather['lon'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon'))
-            map_data = latest_weather[latest_weather['lat'].notna()].copy()
-
-            if not map_data.empty:
-                fig = go.Figure(go.Scattergeo(
-                    lon=map_data['lon'], lat=map_data['lat'],
-                    text=map_data.apply(lambda r: f"{r['city']}: {r['temperature']:.1f}C", axis=1),
-                    mode='markers',
-                    marker=dict(
-                        size=map_data['temperature'].apply(lambda x: max(abs(x) + 5, 8)),
-                        color=map_data['temperature'],
-                        colorscale='RdYlBu_r', cmin=-20, cmax=45,
-                        colorbar=dict(title="Temp (C)")
-                    )
-                ))
-                fig.update_geos(
-                    projection_type='orthographic',
-                    showland=True, landcolor='rgb(40,40,40)',
-                    showocean=True, oceancolor='rgb(20,30,50)'
-                )
-                fig.update_layout(height=500, paper_bgcolor='rgba(0,0,0,0)')
+            if not latest_comparison.empty:
+                fig = px.bar(latest_comparison, x='country', y='value',
+                            title=f"{selected_indicator} by Country",
+                            color='value', color_continuous_scale='Blues')
+                fig.update_layout(**get_dark_plotly_layout(), height=400)
                 st.plotly_chart(fig, use_container_width=True)
 
-    with tab2:
-        st.subheader("Natural Disasters & Earthquakes")
-        disasters_df = load_data("""
-            SELECT disaster_type, location, magnitude, timestamp
-            FROM disasters ORDER BY timestamp DESC LIMIT 30
-        """)
 
-        if disasters_df.empty:
-            st.info("No disaster data recorded yet.")
-        else:
-            disasters_df['timestamp'] = pd.to_datetime(disasters_df['timestamp'])
-            st.dataframe(disasters_df, use_container_width=True, hide_index=True)
+# ============================================================================
+# PAGE: WEATHER & 3D GLOBE
+# ============================================================================
+
+elif page == "Weather & Globe":
+    st.title("Weather & 3D Globe Visualization")
+    st.markdown("---")
+
+    weather_df = load_data("""
+        SELECT city, country, temperature, feels_like, humidity, description, timestamp
+        FROM weather ORDER BY timestamp DESC
+    """)
+
+    if weather_df.empty:
+        st.warning("No weather data available.")
+    else:
+        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+        weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
+        latest_weather = weather_df.groupby('city').first().reset_index()
+        latest_weather = latest_weather[latest_weather['temperature'].notna()]
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Cities Tracked", len(latest_weather))
+        with col2:
+            if not latest_weather.empty:
+                hottest = latest_weather.loc[latest_weather['temperature'].idxmax()]
+                st.metric("Hottest", f"{hottest['city']}", f"{hottest['temperature']:.1f}C")
+        with col3:
+            if not latest_weather.empty:
+                coldest = latest_weather.loc[latest_weather['temperature'].idxmin()]
+                st.metric("Coldest", f"{coldest['city']}", f"{coldest['temperature']:.1f}C")
+        with col4:
+            avg_temp = latest_weather['temperature'].mean()
+            st.metric("Global Average", f"{avg_temp:.1f}C")
+
+        st.markdown("---")
+
+        # Add coordinates
+        latest_weather['lat'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lat'))
+        latest_weather['lon'] = latest_weather['city'].map(lambda x: CITY_COORDS.get(x, {}).get('lon'))
+        map_data = latest_weather[latest_weather['lat'].notna()].copy()
+
+        # 3D Globe visualization
+        st.subheader("Interactive 3D Globe")
+
+        # Globe controls
+        col1, col2 = st.columns(2)
+        with col1:
+            projection = st.selectbox("Projection", ["orthographic", "natural earth", "equirectangular"])
+        with col2:
+            rotation = st.slider("Rotation (Longitude)", -180, 180, 0)
+
+        if not map_data.empty:
+            fig = go.Figure()
+
+            # Add weather points
+            fig.add_trace(go.Scattergeo(
+                lon=map_data['lon'],
+                lat=map_data['lat'],
+                text=map_data.apply(lambda r: f"<b>{r['city']}</b><br>Temp: {r['temperature']:.1f}C<br>{r['description']}", axis=1),
+                mode='markers',
+                marker=dict(
+                    size=map_data['temperature'].apply(lambda x: max(abs(x) / 3 + 8, 6)),
+                    color=map_data['temperature'],
+                    colorscale='RdYlBu_r',
+                    cmin=-10,
+                    cmax=40,
+                    colorbar=dict(title="Temp (C)", tickfont=dict(color='white')),
+                    line=dict(width=1, color='white')
+                ),
+                hoverinfo='text'
+            ))
+
+            # 3D Globe projection
+            fig.update_geos(
+                projection_type=projection.replace(" ", ""),
+                projection_rotation_lon=rotation,
+                showland=True,
+                landcolor='rgb(40, 40, 40)',
+                showocean=True,
+                oceancolor='rgb(20, 30, 50)',
+                showlakes=True,
+                lakecolor='rgb(30, 40, 60)',
+                showcoastlines=True,
+                coastlinecolor='rgb(80, 80, 80)',
+                showframe=False,
+                bgcolor='rgba(0,0,0,0)'
+            )
+
+            fig.update_layout(
+                height=600,
+                paper_bgcolor='rgba(0,0,0,0)',
+                geo=dict(bgcolor='rgba(0,0,0,0)'),
+                margin=dict(l=0, r=0, t=0, b=0)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
 
 # ============================================================================
@@ -721,7 +695,6 @@ elif page == "Space":
     st.title("Space Intelligence")
     st.markdown("---")
 
-    # ISS
     st.subheader("International Space Station")
     iss_df = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 50")
 
@@ -739,7 +712,6 @@ elif page == "Space":
 
     st.markdown("---")
 
-    # NEO
     st.subheader("Near-Earth Objects")
     neo_df = load_data("""
         SELECT name, date, estimated_diameter_max, relative_velocity,
@@ -752,7 +724,6 @@ elif page == "Space":
         neo_df['date'] = pd.to_datetime(neo_df['date'])
         neo_df['estimated_diameter_max'] = pd.to_numeric(neo_df['estimated_diameter_max'], errors='coerce')
         neo_df['relative_velocity'] = pd.to_numeric(neo_df['relative_velocity'], errors='coerce')
-        neo_df['miss_distance'] = pd.to_numeric(neo_df['miss_distance'], errors='coerce')
 
         display_neo = neo_df.copy()
         display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: 'YES' if x else 'No')
@@ -762,6 +733,82 @@ elif page == "Space":
                     use_container_width=True, hide_index=True)
     else:
         st.info("No NEO data available.")
+
+
+# ============================================================================
+# PAGE: GLOBAL EVENTS (GDELT)
+# ============================================================================
+
+elif page == "Global Events":
+    st.title("Global Events & Social Unrest")
+    st.markdown("*Powered by GDELT Project*")
+    st.markdown("---")
+
+    if not table_exists('gdelt_events'):
+        st.warning("GDELT events table not yet created. Run the GDELT collector to populate data.")
+    else:
+        gdelt_df = load_data("""
+            SELECT title, url, source, country, event_type, tone, published_at, timestamp
+            FROM gdelt_events ORDER BY timestamp DESC LIMIT 200
+        """)
+
+        if gdelt_df.empty:
+            st.info("No GDELT events collected yet. Run the collector to fetch global events.")
+        else:
+            gdelt_df['timestamp'] = pd.to_datetime(gdelt_df['timestamp'])
+            gdelt_df['tone'] = pd.to_numeric(gdelt_df['tone'], errors='coerce')
+
+            # Summary stats
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Events", len(gdelt_df))
+            with col2:
+                avg_tone = gdelt_df['tone'].mean()
+                tone_label = "Negative" if avg_tone < -2 else "Neutral" if avg_tone < 2 else "Positive"
+                st.metric("Avg Sentiment", f"{avg_tone:.2f}", tone_label)
+            with col3:
+                countries = gdelt_df['country'].nunique()
+                st.metric("Countries", countries)
+            with col4:
+                protests = len(gdelt_df[gdelt_df['event_type'].isin(['PROTEST', 'RIOT', 'STRIKE'])])
+                st.metric("Unrest Events", protests)
+
+            st.markdown("---")
+
+            # Event type filter
+            tab1, tab2, tab3 = st.tabs(["All Events", "By Country", "Sentiment Analysis"])
+
+            with tab1:
+                event_types = ['All'] + gdelt_df['event_type'].unique().tolist()
+                selected_type = st.selectbox("Filter by Event Type", event_types)
+
+                filtered = gdelt_df if selected_type == 'All' else gdelt_df[gdelt_df['event_type'] == selected_type]
+
+                for _, event in filtered.head(20).iterrows():
+                    tone = event.get('tone', 0) or 0
+                    tone_color = 'negative' if tone < -2 else 'positive' if tone > 2 else 'neutral'
+                    st.markdown(f"""
+                    **{event['title'][:100]}...**
+                    <span class='{tone_color}'>Tone: {tone:.2f}</span> |
+                    {event['country']} | {event['event_type']} | {event['source']}
+                    """, unsafe_allow_html=True)
+                    st.markdown("---")
+
+            with tab2:
+                country_counts = gdelt_df['country'].value_counts().head(15)
+                fig = px.bar(x=country_counts.index, y=country_counts.values,
+                            title="Events by Country", labels={'x': 'Country', 'y': 'Event Count'})
+                fig.update_layout(**get_dark_plotly_layout(), height=400)
+                st.plotly_chart(fig, use_container_width=True)
+
+            with tab3:
+                # Sentiment by country
+                country_tone = gdelt_df.groupby('country')['tone'].mean().sort_values()
+                fig = px.bar(x=country_tone.values, y=country_tone.index, orientation='h',
+                            title="Average Sentiment by Country (Negative = Unrest)",
+                            color=country_tone.values, color_continuous_scale='RdYlGn')
+                fig.update_layout(**get_dark_plotly_layout(), height=500)
+                st.plotly_chart(fig, use_container_width=True)
 
 
 # ============================================================================
@@ -802,6 +849,162 @@ elif page == "News":
 
 
 # ============================================================================
+# PAGE: TIME SERIES ANALYSIS
+# ============================================================================
+
+elif page == "Time Series":
+    st.title("Time Series Analysis")
+    st.markdown("*Historical trends and pattern analysis*")
+    st.markdown("---")
+
+    analysis_type = st.selectbox("Select Data Type", ["Stocks", "Crypto", "Economic Indicators", "Weather"])
+
+    if analysis_type == "Stocks":
+        stocks_df = load_data("""
+            SELECT symbol, price, change_percent, timestamp
+            FROM stocks ORDER BY timestamp DESC
+        """)
+
+        if stocks_df.empty:
+            st.warning("No stock data for time series analysis.")
+        else:
+            stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
+            symbols = stocks_df['symbol'].unique().tolist()
+            selected_symbol = st.selectbox("Select Stock", symbols)
+
+            if selected_symbol:
+                symbol_data = stocks_df[stocks_df['symbol'] == selected_symbol].sort_values('timestamp')
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=symbol_data['timestamp'],
+                    y=symbol_data['price'],
+                    mode='lines+markers',
+                    name=selected_symbol,
+                    line=dict(color='#00d26a', width=2)
+                ))
+                fig.update_layout(
+                    title=f"{selected_symbol} Price History",
+                    **get_dark_plotly_layout(),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Statistics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Current", f"${symbol_data['price'].iloc[0]:.2f}")
+                with col2:
+                    st.metric("High", f"${symbol_data['price'].max():.2f}")
+                with col3:
+                    st.metric("Low", f"${symbol_data['price'].min():.2f}")
+                with col4:
+                    st.metric("Avg", f"${symbol_data['price'].mean():.2f}")
+
+    elif analysis_type == "Crypto":
+        crypto_df = load_data("""
+            SELECT symbol, price, change_percent_24h, market_cap, timestamp
+            FROM crypto ORDER BY timestamp DESC
+        """)
+
+        if crypto_df.empty:
+            st.warning("No crypto data for time series analysis.")
+        else:
+            crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
+            symbols = crypto_df['symbol'].unique().tolist()
+            selected_symbol = st.selectbox("Select Cryptocurrency", symbols)
+
+            if selected_symbol:
+                symbol_data = crypto_df[crypto_df['symbol'] == selected_symbol].sort_values('timestamp')
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=symbol_data['timestamp'],
+                    y=symbol_data['price'],
+                    mode='lines+markers',
+                    name=selected_symbol,
+                    line=dict(color='#f7931a', width=2)
+                ))
+                fig.update_layout(
+                    title=f"{selected_symbol} Price History",
+                    **get_dark_plotly_layout(),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+    elif analysis_type == "Economic Indicators":
+        econ_df = load_data("""
+            SELECT country, name, value, timestamp
+            FROM economic_indicators ORDER BY timestamp DESC
+        """)
+
+        if econ_df.empty:
+            st.warning("No economic data for time series analysis.")
+        else:
+            econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
+            indicators = econ_df['name'].unique().tolist()
+            selected_indicator = st.selectbox("Select Indicator", indicators)
+
+            if selected_indicator:
+                indicator_data = econ_df[econ_df['name'] == selected_indicator]
+                countries = indicator_data['country'].unique().tolist()
+
+                fig = go.Figure()
+                colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6']
+                for i, country in enumerate(countries):
+                    country_data = indicator_data[indicator_data['country'] == country].sort_values('timestamp')
+                    fig.add_trace(go.Scatter(
+                        x=country_data['timestamp'],
+                        y=country_data['value'],
+                        mode='lines+markers',
+                        name=country,
+                        line=dict(color=colors[i % len(colors)], width=2)
+                    ))
+
+                fig.update_layout(
+                    title=f"{selected_indicator} - Cross Country Comparison",
+                    **get_dark_plotly_layout(),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+    elif analysis_type == "Weather":
+        weather_df = load_data("""
+            SELECT city, temperature, humidity, timestamp
+            FROM weather ORDER BY timestamp DESC
+        """)
+
+        if weather_df.empty:
+            st.warning("No weather data for time series analysis.")
+        else:
+            weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+            weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
+            cities = weather_df['city'].unique().tolist()
+            selected_cities = st.multiselect("Select Cities", cities, default=cities[:3])
+
+            if selected_cities:
+                fig = go.Figure()
+                colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71']
+                for i, city in enumerate(selected_cities):
+                    city_data = weather_df[weather_df['city'] == city].sort_values('timestamp')
+                    fig.add_trace(go.Scatter(
+                        x=city_data['timestamp'],
+                        y=city_data['temperature'],
+                        mode='lines+markers',
+                        name=city,
+                        line=dict(color=colors[i % len(colors)], width=2)
+                    ))
+
+                fig.update_layout(
+                    title="Temperature Trends",
+                    yaxis_title="Temperature (C)",
+                    **get_dark_plotly_layout(),
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+
+# ============================================================================
 # PAGE: ALERTS & EXPORT
 # ============================================================================
 
@@ -819,7 +1022,6 @@ elif page == "Alerts & Export":
         if not stocks_df.empty:
             stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
             latest_stocks = stocks_df.groupby('symbol').first().reset_index()
-
             big_movers = latest_stocks[abs(latest_stocks['change_percent']) > 5]
             if not big_movers.empty:
                 st.markdown("#### Stock Alerts (>5% change)")
@@ -837,7 +1039,6 @@ elif page == "Alerts & Export":
         if not crypto_df.empty:
             crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
             latest_crypto = crypto_df.groupby('symbol').first().reset_index()
-
             big_crypto = latest_crypto[abs(latest_crypto['change_percent_24h']) > 10]
             if not big_crypto.empty:
                 st.markdown("#### Crypto Alerts (>10% change)")
@@ -863,6 +1064,21 @@ elif page == "Alerts & Export":
                     <br>Approach Date: {row['date']}
                 </div>""", unsafe_allow_html=True)
 
+        # GDELT unrest alerts
+        if table_exists('gdelt_events'):
+            unrest_df = load_data("""
+                SELECT * FROM gdelt_events
+                WHERE event_type IN ('PROTEST', 'RIOT', 'STRIKE') AND tone < -5
+                ORDER BY timestamp DESC LIMIT 5
+            """)
+            if not unrest_df.empty:
+                st.markdown("#### Social Unrest Alerts")
+                for _, row in unrest_df.iterrows():
+                    st.markdown(f"""<div class='warning-box'>
+                        <strong>{row['country']}</strong>: {row['title'][:80]}...
+                        <br>Tone: {row['tone']:.2f} | Type: {row['event_type']}
+                    </div>""", unsafe_allow_html=True)
+
     with tab2:
         st.subheader("Export Data")
 
@@ -876,6 +1092,10 @@ elif page == "Alerts & Export":
             "Economic Indicators": "SELECT * FROM economic_indicators ORDER BY timestamp DESC LIMIT 500",
             "Near-Earth Objects": "SELECT * FROM near_earth_objects ORDER BY date DESC LIMIT 500",
         }
+
+        # Add GDELT if table exists
+        if table_exists('gdelt_events'):
+            export_options["GDELT Events"] = "SELECT * FROM gdelt_events ORDER BY timestamp DESC LIMIT 1000"
 
         selected_export = st.selectbox("Select data to export", list(export_options.keys()))
 
