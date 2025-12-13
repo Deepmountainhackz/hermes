@@ -1,7 +1,13 @@
 """
-Hermes Intelligence Platform Dashboard v6.9
+Hermes Intelligence Platform Dashboard v6.12
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
+
+Performance optimizations:
+- Connection pooling for database queries
+- Aggressive caching with st.cache_data
+- Fragment caching for expensive UI components
+- Optimized session state management
 """
 
 import streamlit as st
@@ -14,6 +20,7 @@ from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
 import numpy as np
+from functools import lru_cache
 
 # Load environment variables (for local development)
 load_dotenv()
@@ -96,17 +103,23 @@ def get_db_config():
     }
 
 
-def get_db_connection():
-    """Get a database connection using psycopg3."""
+# Connection pool for better performance - cached as resource
+@st.cache_resource
+def get_connection_pool():
+    """Get or create a connection pool for database connections (cached)."""
+    from psycopg_pool import ConnectionPool
     config = get_db_config()
-    return psycopg.connect(
-        host=config['host'],
-        port=config['port'],
-        dbname=config['dbname'],
-        user=config['user'],
-        password=config['password'],
-        row_factory=dict_row
+    conninfo = f"host={config['host']} port={config['port']} dbname={config['dbname']} user={config['user']} password={config['password']}"
+    return ConnectionPool(
+        conninfo=conninfo,
+        min_size=2,
+        max_size=10,
+        kwargs={'row_factory': dict_row}
     )
+
+def get_db_connection():
+    """Get a database connection from the pool."""
+    return get_connection_pool().connection()
 
 
 # ============================================================================
@@ -120,9 +133,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling - Modern Dashboard Design v6.9
+# Custom CSS for styling - Modern Dashboard Design v6.12
 CUSTOM_CSS = """
 <style>
+    /* ========================================
+       PERFORMANCE OPTIMIZATIONS
+       ======================================== */
+    * {
+        /* Enable hardware acceleration for smoother animations */
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+
+    /* Reduce paint areas */
+    .stPlotlyChart, .stDataFrame, [data-testid="stMetric"] {
+        will-change: auto;
+        contain: layout style;
+    }
+
     /* ========================================
        DESIGN SYSTEM - CSS Variables
        ======================================== */
@@ -643,6 +671,27 @@ def format_change(value):
     return f"+{value:.2f}%" if value > 0 else f"{value:.2f}%"
 
 
+# Optimized Plotly config for faster rendering
+PLOTLY_CONFIG = {
+    'displayModeBar': False,  # Hide toolbar for cleaner look
+    'staticPlot': False,
+    'responsive': True,
+}
+
+PLOTLY_LAYOUT_DEFAULTS = {
+    'margin': dict(l=40, r=40, t=40, b=40),
+    'paper_bgcolor': 'rgba(0,0,0,0)',
+    'plot_bgcolor': 'rgba(0,0,0,0)',
+    'font': dict(family='system-ui, -apple-system, sans-serif'),
+}
+
+
+def render_chart(fig, key=None, use_container_width=True):
+    """Render a Plotly chart with optimized settings."""
+    fig.update_layout(**PLOTLY_LAYOUT_DEFAULTS)
+    st.plotly_chart(fig, use_container_width=use_container_width, config=PLOTLY_CONFIG, key=key)
+
+
 def page_title(title, subtitle=None):
     """Display a colored page title based on its category grouping."""
     category = PAGE_CATEGORIES.get(title, 'cat_tools')
@@ -1092,7 +1141,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.12 - Dynamic Category Nav Colors")
+st.sidebar.caption("v6.13 - Performance Optimizations")
 
 
 # ============================================================================
