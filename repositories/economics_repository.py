@@ -25,7 +25,7 @@ class EconomicsRepository:
         CREATE TABLE IF NOT EXISTS economic_indicators (
             id SERIAL PRIMARY KEY,
             indicator VARCHAR(50) NOT NULL,
-            country VARCHAR(3) NOT NULL,
+            country VARCHAR(50) NOT NULL,
             name VARCHAR(255),
             value DECIMAL(20, 4),
             unit VARCHAR(50),
