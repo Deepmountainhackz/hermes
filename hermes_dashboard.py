@@ -364,6 +364,8 @@ def format_large_number(value):
     """Format large numbers with K, M, B suffixes"""
     if value is None:
         return "N/A"
+    # Convert Decimal to float to avoid division errors
+    value = float(value)
     if value >= 1e12:
         return f"${value/1e12:.2f}T"
     if value >= 1e9:
@@ -1771,6 +1773,8 @@ elif page == "Global Development":
                                 with cols[idx % len(cols)]:
                                     value = row['value']
                                     if pd.notna(value):
+                                        # Convert Decimal to float to avoid division errors
+                                        value = float(value)
                                         # Format based on magnitude
                                         if abs(value) >= 1e12:
                                             display_val = f"${value/1e12:.1f}T"
@@ -2279,7 +2283,7 @@ elif page == "Weather & Globe":
         # Globe controls
         col1, col2 = st.columns(2)
         with col1:
-            projection = st.selectbox("Projection", ["orthographic", "natural earth", "equirectangular"])
+            projection = st.selectbox("Projection", ["orthographic", "naturalEarth", "equirectangular"])
         with col2:
             rotation = st.slider("Rotation (Longitude)", -180, 180, 0)
 
@@ -2287,18 +2291,21 @@ elif page == "Weather & Globe":
             fig = go.Figure()
 
             # Add weather points
+            # Calculate marker sizes as a list (not Series) to avoid Plotly errors
+            marker_sizes = [max(abs(t) / 3 + 8, 6) for t in map_data['temperature'].tolist()]
+
             fig.add_trace(go.Scattergeo(
-                lon=map_data['lon'],
-                lat=map_data['lat'],
-                text=map_data.apply(lambda r: f"<b>{r['city']}</b><br>Temp: {r['temperature']:.1f}C<br>{r['description']}", axis=1),
+                lon=map_data['lon'].tolist(),
+                lat=map_data['lat'].tolist(),
+                text=map_data.apply(lambda r: f"<b>{r['city']}</b><br>Temp: {r['temperature']:.1f}C<br>{r['description']}", axis=1).tolist(),
                 mode='markers',
                 marker=dict(
-                    size=map_data['temperature'].apply(lambda x: max(abs(x) / 3 + 8, 6)),
-                    color=map_data['temperature'],
+                    size=marker_sizes,
+                    color=map_data['temperature'].tolist(),
                     colorscale='RdYlBu_r',
                     cmin=-10,
                     cmax=40,
-                    colorbar=dict(title="Temp (C)", tickfont=dict(color='#333'), titlefont=dict(color='#333')),
+                    colorbar=dict(title=dict(text="Temp (C)", font=dict(color='#333')), tickfont=dict(color='#333')),
                     line=dict(width=1, color='white')
                 ),
                 hoverinfo='text'
@@ -2306,7 +2313,7 @@ elif page == "Weather & Globe":
 
             # 3D Globe projection (light mode)
             fig.update_geos(
-                projection_type=projection.replace(" ", ""),
+                projection_type=projection,
                 projection_rotation_lon=rotation,
                 showland=True,
                 landcolor='rgb(229, 229, 229)',
