@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v5.2
+Hermes Intelligence Platform Dashboard v6.8
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 """
@@ -655,10 +655,29 @@ st.sidebar.caption("v6.4 - Grouped Navigation")
 if page == "Overview":
     st.title("Hermes Intelligence Platform")
     st.markdown("*Real-time Multi-Layer Intelligence Dashboard*")
+
+    with st.expander("ℹ️ How to Use This Dashboard", expanded=False):
+        st.markdown("""
+        **Welcome to Hermes!** This platform aggregates real-time financial, economic, and global data to help you make informed decisions.
+
+        **Key Sections:**
+        - **Major Indices**: Track the main stock market benchmarks (S&P 500, NASDAQ, etc.)
+        - **Treasury Yield Curve**: Monitor bond yields - a key recession predictor
+        - **Market Pulse**: See today's biggest movers and sentiment indicators
+        - **Market Indicators**: Key ratios used by professional traders
+
+        **Color Coding:**
+        - 🟢 Green = Positive/Rising
+        - 🔴 Red = Negative/Falling
+        - Gray = Neutral or unchanged
+
+        **Data Freshness:** Check the sidebar "Data Freshness" section to see when data was last updated.
+        """)
     st.markdown("---")
 
     # Bloomberg-style Major Indices Section
     st.subheader("📊 Major Indices")
+    st.caption("ETFs tracking major global equity indices. These represent the overall health of stock markets.")
 
     # Index ETF mapping for display names
     INDEX_NAMES = {
@@ -704,6 +723,7 @@ if page == "Overview":
 
     with yield_col:
         st.subheader("📈 Treasury Yield Curve")
+        st.caption("The relationship between short and long-term US government bond yields.")
 
         # Fetch Treasury yields
         treasury_df = load_data("""
@@ -779,6 +799,16 @@ if page == "Overview":
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
+                with st.expander("📚 Understanding the Yield Curve"):
+                    st.markdown("""
+                    **What is it?** The yield curve shows interest rates on US Treasury bonds across different maturities.
+
+                    **Normal Curve (Upward Sloping):** Long-term rates > short-term rates. This is healthy - investors expect growth and demand higher returns for locking money longer.
+
+                    **Inverted Curve (Downward Sloping):** Short-term rates > long-term rates. **This is a recession warning!** Historically, an inverted yield curve has preceded every US recession in the last 50 years.
+
+                    **The 10Y-2Y Spread:** The most watched indicator. When negative (inverted), it signals that investors expect the Fed to cut rates due to economic weakness.
+                    """)
             else:
                 st.info("No Treasury yield data")
         else:
@@ -786,6 +816,7 @@ if page == "Overview":
 
     with rates_col:
         st.subheader("📊 Key Rates")
+        st.caption("Central bank rates and key spreads that drive financial markets.")
 
         # Fed Funds Rate
         fed_rate = load_data("""
@@ -828,6 +859,7 @@ if page == "Overview":
 
     # Key Highlights Section - Top movers and sentiment
     st.subheader("Market Pulse")
+    st.caption("Today's biggest movers and key sentiment indicators at a glance.")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -895,10 +927,27 @@ if page == "Overview":
         except Exception:
             st.metric("Crypto F&G", "N/A", "-")
 
+    with st.expander("📚 Understanding VIX & Fear/Greed"):
+        st.markdown("""
+        **VIX (Volatility Index):** Often called the "Fear Gauge." Measures expected stock market volatility over the next 30 days.
+        - **Below 15:** Low fear, complacent markets (sometimes a contrarian sell signal)
+        - **15-20:** Normal market conditions
+        - **20-25:** Elevated uncertainty
+        - **Above 25:** High fear, market stress (sometimes a contrarian buy signal)
+
+        **Crypto Fear & Greed Index:** Analyzes crypto market sentiment from 0-100.
+        - **0-25 Extreme Fear:** Investors worried, potential buying opportunity
+        - **25-45 Fear:** Cautious sentiment
+        - **45-55 Neutral:** Balanced sentiment
+        - **55-75 Greed:** Optimistic sentiment
+        - **75-100 Extreme Greed:** FOMO, potential sell signal
+        """)
+
     st.markdown("---")
 
     # Bloomberg-style: Gold/Oil Ratio, 52-Week Stats, BTC Dominance
     st.subheader("📊 Market Indicators")
+    st.caption("Professional ratios and technical levels used by institutional traders.")
 
     ind_col1, ind_col2, ind_col3, ind_col4 = st.columns(4)
 
@@ -982,10 +1031,31 @@ if page == "Overview":
         else:
             st.metric("Gold", "N/A", "Run commodities")
 
+    with st.expander("📚 Understanding Market Indicators"):
+        st.markdown("""
+        **Gold/Oil Ratio:** Compares gold (safe haven) to oil (economic activity). Historical average ~16.
+        - **Above 25:** Risk-off sentiment - investors prefer safety
+        - **Below 15:** Risk-on sentiment - confidence in economic growth
+        - Used to gauge overall market fear vs. optimism
+
+        **52-Week Range:** Shows where current price sits relative to its yearly high/low.
+        - **Near High (>90%):** Bullish momentum, but potential resistance
+        - **Near Low (<10%):** Bearish pressure, but potential support
+        - Helps identify overbought/oversold conditions
+
+        **BTC Dominance:** Bitcoin's share of total crypto market cap.
+        - **High (>55%):** "Flight to safety" within crypto - altcoins underperforming
+        - **Low (<40%):** "Altseason" - speculative capital flowing to smaller coins
+        - Useful for crypto portfolio allocation decisions
+
+        **Gold:** The ultimate safe-haven asset. Rising gold often signals inflation fears or geopolitical uncertainty.
+        """)
+
     st.markdown("---")
 
     # Data stats row
     st.subheader("Data Overview")
+    st.caption("Total records in Hermes database by category.")
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
@@ -1210,10 +1280,30 @@ if page == "Overview":
 elif page == "Markets":
     st.title("Market Intelligence")
     st.markdown("*Stocks, Commodities, and Forex*")
+
+    with st.expander("ℹ️ Understanding Stock Markets", expanded=False):
+        st.markdown("""
+        **What You'll Find Here:**
+        - **Global Market Hours**: See which exchanges are open around the world
+        - **Stock Data**: Real-time prices, changes, and volume for tracked equities
+        - **Technical Indicators**: Moving averages, RSI, and trend analysis
+
+        **Key Concepts:**
+        - **Volume**: Number of shares traded - high volume confirms price movements
+        - **Change %**: Daily price change as a percentage
+        - **Market Cap**: Company value = Share Price × Total Shares Outstanding
+        - **P/E Ratio**: Price-to-Earnings - how much investors pay per dollar of earnings
+
+        **Trading Sessions:**
+        - Markets follow their local timezone
+        - Pre-market (4:00-9:30 AM ET) and After-hours (4:00-8:00 PM ET) have lower liquidity
+        - Overlapping sessions (e.g., US/Europe) often see higher volatility
+        """)
     st.markdown("---")
 
     # ========== GLOBAL MARKET HOURS SECTION ==========
     st.subheader("🌍 Global Market Hours")
+    st.caption("Real-time trading status for major world exchanges.")
 
     from datetime import datetime, time as dt_time
     import pytz
@@ -2005,10 +2095,39 @@ elif page == "Crypto":
 
 elif page == "Economic Indicators":
     st.title("Economic Indicators")
+
+    with st.expander("ℹ️ Understanding Economic Indicators", expanded=False):
+        st.markdown("""
+        **What Are Economic Indicators?**
+        Data points released by governments and institutions that measure economic health. Markets react strongly to these releases.
+
+        **Key Indicator Categories:**
+
+        | Category | Key Indicators | Why It Matters |
+        |----------|---------------|----------------|
+        | **Growth** | GDP, Industrial Production | Overall economic output |
+        | **Employment** | NFP, Unemployment Rate | Consumer spending power |
+        | **Inflation** | CPI, PPI, PCE | Purchasing power & Fed policy |
+        | **Central Banks** | Fed Funds Rate, ECB Rate | Cost of borrowing |
+        | **Consumer** | Retail Sales, Confidence | 70% of US GDP is consumption |
+        | **Housing** | Housing Starts, Home Sales | Interest rate sensitive |
+
+        **Reading the Data:**
+        - **Beat** (actual > consensus): Usually bullish for stocks, may be hawkish for rates
+        - **Miss** (actual < consensus): Usually bearish for stocks, may be dovish for rates
+        - **In-Line**: Minimal market reaction
+
+        **Most Market-Moving Events:**
+        1. FOMC Rate Decisions & Dot Plot
+        2. Non-Farm Payrolls (NFP) - First Friday monthly
+        3. CPI Inflation - Mid-month
+        4. GDP - End of month quarterly
+        """)
     st.markdown("---")
 
     # ========== ECONOMIC CALENDAR SECTION ==========
     st.subheader("📅 Economic Calendar")
+    st.caption("Upcoming high-impact economic events that move markets.")
 
     from datetime import datetime, timedelta
     import calendar
@@ -5931,6 +6050,37 @@ elif page == "Correlation Analysis":
 elif page == "Risk Metrics":
     st.title("Risk Metrics & Portfolio Analytics")
     st.markdown("*Value at Risk, volatility analysis, and risk-adjusted returns*")
+
+    with st.expander("ℹ️ Understanding Risk Metrics", expanded=False):
+        st.markdown("""
+        **Key Risk Measures:**
+
+        | Metric | What It Measures | Interpretation |
+        |--------|-----------------|----------------|
+        | **VaR (Value at Risk)** | Maximum expected loss at confidence level | "95% confident won't lose more than X" |
+        | **CVaR (Conditional VaR)** | Average loss when VaR is exceeded | Expected loss in worst-case scenarios |
+        | **Volatility (Std Dev)** | How much returns fluctuate | Higher = more risk |
+        | **Sharpe Ratio** | Return per unit of risk | Higher = better risk-adjusted return |
+        | **Max Drawdown** | Largest peak-to-trough decline | Worst historical loss |
+
+        **VaR Confidence Levels:**
+        - **95% VaR**: Expected to be exceeded ~12 times per year
+        - **99% VaR**: Expected to be exceeded ~2-3 times per year
+
+        **Volatility Rules of Thumb:**
+        - **<10%**: Low volatility (bonds, utilities)
+        - **10-20%**: Moderate (large-cap stocks)
+        - **20-30%**: High (small-caps, commodities)
+        - **>30%**: Very high (crypto, emerging markets)
+
+        **Sharpe Ratio Benchmarks:**
+        - **<0**: Losing money on risk-adjusted basis
+        - **0-1**: Subpar risk-adjusted returns
+        - **1-2**: Good risk-adjusted returns
+        - **>2**: Excellent (rare for long periods)
+
+        **Important**: Past volatility doesn't guarantee future volatility. Tail risks (rare events) can exceed historical measures.
+        """)
     st.markdown("---")
 
     # Load stock data for risk calculations
@@ -6195,6 +6345,31 @@ elif page == "Risk Metrics":
 elif page == "Economic Calendar":
     st.title("Economic Calendar")
     st.markdown("*Upcoming data releases and market-moving events*")
+
+    with st.expander("ℹ️ Trading the Economic Calendar", expanded=False):
+        st.markdown("""
+        **Why Economic Releases Matter:**
+        Markets often move sharply when actual data differs from expectations (the "forecast" or consensus).
+
+        **Importance Levels:**
+        - **Critical**: FOMC, NFP, CPI - Can move markets 1-2%+ instantly
+        - **High**: GDP, Retail Sales, PMI - Significant market impact
+        - **Medium**: Housing, Claims - Moderate short-term impact
+        - **Low**: Regional data - Usually limited impact
+
+        **Trading Tips:**
+        1. **Before Release**: Volatility often compresses (calm before storm)
+        2. **On Release**: Initial move can be violent and often reverses
+        3. **After Digestion**: True trend emerges 15-30 minutes post-release
+
+        **Key Times (ET):**
+        - 08:30 AM - Most US economic data
+        - 10:00 AM - ISM, Consumer data
+        - 02:00 PM - FOMC announcements
+        - 02:30 PM - Fed Chair press conferences
+
+        **Pro Tip**: Focus on the *surprise* (actual vs forecast), not absolute numbers.
+        """)
     st.markdown("---")
 
     # Economic Calendar Data (curated upcoming events)
@@ -7273,6 +7448,37 @@ elif page == "Calculators":
 elif page == "Bond Markets":
     st.title("Bond Markets & Fixed Income")
     st.markdown("*Treasury yields, credit spreads, and global sovereign debt*")
+
+    with st.expander("ℹ️ Understanding Bond Markets", expanded=False):
+        st.markdown("""
+        **Bond Basics:**
+        - **Yield**: The return you earn holding the bond to maturity
+        - **Price & Yield are Inverse**: When yields rise, bond prices fall (and vice versa)
+        - **Duration**: How sensitive a bond is to interest rate changes
+        - **Maturity**: Time until the bond repays principal
+
+        **US Treasury Maturities:**
+        | Type | Maturity | Typical Use |
+        |------|----------|-------------|
+        | T-Bills | <1 year | Cash equivalent, money markets |
+        | T-Notes | 2-10 years | Core fixed income allocation |
+        | T-Bonds | 20-30 years | Long-duration, rate-sensitive |
+        | TIPS | Various | Inflation protection |
+
+        **Key Spreads:**
+        - **2Y-10Y Spread**: Most-watched recession indicator. Inverted (negative) = recession warning
+        - **3M-10Y Spread**: Fed's preferred spread. Inverted for 18+ months signals trouble
+        - **Credit Spreads**: Difference between corporate bonds and Treasuries. Widening = stress
+
+        **What Moves Bond Yields:**
+        - **Fed Policy**: Rate hikes push short-end up
+        - **Inflation**: Higher inflation = higher yields demanded
+        - **Economic Growth**: Strong growth = higher yields
+        - **Flight to Safety**: Crisis = yields fall (prices rise)
+        - **Supply**: More Treasury issuance = upward pressure on yields
+
+        **Basis Points (bp)**: 1 bp = 0.01%. So 100 bp = 1%.
+        """)
     st.markdown("---")
 
     bond_tab1, bond_tab2, bond_tab3, bond_tab4 = st.tabs([
@@ -7460,6 +7666,29 @@ elif page == "Bond Markets":
 elif page == "Sector Analysis":
     st.title("S&P 500 Sector Analysis")
     st.markdown("*Sector performance, rotation analysis, and ETF comparisons*")
+
+    with st.expander("ℹ️ Understanding Sector Analysis", expanded=False):
+        st.markdown("""
+        **Why Sectors Matter:**
+        The S&P 500 is divided into 11 sectors. Understanding sector performance helps with:
+        - **Asset Allocation**: Diversify across sectors to reduce risk
+        - **Cycle Positioning**: Different sectors lead at different economic stages
+        - **Relative Strength**: Identify which areas of the market are leading or lagging
+
+        **The 11 GICS Sectors:**
+        | Sector | Key Companies | Sensitive To |
+        |--------|--------------|--------------|
+        | Technology (XLK) | AAPL, MSFT, NVDA | Interest rates, Innovation |
+        | Healthcare (XLV) | JNJ, UNH, PFE | Regulation, Demographics |
+        | Financials (XLF) | JPM, BRK, BAC | Interest rates, Credit |
+        | Consumer Disc. (XLY) | AMZN, TSLA, HD | Consumer spending |
+        | Industrials (XLI) | CAT, UPS, HON | Manufacturing, Trade |
+        | Energy (XLE) | XOM, CVX | Oil prices, Demand |
+        | Utilities (XLU) | NEE, DUK | Interest rates (bond proxy) |
+        | Real Estate (XLRE) | AMT, PLD | Interest rates, Occupancy |
+
+        **Sector Rotation**: As the economy moves through cycles, certain sectors outperform. Early recovery favors cyclicals; late cycle favors defensives.
+        """)
     st.markdown("---")
 
     sector_tab1, sector_tab2, sector_tab3, sector_tab4 = st.tabs([
@@ -9088,6 +9317,38 @@ elif page == "Time Series":
 elif page == "Options Flow":
     st.title("Options Flow & Derivatives")
     st.markdown("*Put/call ratios, unusual activity, and implied volatility*")
+
+    with st.expander("ℹ️ Understanding Options Flow", expanded=False):
+        st.markdown("""
+        **Options Basics:**
+        - **Call**: Right to BUY at strike price (bullish bet)
+        - **Put**: Right to SELL at strike price (bearish bet or hedge)
+        - **Premium**: Price paid for the option contract
+        - **Strike**: The agreed price to buy/sell
+        - **Expiration**: When the option contract expires
+
+        **Key Metrics:**
+
+        | Metric | What It Tells You |
+        |--------|------------------|
+        | **Put/Call Ratio** | Ratio of puts to calls traded. >1 = bearish sentiment, <1 = bullish |
+        | **Implied Volatility (IV)** | Market's expectation of future price movement |
+        | **IV Rank** | Current IV vs. past year. High = options expensive |
+        | **Unusual Activity** | Large trades that may signal institutional positioning |
+        | **Max Pain** | Strike price where most options expire worthless |
+
+        **Put/Call Ratio Interpretation:**
+        - **<0.7**: Extreme bullishness (contrarian bearish)
+        - **0.7-0.9**: Moderately bullish sentiment
+        - **0.9-1.1**: Neutral
+        - **>1.1**: Elevated fear/hedging (contrarian bullish)
+
+        **Following "Smart Money":**
+        Large options trades (especially sweeps that cross multiple exchanges) can signal institutional positioning. Look for:
+        - Unusual volume (>5x average)
+        - Large premium paid
+        - Out-of-the-money strikes with near expiration
+        """)
     st.markdown("---")
 
     opt_tab1, opt_tab2, opt_tab3, opt_tab4 = st.tabs([

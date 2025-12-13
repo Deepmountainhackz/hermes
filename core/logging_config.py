@@ -21,7 +21,7 @@ def add_timestamp(logger, method_name, event_dict):
 def add_service_info(logger, method_name, event_dict):
     """Add service identification to log events."""
     event_dict["service"] = "hermes"
-    event_dict["version"] = "6.7"
+    event_dict["version"] = "6.8"
     return event_dict
 
 
