@@ -1,6 +1,6 @@
 """
-Hermes Intelligence Platform Dashboard v4.0
-Multi-layer intelligence with 3D globe, time-series analysis, and GDELT integration
+Hermes Intelligence Platform Dashboard v4.2
+Enhanced UX with gauges, sparklines, data freshness, and improved styling
 """
 
 import streamlit as st
@@ -12,6 +12,7 @@ import os
 from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
+import numpy as np
 
 # Load environment variables (for local development)
 load_dotenv()
@@ -108,7 +109,7 @@ def get_db_connection():
 
 
 # ============================================================================
-# PAGE CONFIGURATION WITH DARK MODE
+# PAGE CONFIGURATION
 # ============================================================================
 
 st.set_page_config(
@@ -118,7 +119,63 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Light mode - clean default Streamlit styling
+# Custom CSS for styling
+CUSTOM_CSS = """
+<style>
+    /* Color classes for change values */
+    .positive { color: #00c853; font-weight: 600; }
+    .negative { color: #ff1744; font-weight: 600; }
+    .neutral { color: #757575; }
+
+    /* Card styling */
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        color: white;
+    }
+
+    /* Alert boxes */
+    .alert-box {
+        background-color: #ffebee;
+        border-left: 4px solid #f44336;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .success-box {
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+
+    /* Data freshness indicator */
+    .freshness-good { color: #4caf50; }
+    .freshness-warning { color: #ff9800; }
+    .freshness-stale { color: #f44336; }
+
+    /* Tooltip styling */
+    .tooltip-icon {
+        color: #9e9e9e;
+        cursor: help;
+        font-size: 0.8rem;
+    }
+
+    /* Market status */
+    .market-open { background-color: #e8f5e9; color: #2e7d32; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
+    .market-closed { background-color: #ffebee; color: #c62828; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
+</style>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================================
@@ -198,15 +255,131 @@ def export_csv(df, filename):
     )
 
 
-def get_dark_plotly_layout():
-    """Standard dark theme layout for Plotly charts"""
+def get_clean_plotly_layout():
+    """Standard clean layout for Plotly charts (light mode)"""
     return dict(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font=dict(color='#333'),
+        xaxis=dict(gridcolor='rgba(0,0,0,0.1)', zerolinecolor='rgba(0,0,0,0.2)'),
+        yaxis=dict(gridcolor='rgba(0,0,0,0.1)', zerolinecolor='rgba(0,0,0,0.2)')
+    )
+
+
+def get_data_freshness(table_name):
+    """Get data freshness status for a table"""
+    try:
+        df = load_data(f"SELECT MAX(timestamp) as latest FROM {table_name}")
+        if df.empty or df['latest'].iloc[0] is None:
+            return None, "stale", "No data"
+        latest = pd.to_datetime(df['latest'].iloc[0])
+        age = datetime.now() - latest.replace(tzinfo=None)
+        hours = age.total_seconds() / 3600
+
+        if hours < 1:
+            return latest, "good", f"{int(age.total_seconds() / 60)}m ago"
+        elif hours < 6:
+            return latest, "good", f"{hours:.1f}h ago"
+        elif hours < 24:
+            return latest, "warning", f"{hours:.1f}h ago"
+        else:
+            return latest, "stale", f"{hours / 24:.1f}d ago"
+    except Exception:
+        return None, "stale", "Error"
+
+
+def is_market_open():
+    """Check if US stock market is open (simplified)"""
+    now = datetime.now()
+    # NYSE hours: 9:30 AM - 4:00 PM ET, Mon-Fri
+    # Simplified: assume ET timezone
+    weekday = now.weekday()
+    hour = now.hour
+
+    if weekday >= 5:  # Weekend
+        return False, "Weekend"
+    if hour < 9 or (hour == 9 and now.minute < 30):
+        return False, "Pre-market"
+    if hour >= 16:
+        return False, "After hours"
+    return True, "Open"
+
+
+def create_sparkline(data, color='#1976d2'):
+    """Create a mini sparkline chart"""
+    if len(data) < 2:
+        return None
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        y=data,
+        mode='lines',
+        line=dict(color=color, width=1.5),
+        fill='tozeroy',
+        fillcolor=f'rgba{tuple(list(int(color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)) + [0.1])}'
+    ))
+    fig.update_layout(
+        height=40,
+        margin=dict(l=0, r=0, t=0, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white'),
-        xaxis=dict(gridcolor='rgba(128,128,128,0.2)', zerolinecolor='rgba(128,128,128,0.2)'),
-        yaxis=dict(gridcolor='rgba(128,128,128,0.2)', zerolinecolor='rgba(128,128,128,0.2)')
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        showlegend=False
     )
+    return fig
+
+
+def create_gauge_chart(value, title, min_val=0, max_val=100):
+    """Create a gauge chart for sentiment indicators"""
+    # Determine color based on value
+    if value <= 25:
+        color = "#f44336"  # Red - Extreme Fear
+    elif value <= 45:
+        color = "#ff9800"  # Orange - Fear
+    elif value <= 55:
+        color = "#9e9e9e"  # Gray - Neutral
+    elif value <= 75:
+        color = "#8bc34a"  # Light Green - Greed
+    else:
+        color = "#4caf50"  # Green - Extreme Greed
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': title, 'font': {'size': 14}},
+        gauge={
+            'axis': {'range': [min_val, max_val], 'tickwidth': 1},
+            'bar': {'color': color},
+            'bgcolor': "white",
+            'borderwidth': 2,
+            'bordercolor': "#e0e0e0",
+            'steps': [
+                {'range': [0, 25], 'color': '#ffebee'},
+                {'range': [25, 45], 'color': '#fff3e0'},
+                {'range': [45, 55], 'color': '#fafafa'},
+                {'range': [55, 75], 'color': '#f1f8e9'},
+                {'range': [75, 100], 'color': '#e8f5e9'}
+            ],
+            'threshold': {
+                'line': {'color': "black", 'width': 2},
+                'thickness': 0.75,
+                'value': value
+            }
+        }
+    ))
+    fig.update_layout(
+        height=200,
+        margin=dict(l=20, r=20, t=40, b=20),
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig
+
+
+def info_tooltip(text):
+    """Create an info tooltip icon with hover text"""
+    return f' <span class="tooltip-icon" title="{text}">ⓘ</span>'
 
 
 # ============================================================================
@@ -214,6 +387,12 @@ def get_dark_plotly_layout():
 # ============================================================================
 
 st.sidebar.title("Hermes Intelligence")
+
+# Market Status Banner
+market_open, market_status = is_market_open()
+status_class = "market-open" if market_open else "market-closed"
+st.sidebar.markdown(f'<p><span class="{status_class}">US Markets: {market_status}</span></p>', unsafe_allow_html=True)
+
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
@@ -225,13 +404,23 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
-if st.sidebar.button("Refresh Data"):
+# Data Freshness Indicators
+st.sidebar.markdown("**Data Freshness**")
+freshness_tables = ['stocks', 'crypto', 'weather', 'news']
+for table in freshness_tables:
+    _, status, age_str = get_data_freshness(table)
+    icon = "🟢" if status == "good" else "🟡" if status == "warning" else "🔴"
+    st.sidebar.caption(f"{icon} {table.title()}: {age_str}")
+
+st.sidebar.markdown("---")
+
+if st.sidebar.button("Refresh Data", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Last Refresh: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-st.sidebar.caption("v4.1 - Sentiment + Yields + Central Bank")
+st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.sidebar.caption("v4.2 - Enhanced UX")
 
 
 # ============================================================================
@@ -241,6 +430,68 @@ st.sidebar.caption("v4.1 - Sentiment + Yields + Central Bank")
 if page == "Overview":
     st.title("Hermes Intelligence Platform")
     st.markdown("### Real-time Multi-Layer Intelligence Dashboard")
+
+    # Key Highlights Section
+    st.markdown("---")
+    st.subheader("Key Highlights")
+
+    highlights = []
+
+    # Get key data for highlights
+    stocks_df = load_data("""
+        SELECT symbol, price, change_percent
+        FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
+        ORDER BY ABS(change_percent) DESC NULLS LAST LIMIT 1
+    """)
+    if not stocks_df.empty:
+        row = stocks_df.iloc[0]
+        change = row.get('change_percent', 0) or 0
+        direction = "up" if change > 0 else "down"
+        highlights.append(f"**{row['symbol']}** {direction} **{abs(change):.1f}%** at ${row['price']:.2f}")
+
+    crypto_df = load_data("""
+        SELECT symbol, price, change_percent_24h
+        FROM crypto WHERE timestamp = (SELECT MAX(timestamp) FROM crypto)
+        ORDER BY ABS(change_percent_24h) DESC NULLS LAST LIMIT 1
+    """)
+    if not crypto_df.empty:
+        row = crypto_df.iloc[0]
+        change = row.get('change_percent_24h', 0) or 0
+        direction = "up" if change > 0 else "down"
+        highlights.append(f"**{row['symbol']}** {direction} **{abs(change):.1f}%** (24h)")
+
+    # VIX from economics
+    vix_df = load_data("""
+        SELECT value FROM economic_indicators
+        WHERE indicator = 'VIXCLS' AND country = 'USA'
+        ORDER BY timestamp DESC LIMIT 1
+    """)
+    if not vix_df.empty and vix_df['value'].iloc[0]:
+        vix = float(vix_df['value'].iloc[0])
+        vix_status = "elevated" if vix > 20 else "low" if vix < 15 else "normal"
+        highlights.append(f"**VIX** at **{vix:.1f}** ({vix_status} volatility)")
+
+    # Crypto Fear & Greed (quick fetch)
+    try:
+        import requests
+        fng_resp = requests.get("https://api.alternative.me/fng/?limit=1", timeout=5)
+        if fng_resp.status_code == 200:
+            fng_data = fng_resp.json()
+            if 'data' in fng_data and fng_data['data']:
+                fng_val = fng_data['data'][0]['value']
+                fng_class = fng_data['data'][0]['value_classification']
+                highlights.append(f"Crypto sentiment: **{fng_class}** ({fng_val})")
+    except Exception:
+        pass
+
+    if highlights:
+        cols = st.columns(len(highlights))
+        for i, highlight in enumerate(highlights):
+            with cols[i]:
+                st.info(highlight)
+    else:
+        st.info("Run collectors to see key highlights")
+
     st.markdown("---")
 
     # System Stats
@@ -396,12 +647,46 @@ elif page == "Markets":
                 st.metric("Avg Change", f"{avg:.2f}%")
 
             st.markdown("---")
-            display_df = latest_stocks[['symbol', 'name', 'price', 'change_percent', 'volume']].copy()
-            display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}" if x else "N/A")
-            display_df['change_percent'] = display_df['change_percent'].apply(format_change)
-            display_df['volume'] = display_df['volume'].apply(lambda x: f"{x:,.0f}" if x else "N/A")
-            display_df.columns = ['Symbol', 'Name', 'Price', 'Change %', 'Volume']
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            # View toggle: Table or Heatmap
+            view_mode = st.radio("View Mode", ["Table", "Heatmap"], horizontal=True)
+
+            if view_mode == "Table":
+                display_df = latest_stocks[['symbol', 'name', 'price', 'change_percent', 'volume']].copy()
+                display_df['price'] = display_df['price'].apply(lambda x: f"${x:.2f}" if x else "N/A")
+                display_df['change_percent'] = display_df['change_percent'].apply(format_change)
+                display_df['volume'] = display_df['volume'].apply(lambda x: f"{x:,.0f}" if x else "N/A")
+                display_df.columns = ['Symbol', 'Name', 'Price', 'Change %', 'Volume']
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+            else:
+                # Treemap heatmap showing stock performance
+                heatmap_df = latest_stocks[['symbol', 'name', 'price', 'change_percent', 'volume']].copy()
+                heatmap_df['change_percent'] = heatmap_df['change_percent'].fillna(0)
+                heatmap_df['volume'] = heatmap_df['volume'].fillna(1)
+                heatmap_df['display_text'] = heatmap_df.apply(
+                    lambda r: f"{r['symbol']}<br>${r['price']:.2f}<br>{r['change_percent']:+.2f}%", axis=1
+                )
+
+                fig = px.treemap(
+                    heatmap_df,
+                    path=['symbol'],
+                    values='volume',
+                    color='change_percent',
+                    color_continuous_scale='RdYlGn',
+                    color_continuous_midpoint=0,
+                    custom_data=['name', 'price', 'change_percent']
+                )
+                fig.update_traces(
+                    textinfo='label+text',
+                    texttemplate='<b>%{label}</b><br>$%{customdata[1]:.2f}<br>%{customdata[2]:+.2f}%',
+                    hovertemplate='<b>%{customdata[0]}</b><br>Symbol: %{label}<br>Price: $%{customdata[1]:.2f}<br>Change: %{customdata[2]:+.2f}%<extra></extra>'
+                )
+                fig.update_layout(
+                    **get_clean_plotly_layout(),
+                    height=500,
+                    margin=dict(l=10, r=10, t=30, b=10)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.caption("Size represents trading volume. Color shows daily change (green=gain, red=loss).")
 
     with tab2:
         st.subheader("Commodity Prices")
@@ -563,7 +848,7 @@ elif page == "Economic Indicators":
                 fig = px.bar(latest_comparison, x='country', y='value',
                             title=f"{selected_indicator} by Country",
                             color='value', color_continuous_scale='Blues')
-                fig.update_layout(**get_dark_plotly_layout(), height=400)
+                fig.update_layout(**get_clean_plotly_layout(), height=400)
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -942,32 +1227,34 @@ elif page == "Weather & Globe":
                     colorscale='RdYlBu_r',
                     cmin=-10,
                     cmax=40,
-                    colorbar=dict(title="Temp (C)", tickfont=dict(color='white')),
+                    colorbar=dict(title="Temp (C)", tickfont=dict(color='#333'), titlefont=dict(color='#333')),
                     line=dict(width=1, color='white')
                 ),
                 hoverinfo='text'
             ))
 
-            # 3D Globe projection
+            # 3D Globe projection (light mode)
             fig.update_geos(
                 projection_type=projection.replace(" ", ""),
                 projection_rotation_lon=rotation,
                 showland=True,
-                landcolor='rgb(40, 40, 40)',
+                landcolor='rgb(229, 229, 229)',
                 showocean=True,
-                oceancolor='rgb(20, 30, 50)',
+                oceancolor='rgb(173, 216, 230)',
                 showlakes=True,
-                lakecolor='rgb(30, 40, 60)',
+                lakecolor='rgb(135, 206, 250)',
                 showcoastlines=True,
-                coastlinecolor='rgb(80, 80, 80)',
+                coastlinecolor='rgb(100, 100, 100)',
+                showcountries=True,
+                countrycolor='rgb(150, 150, 150)',
                 showframe=False,
-                bgcolor='rgba(0,0,0,0)'
+                bgcolor='white'
             )
 
             fig.update_layout(
                 height=600,
-                paper_bgcolor='rgba(0,0,0,0)',
-                geo=dict(bgcolor='rgba(0,0,0,0)'),
+                paper_bgcolor='white',
+                geo=dict(bgcolor='white'),
                 margin=dict(l=0, r=0, t=0, b=0)
             )
 
@@ -1085,7 +1372,7 @@ elif page == "Global Events":
                 country_counts = gdelt_df['country'].value_counts().head(15)
                 fig = px.bar(x=country_counts.index, y=country_counts.values,
                             title="Events by Country", labels={'x': 'Country', 'y': 'Event Count'})
-                fig.update_layout(**get_dark_plotly_layout(), height=400)
+                fig.update_layout(**get_clean_plotly_layout(), height=400)
                 st.plotly_chart(fig, use_container_width=True)
 
             with tab3:
@@ -1094,7 +1381,7 @@ elif page == "Global Events":
                 fig = px.bar(x=country_tone.values, y=country_tone.index, orientation='h',
                             title="Average Sentiment by Country (Negative = Unrest)",
                             color=country_tone.values, color_continuous_scale='RdYlGn')
-                fig.update_layout(**get_dark_plotly_layout(), height=500)
+                fig.update_layout(**get_clean_plotly_layout(), height=500)
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -1172,7 +1459,7 @@ elif page == "Time Series":
                 ))
                 fig.update_layout(
                     title=f"{selected_symbol} Price History",
-                    **get_dark_plotly_layout(),
+                    **get_clean_plotly_layout(),
                     height=400
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -1214,7 +1501,7 @@ elif page == "Time Series":
                 ))
                 fig.update_layout(
                     title=f"{selected_symbol} Price History",
-                    **get_dark_plotly_layout(),
+                    **get_clean_plotly_layout(),
                     height=400
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -1250,7 +1537,7 @@ elif page == "Time Series":
 
                 fig.update_layout(
                     title=f"{selected_indicator} - Cross Country Comparison",
-                    **get_dark_plotly_layout(),
+                    **get_clean_plotly_layout(),
                     height=400
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -1285,7 +1572,7 @@ elif page == "Time Series":
                 fig.update_layout(
                     title="Temperature Trends",
                     yaxis_title="Temperature (C)",
-                    **get_dark_plotly_layout(),
+                    **get_clean_plotly_layout(),
                     height=400
                 )
                 st.plotly_chart(fig, use_container_width=True)

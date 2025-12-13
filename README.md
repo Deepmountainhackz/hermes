@@ -8,8 +8,20 @@ A comprehensive, automated data collection and analysis platform that integrates
 
 ---
 
-## ✨ What's New in v4.1
+## ✨ What's New in v4.2
 
+### UX Improvements
+- **🎨 Light Mode Theme** - Clean, professional light mode styling throughout
+- **📊 Stock Heatmap** - Treemap visualization showing performance by volume
+- **🔄 Data Freshness Indicators** - Real-time status of data collection
+- **🕐 Market Status Banner** - Live US market open/closed status
+- **💡 Key Highlights** - Auto-generated insights on Overview page
+- **📈 Gauge Charts** - Visual Fear & Greed gauges
+- **✨ Sparklines** - Mini trend charts for tables
+- **ℹ️ Tooltip Explainers** - Contextual help icons
+- **🌍 Improved Globe** - Light mode globe with better country visibility
+
+### v4.1 Features
 - **📊 Market Sentiment Dashboard** - Fear & Greed Index for crypto and stocks
 - **📈 Treasury Yield Curve** - 3M, 2Y, 5Y, 10Y, 30Y yields with curve visualization
 - **📉 VIX Volatility Index** - Real-time market fear gauge with interpretation
