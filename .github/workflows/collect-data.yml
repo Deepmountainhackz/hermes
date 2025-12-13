@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
@@ -27,41 +27,64 @@ jobs:
 
       - name: Run data collection
         env:
+          # Database configuration (matches core/config.py)
           DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
           DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
           DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
           DATABASE_USER: ${{ secrets.DATABASE_USER }}
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          # API keys (matches core/config.py)
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python -c "
           from collectors import (
               MarketsCollector,
               ForexCollector,
               CommoditiesCollector,
+              EconomicsCollector,
               WeatherCollector,
+              SpaceCollector,
+              DisastersCollector,
               NewsCollector
           )
-          from core import config
+          from core import Config
+
+          # Create config instance
+          cfg = Config()
 
           collectors = [
               ('Markets', MarketsCollector),
               ('Forex', ForexCollector),
               ('Commodities', CommoditiesCollector),
+              ('Economics', EconomicsCollector),
               ('Weather', WeatherCollector),
+              ('Space', SpaceCollector),
+              ('Disasters', DisastersCollector),
               ('News', NewsCollector),
           ]
 
           for name, CollectorClass in collectors:
               try:
-                  print(f'Collecting {name} data...')
-                  collector = CollectorClass(config)
+                  print(f'=== Collecting {name} data ===')
+                  collector = CollectorClass(cfg)
                   collector.setup()
                   result = collector.collect()
                   print(f'{name}: {result}')
+                  print()
               except Exception as e:
                   print(f'{name} failed: {e}')
+                  print()
+
+          print('=== Data collection complete ===')
           "
+
+      - name: Collection summary
+        if: always()
+        run: |
+          echo "## Data Collection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at: $(date -u)" >> $GITHUB_STEP_SUMMARY
