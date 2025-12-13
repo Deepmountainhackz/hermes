@@ -31,7 +31,7 @@ class NewsRepository:
             id SERIAL PRIMARY KEY,
             title VARCHAR(500),
             source VARCHAR(100),
-            url TEXT,
+            url TEXT UNIQUE,
             description TEXT,
             published_at TIMESTAMP,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -39,12 +39,28 @@ class NewsRepository:
 
         CREATE INDEX IF NOT EXISTS idx_news_source ON news(source);
         CREATE INDEX IF NOT EXISTS idx_news_timestamp ON news(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_news_url ON news(url);
         """
 
         try:
             with self.db_manager.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(create_query)
+                    # Add unique constraint if it doesn't exist (for existing tables)
+                    cur.execute("""
+                        DO $$
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM pg_constraint WHERE conname = 'news_url_key'
+                            ) THEN
+                                -- Remove duplicates first, keeping only the latest
+                                DELETE FROM news a USING news b
+                                WHERE a.id < b.id AND a.url = b.url;
+                                -- Add unique constraint
+                                ALTER TABLE news ADD CONSTRAINT news_url_key UNIQUE (url);
+                            END IF;
+                        END $$;
+                    """)
                 conn.commit()
             logger.info("News table and indexes created/verified successfully")
         except Exception as e:
@@ -68,6 +84,7 @@ class NewsRepository:
         insert_query = """
         INSERT INTO news (title, source, url, description, published_at, timestamp)
         VALUES (%(title)s, %(source)s, %(url)s, %(description)s, %(published_at)s, %(timestamp)s)
+        ON CONFLICT (url) DO NOTHING
         """
 
         try:
