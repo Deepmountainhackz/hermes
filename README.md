@@ -2,18 +2,29 @@
 
 > **Global Systems Intelligence for Investment Research**
 
-A comprehensive, automated data collection and analysis platform that integrates financial markets, economic indicators, environmental data, space events, and news intelligence to support macro investment decision-making.
+A comprehensive, automated data collection and analysis platform that integrates financial markets, cryptocurrency, economic indicators, environmental data, space events, and news intelligence to support macro investment decision-making.
 
 **Live Dashboard:** [hermes-intelligence.streamlit.app](https://hermes-intelligence.streamlit.app)
 
 ---
 
+## ✨ What's New in v3.0
+
+- **🌙 Dark Mode UI** - Sleek dark theme optimized for data visualization
+- **₿ Cryptocurrency Tracking** - Top 15 cryptos with real-time prices and 24h changes
+- **📥 Data Export** - Download any dataset as CSV with one click
+- **🚨 Smart Alerts** - Automatic detection of significant market moves, crypto volatility, and hazardous NEOs
+- **🎨 Enhanced Visualizations** - All charts optimized for dark mode with better readability
+
+---
+
 ## 🎯 Overview
 
-Hermes is a multi-dimensional intelligence platform designed for serious macro investing. It automatically collects, stores, and visualizes data from multiple global sources every 2 hours, providing a comprehensive view of:
+Hermes is a multi-dimensional intelligence platform designed for serious macro investing. It automatically collects, stores, and visualizes data from multiple global sources every 6 hours, providing a comprehensive view of:
 
 - **Financial Markets** - Stocks, commodities, and forex rates
-- **Economic Indicators** - GDP, unemployment, inflation across major economies  
+- **Cryptocurrency** - Top 15 cryptos by market cap with price tracking
+- **Economic Indicators** - GDP, unemployment, inflation across major economies
 - **Environmental Events** - Weather, earthquakes, wildfires, storms
 - **Space Events** - ISS tracking, near-Earth objects, solar activity
 - **News Intelligence** - Premium financial news sources
@@ -39,6 +50,14 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 
 - **7 Forex Pairs** (Major Currencies vs USD)
   - EUR, GBP, JPY, CHF, AUD, CAD, CNY
+
+### **Cryptocurrency Intelligence**
+- **15 Top Cryptos** by market cap via CoinGecko API
+  - Bitcoin, Ethereum, Tether, BNB, Solana
+  - XRP, Cardano, Dogecoin, Polkadot, Avalanche
+  - Chainlink, Polygon, Litecoin, Uniswap, Stellar
+- **Real-time Data:** Price, 24h change, market cap, volume
+- **Alerts:** Automatic detection of >10% price moves
 
 ### **Economic Indicators**
 - **15 Key Indicators** across 5 major economies
@@ -67,14 +86,14 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
 
 ## 🚀 Automated Data Collection
 
-**Frequency:** Every 2 hours via GitHub Actions  
-**Total Collectors:** 13 independent data collectors  
-**Database:** PostgreSQL (hosted on Railway)  
-**Storage:** 14 normalized tables with proper indexing
+**Frequency:** Every 6 hours via GitHub Actions
+**Total Collectors:** 10 independent data collectors
+**Database:** PostgreSQL (hosted on Railway)
+**Storage:** 15 normalized tables with proper indexing
 
 ### Collection Schedule
 ```
-0 */2 * * * - Runs at: 12:00 AM, 2:00 AM, 4:00 AM, ... (12 times daily)
+0 */6 * * * - Runs at: 12:00 AM, 6:00 AM, 12:00 PM, 6:00 PM (4 times daily)
 ```
 
 All data is automatically collected, validated, and stored without manual intervention.
@@ -97,12 +116,13 @@ All data is automatically collected, validated, and stored without manual interv
 
 ### **APIs Integrated**
 1. **Alpha Vantage** - Stocks, commodities, forex
-2. **FRED (Federal Reserve)** - Economic indicators
-3. **USGS** - Earthquake data
-4. **NASA EONET** - Wildfires and storms
-5. **NASA APIs** - NEO, solar activity, ISS tracking
-6. **OpenWeatherMap** - Global weather data
-7. **NewsAPI** - Premium news sources
+2. **CoinGecko** - Cryptocurrency data (free, no key required)
+3. **FRED (Federal Reserve)** - Economic indicators
+4. **USGS** - Earthquake data
+5. **NASA EONET** - Wildfires and storms
+6. **NASA APIs** - NEO, solar activity, ISS tracking
+7. **OpenWeatherMap** - Global weather data
+8. **NewsAPI** - Premium news sources
 
 ---
 
@@ -110,18 +130,25 @@ All data is automatically collected, validated, and stored without manual interv
 
 ```
 hermes/
-├── services/              # Data collection modules
-│   ├── markets/          # Stock, commodity, forex, economic collectors
-│   ├── environment/      # Weather, earthquake, wildfire, storm collectors
-│   ├── space/            # ISS, NEO, solar collectors
-│   ├── social/           # News collectors
-│   └── geography/        # Country data collectors
+├── core/                  # Core infrastructure
+│   ├── config.py         # Configuration management
+│   ├── database.py       # Database connection manager
+│   └── exceptions.py     # Custom exceptions
+├── services/              # Business logic layer
+│   ├── markets_service.py    # Stocks data
+│   ├── forex_service.py      # Currency exchange
+│   ├── commodities_service.py # Commodities
+│   ├── crypto_service.py     # Cryptocurrency (NEW)
+│   ├── economics_service.py  # Economic indicators
+│   ├── weather_service.py    # Weather data
+│   ├── space_service.py      # Space events
+│   ├── disasters_service.py  # Earthquakes, wildfires, storms
+│   └── news_service.py       # News aggregation
+├── repositories/          # Database operations
+├── collectors/            # Data collection orchestrators
 ├── .github/
 │   └── workflows/        # GitHub Actions automation
-├── docs/                 # Comprehensive documentation
-├── database.py           # Database connection manager
-├── initialize_database.py # Database schema setup
-├── hermes_dashboard.py   # Streamlit web interface
+├── hermes_dashboard.py   # Streamlit web interface (dark mode)
 └── requirements.txt      # Python dependencies
 ```
 
@@ -129,28 +156,42 @@ hermes/
 
 ## 🎨 Dashboard Features
 
-The interactive Streamlit dashboard provides:
+The interactive Streamlit dashboard provides a sleek dark-mode interface:
+
+### **🌙 Dark Mode UI**
+- Professional dark theme throughout
+- Optimized chart colors for readability
+- Custom CSS styling for all components
 
 ### **📈 Markets Overview**
 - Real-time stock prices with interactive charts
-- Historical price trends
-- Sector performance tracking
+- Commodities and forex tracking
+- Sector performance with visual indicators
 
-### **🌍 Environment Globe**
-- 3D interactive globe with H3 hexagonal mapping
+### **₿ Cryptocurrency**
+- Top 15 cryptos by market cap
+- Price, 24h change, market cap, volume
+- Visual price change indicators (green/red)
+
+### **🌍 Weather & Environment**
 - 50 cities with live weather data
-- Earthquake markers (M4.5+)
-- Wildfire and storm locations
+- Temperature, humidity, wind conditions
+- Global coverage across all continents
 
 ### **☄️ Space Events**
-- ISS position tracking on 3D map
-- Near-Earth Object trajectories
-- Solar flare activity
+- ISS position tracking
+- Near-Earth Object monitoring with hazard alerts
+- Solar flare activity timeline
 
 ### **📰 News Feed**
 - Latest articles from premium sources
-- Technology news aggregation
-- Time-sorted updates
+- Source filtering and time-sorted updates
+
+### **🚨 Alerts & Export**
+- **Stock Alerts:** >5% daily price moves
+- **Crypto Alerts:** >10% 24h price changes
+- **Space Alerts:** Potentially hazardous asteroids
+- **CSV Export:** Download any dataset with one click
 
 ---
 
@@ -183,6 +224,12 @@ The interactive Streamlit dashboard provides:
 - Monitor agricultural conditions
 - Industrial metals demand signals
 - Inflation indicators
+
+### **Crypto Analysis**
+- Monitor market cap shifts across top cryptos
+- Track 24h volatility for trading opportunities
+- Correlation with risk-on/risk-off sentiment
+- Alerts for significant price movements
 
 ---
 
@@ -241,10 +288,10 @@ Add all API keys as repository secrets:
 - `wildfires` - Active fires with geocoded positions
 - `storms` - Active severe weather events
 - `iss_positions` - ISS tracking data
-- `neo_objects` - Near-Earth Objects
+- `near_earth_objects` - Near-Earth Objects
 - `solar_flares` - Solar activity
 - `news` - Article aggregation
-- `countries` - Country profiles and statistics
+- `crypto` - Cryptocurrency prices and market data
 
 ---
 
@@ -267,21 +314,21 @@ Add all API keys as repository secrets:
 
 ## 🎯 Roadmap
 
-### **Phase 1: Core Expansion** (Current)
+### **Phase 1: Core Expansion** ✅ Complete
 - ✅ Multi-sector stock coverage
 - ✅ Commodity and forex tracking
 - ✅ Economic indicators (5 countries)
 - ✅ Natural disaster monitoring
 - ✅ Automated collection pipeline
 
-### **Phase 2: Enhanced Intelligence** (Next)
+### **Phase 2: Enhanced Intelligence** ✅ Complete
+- ✅ Cryptocurrency tracking (15 top cryptos)
+- ✅ Alert system for significant events
+- ✅ Dark mode UI
+- ✅ CSV data export
 - [ ] Additional economic indicators (PMI, confidence indexes)
-- [ ] Country economic profiles (detailed GDP, trade data)
-- [ ] Shipping weather intelligence (wind patterns, routes)
-- [ ] Cryptocurrency tracking (BTC, ETH)
-- [ ] Alert system for significant events
 
-### **Phase 3: Advanced Analysis** (Future)
+### **Phase 3: Advanced Analysis** (Next)
 - [ ] GDELT social unrest integration
 - [ ] LLM-powered event classification
 - [ ] Cross-layer correlation analysis
@@ -289,7 +336,7 @@ Add all API keys as repository secrets:
 - [ ] Custom query interface
 
 ### **Phase 4: Visualization & UI** (Future)
-- [ ] Advanced interactive maps
+- [ ] 3D interactive globe visualization
 - [ ] Time-series analysis tools
 - [ ] Portfolio correlation views
 - [ ] Custom dashboard builder
@@ -387,6 +434,7 @@ Built from scratch in 4 days by a complete programming beginner with:
 
 **Data Sources:**
 - Alpha Vantage - Financial market data
+- CoinGecko - Cryptocurrency data
 - FRED (St. Louis Fed) - Economic indicators
 - USGS - Earthquake data
 - NASA - Space and Earth observation
