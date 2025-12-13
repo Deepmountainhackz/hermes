@@ -13,7 +13,9 @@ A comprehensive, automated data collection and analysis platform that integrates
 ### New Features
 - **🌍 World Bank Integration** - Global development indicators from World Bank API (free, no key)
 - **🏛️ 20 G20 Countries** - US, China, Japan, Germany, UK, France, India, Brazil, and more
-- **📊 20+ Development Indicators** - GDP, inflation, trade, demographics, labor, environment
+- **📊 36+ Development Indicators** - Economy, trade, demographics, health, education, labor, environment
+- **🏥 Health Indicators** - Infant/child mortality, maternal mortality, physicians, hospital beds, immunization rates, health spending
+- **📚 Education Indicators** - Adult & youth literacy rates, school enrollment (all levels), education spending, completion rates
 - **📈 Country Profiles** - View all indicators for any country at a glance
 - **🔄 Global Rankings** - Compare countries across any indicator
 - **🎯 Multi-Country Comparison** - Normalized heatmaps for cross-country analysis
@@ -105,13 +107,15 @@ Hermes is a multi-dimensional intelligence platform designed for serious macro i
   - Europe: Germany, UK, France, Italy, Russia, Switzerland, Turkey
   - Asia-Pacific: China, Japan, South Korea, India, Indonesia, Australia, Saudi Arabia
   - Africa: South Africa
-- **20+ Development Indicators** across 6 categories:
+- **36+ Development Indicators** across 8 categories:
   - Economy: GDP, GDP Growth, GDP Per Capita, Inflation, Government Debt, Current Account
   - Trade: Exports, Imports, Trade Balance, Foreign Direct Investment
   - Demographics: Population, Population Growth, Urban Population, Life Expectancy
+  - **Health**: Infant Mortality, Under-5 Mortality, Maternal Mortality, Death/Birth Rates, Health Expenditure, Physicians, Hospital Beds, Immunization Rates
+  - **Education**: Adult Literacy, Youth Literacy, Primary/Secondary/Tertiary Enrollment, Education Expenditure, Completion Rates
   - Labor: Unemployment Rate, Labor Force Participation
-  - Social: Poverty Rate, Literacy Rate
-  - Environment: Energy Use, CO2 Emissions
+  - Social: Poverty Rate, GINI Index (Income Inequality)
+  - Energy/Environment: Energy Use, CO2 Emissions, Electricity Access, Renewable Energy %
 - **Free API** - No authentication required
 
 ### **Market Sentiment & Risk**

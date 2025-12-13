@@ -42,15 +42,39 @@ class WorldBankService:
         'SP.URB.TOTL.IN.ZS': {'name': 'Urban Population (% of Total)', 'category': 'Demographics'},
         'SP.DYN.LE00.IN': {'name': 'Life Expectancy (Years)', 'category': 'Demographics'},
 
+        # Health indicators (NEW)
+        'SP.DYN.IMRT.IN': {'name': 'Infant Mortality Rate (per 1,000)', 'category': 'Health'},
+        'SP.DYN.CDRT.IN': {'name': 'Death Rate (per 1,000)', 'category': 'Health'},
+        'SP.DYN.CBRT.IN': {'name': 'Birth Rate (per 1,000)', 'category': 'Health'},
+        'SH.XPD.CHEX.GD.ZS': {'name': 'Health Expenditure (% of GDP)', 'category': 'Health'},
+        'SH.MED.PHYS.ZS': {'name': 'Physicians (per 1,000 people)', 'category': 'Health'},
+        'SH.MED.BEDS.ZS': {'name': 'Hospital Beds (per 1,000 people)', 'category': 'Health'},
+        'SH.STA.MMRT': {'name': 'Maternal Mortality Ratio (per 100,000)', 'category': 'Health'},
+        'SH.DYN.MORT': {'name': 'Under-5 Mortality Rate (per 1,000)', 'category': 'Health'},
+        'SH.IMM.IDPT': {'name': 'DPT Immunization (% of children)', 'category': 'Health'},
+        'SH.IMM.MEAS': {'name': 'Measles Immunization (% of children)', 'category': 'Health'},
+
+        # Education indicators (NEW)
+        'SE.ADT.LITR.ZS': {'name': 'Literacy Rate - Adult (% age 15+)', 'category': 'Education'},
+        'SE.ADT.1524.LT.ZS': {'name': 'Literacy Rate - Youth (% age 15-24)', 'category': 'Education'},
+        'SE.PRM.ENRR': {'name': 'Primary School Enrollment (%)', 'category': 'Education'},
+        'SE.SEC.ENRR': {'name': 'Secondary School Enrollment (%)', 'category': 'Education'},
+        'SE.TER.ENRR': {'name': 'Tertiary School Enrollment (%)', 'category': 'Education'},
+        'SE.XPD.TOTL.GD.ZS': {'name': 'Education Expenditure (% of GDP)', 'category': 'Education'},
+        'SE.PRM.CMPT.ZS': {'name': 'Primary Completion Rate (%)', 'category': 'Education'},
+        'SE.SEC.CMPT.LO.ZS': {'name': 'Lower Secondary Completion Rate (%)', 'category': 'Education'},
+
         # Labor & Social
         'SL.UEM.TOTL.ZS': {'name': 'Unemployment (% of Labor Force)', 'category': 'Labor'},
         'SL.TLF.CACT.ZS': {'name': 'Labor Force Participation (%)', 'category': 'Labor'},
         'SI.POV.NAHC': {'name': 'Poverty Rate (National)', 'category': 'Social'},
-        'SE.ADT.LITR.ZS': {'name': 'Literacy Rate (Adult %)', 'category': 'Social'},
+        'SI.POV.GINI': {'name': 'GINI Index (Income Inequality)', 'category': 'Social'},
 
         # Energy & Environment
         'EG.USE.PCAP.KG.OE': {'name': 'Energy Use (kg Oil Equiv Per Capita)', 'category': 'Energy'},
         'EN.ATM.CO2E.PC': {'name': 'CO2 Emissions (Metric Tons Per Capita)', 'category': 'Environment'},
+        'EG.ELC.ACCS.ZS': {'name': 'Access to Electricity (% of Population)', 'category': 'Energy'},
+        'EG.FEC.RNEW.ZS': {'name': 'Renewable Energy (% of Total)', 'category': 'Energy'},
     }
 
     # Countries to track (ISO 3166-1 alpha-2 codes)
