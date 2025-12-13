@@ -1005,15 +1005,15 @@ st.sidebar.markdown("---")
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "Overview"
 
-# Navigation structure with categories
+# Navigation structure with categories and their colors
 NAV_STRUCTURE = {
-    "📊 Markets": ["Overview", "Markets", "Crypto", "Bond Markets", "Sector Analysis"],
-    "📈 Analytics": ["Technical Analysis", "Correlation Analysis", "Risk Metrics", "Time Series", "Options Flow"],
-    "🌍 Economics": ["Economic Indicators", "Economic Calendar", "Earnings Dashboard", "Global Development", "Country Profile"],
-    "🏭 Commodities": ["Energy & Resources", "Agriculture & Food", "Trade & Shipping"],
-    "🌐 Global": ["Demographics", "Debt & Fiscal", "Weather & Globe", "Space"],
-    "📰 News & Events": ["News", "Market Sentiment", "Global Events"],
-    "🛠️ Tools": ["Portfolio", "Watchlist", "Calculators", "Currency Converter", "Query Builder", "Alerts & Export", "Collection Status"],
+    "📊 Markets": ("cat_markets", ["Overview", "Markets", "Crypto", "Bond Markets", "Sector Analysis"]),
+    "📈 Analytics": ("cat_analytics", ["Technical Analysis", "Correlation Analysis", "Risk Metrics", "Time Series", "Options Flow"]),
+    "🌍 Economics": ("cat_economics", ["Economic Indicators", "Economic Calendar", "Earnings Dashboard", "Global Development", "Country Profile"]),
+    "🏭 Commodities": ("cat_commodities", ["Energy & Resources", "Agriculture & Food", "Trade & Shipping"]),
+    "🌐 Global": ("cat_global", ["Demographics", "Debt & Fiscal", "Weather & Globe", "Space"]),
+    "📰 News & Events": ("cat_news", ["News", "Market Sentiment", "Global Events"]),
+    "🛠️ Tools": ("cat_tools", ["Portfolio", "Watchlist", "Calculators", "Currency Converter", "Query Builder", "Alerts & Export", "Collection Status"]),
 }
 
 # Helper function to create navigation button
@@ -1031,23 +1031,32 @@ def nav_button(page_name, current_page):
         st.rerun()
 
 # Render grouped navigation
-for category, pages in NAV_STRUCTURE.items():
+for category, (cat_color_key, pages) in NAV_STRUCTURE.items():
     # Check if any page in this category is currently selected
     category_has_selection = st.session_state.current_page in pages
+    cat_color = COLORS.get(cat_color_key, COLORS['primary'])
 
     with st.sidebar.expander(category, expanded=category_has_selection):
         for page_name in pages:
             is_selected = st.session_state.current_page == page_name
-            prefix = "→ " if is_selected else "   "
 
-            if st.button(
-                f"{prefix}{page_name}",
-                key=f"nav_{page_name}",
-                use_container_width=True,
-                type="primary" if is_selected else "secondary"
-            ):
-                st.session_state.current_page = page_name
-                st.rerun()
+            if is_selected:
+                # Custom colored button for selected state
+                st.markdown(
+                    f"""<div style="background-color:{cat_color}; color:white; padding:8px 12px; border-radius:6px; margin:4px 0; font-weight:500; display:flex; align-items:center;">
+                        <span style="margin-right:8px;">→</span> {page_name}
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+            else:
+                if st.button(
+                    f"   {page_name}",
+                    key=f"nav_{page_name}",
+                    use_container_width=True,
+                    type="secondary"
+                ):
+                    st.session_state.current_page = page_name
+                    st.rerun()
 
 # Get current page from session state
 page = st.session_state.current_page
@@ -1069,7 +1078,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.10 - Colored Page Titles")
+st.sidebar.caption("v6.11 - Category-Colored Navigation")
 
 
 # ============================================================================
@@ -2684,17 +2693,17 @@ elif page == "Economic Indicators":
                     time_str = f"In {days_until}d"
                     bg_color = "#1976d2"
 
-                importance_color = "#d32f2f" if event['importance'] == 'HIGH' else "#ff9800"
+                importance_color = COLORS['negative'] if event['importance'] == 'HIGH' else "#f59e0b"
 
                 st.markdown(
-                    f"""<div style="background-color:#1e1e1e; padding:10px; border-radius:5px; margin:5px 0; border-left:4px solid {importance_color};">
+                    f"""<div style="background-color:#ffffff; padding:12px 16px; border-radius:8px; margin:8px 0; border-left:4px solid {importance_color}; border:1px solid #e2e8f0; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <b>{event['country']}</b> {event['event']}<br>
-                            <small style="color:#888;">{event['category']} | {event['date'].strftime('%a, %b %d, %Y')}</small>
+                            <span style="color:#1e293b; font-weight:600;">{event['country']}</span> <span style="color:#334155;">{event['event']}</span><br>
+                            <small style="color:#64748b;">{event['category']} | {event['date'].strftime('%a, %b %d, %Y')}</small>
                         </div>
-                        <div style="background-color:{bg_color}; padding:5px 10px; border-radius:3px;">
-                            <b>{time_str}</b>
+                        <div style="background-color:{bg_color}; color:white; padding:6px 12px; border-radius:6px; font-weight:600; font-size:0.85rem;">
+                            {time_str}
                         </div>
                     </div>
                     </div>""",
