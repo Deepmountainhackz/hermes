@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.16
+Hermes Intelligence Platform Dashboard v6.17
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -728,89 +728,89 @@ COMMODITY_ICONS = {
 # Country flags - for international data display
 COUNTRY_FLAGS = {
     # North America
-    'usa': '\U0001F1FA\U0001F1F8', 'us': '\U0001F1FA\U0001F1F8', 'united states': '\U0001F1FA\U0001F1F8', 'america': '\U0001F1FA\U0001F1F8',
-    'canada': '\U0001F1E8\U0001F1E6', 'ca': '\U0001F1E8\U0001F1E6', 'can': '\U0001F1E8\U0001F1E6',
-    'mexico': '\U0001F1F2\U0001F1FD', 'mx': '\U0001F1F2\U0001F1FD', 'mex': '\U0001F1F2\U0001F1FD',
+    'usa': '🇺🇸', 'us': '🇺🇸', 'united states': '🇺🇸', 'america': '🇺🇸',
+    'canada': '🇨🇦', 'ca': '🇨🇦', 'can': '🇨🇦',
+    'mexico': '🇲🇽', 'mx': '🇲🇽', 'mex': '🇲🇽',
     # Europe
-    'uk': '\U0001F1EC\U0001F1E7', 'gb': '\U0001F1EC\U0001F1E7', 'united kingdom': '\U0001F1EC\U0001F1E7', 'britain': '\U0001F1EC\U0001F1E7', 'great britain': '\U0001F1EC\U0001F1E7',
-    'germany': '\U0001F1E9\U0001F1EA', 'de': '\U0001F1E9\U0001F1EA', 'deu': '\U0001F1E9\U0001F1EA',
-    'france': '\U0001F1EB\U0001F1F7', 'fr': '\U0001F1EB\U0001F1F7', 'fra': '\U0001F1EB\U0001F1F7',
-    'italy': '\U0001F1EE\U0001F1F9', 'it': '\U0001F1EE\U0001F1F9', 'ita': '\U0001F1EE\U0001F1F9',
-    'spain': '\U0001F1EA\U0001F1F8', 'es': '\U0001F1EA\U0001F1F8', 'esp': '\U0001F1EA\U0001F1F8',
-    'netherlands': '\U0001F1F3\U0001F1F1', 'nl': '\U0001F1F3\U0001F1F1', 'nld': '\U0001F1F3\U0001F1F1', 'holland': '\U0001F1F3\U0001F1F1',
-    'belgium': '\U0001F1E7\U0001F1EA', 'be': '\U0001F1E7\U0001F1EA', 'bel': '\U0001F1E7\U0001F1EA',
-    'switzerland': '\U0001F1E8\U0001F1ED', 'ch': '\U0001F1E8\U0001F1ED', 'che': '\U0001F1E8\U0001F1ED', 'swiss': '\U0001F1E8\U0001F1ED',
-    'austria': '\U0001F1E6\U0001F1F9', 'at': '\U0001F1E6\U0001F1F9', 'aut': '\U0001F1E6\U0001F1F9',
-    'sweden': '\U0001F1F8\U0001F1EA', 'se': '\U0001F1F8\U0001F1EA', 'swe': '\U0001F1F8\U0001F1EA',
-    'norway': '\U0001F1F3\U0001F1F4', 'no': '\U0001F1F3\U0001F1F4', 'nor': '\U0001F1F3\U0001F1F4',
-    'denmark': '\U0001F1E9\U0001F1F0', 'dk': '\U0001F1E9\U0001F1F0', 'dnk': '\U0001F1E9\U0001F1F0',
-    'finland': '\U0001F1EB\U0001F1EE', 'fi': '\U0001F1EB\U0001F1EE', 'fin': '\U0001F1EB\U0001F1EE',
-    'ireland': '\U0001F1EE\U0001F1EA', 'ie': '\U0001F1EE\U0001F1EA', 'irl': '\U0001F1EE\U0001F1EA',
-    'portugal': '\U0001F1F5\U0001F1F9', 'pt': '\U0001F1F5\U0001F1F9', 'prt': '\U0001F1F5\U0001F1F9',
-    'greece': '\U0001F1EC\U0001F1F7', 'gr': '\U0001F1EC\U0001F1F7', 'grc': '\U0001F1EC\U0001F1F7',
-    'poland': '\U0001F1F5\U0001F1F1', 'pl': '\U0001F1F5\U0001F1F1', 'pol': '\U0001F1F5\U0001F1F1',
-    'czech': '\U0001F1E8\U0001F1FF', 'cz': '\U0001F1E8\U0001F1FF', 'czechia': '\U0001F1E8\U0001F1FF', 'czech republic': '\U0001F1E8\U0001F1FF',
-    'hungary': '\U0001F1ED\U0001F1FA', 'hu': '\U0001F1ED\U0001F1FA', 'hun': '\U0001F1ED\U0001F1FA',
-    'romania': '\U0001F1F7\U0001F1F4', 'ro': '\U0001F1F7\U0001F1F4', 'rou': '\U0001F1F7\U0001F1F4',
-    'russia': '\U0001F1F7\U0001F1FA', 'ru': '\U0001F1F7\U0001F1FA', 'rus': '\U0001F1F7\U0001F1FA',
-    'ukraine': '\U0001F1FA\U0001F1E6', 'ua': '\U0001F1FA\U0001F1E6', 'ukr': '\U0001F1FA\U0001F1E6',
-    'turkey': '\U0001F1F9\U0001F1F7', 'tr': '\U0001F1F9\U0001F1F7', 'tur': '\U0001F1F9\U0001F1F7', 'turkiye': '\U0001F1F9\U0001F1F7',
+    'uk': '🇬🇧', 'gb': '🇬🇧', 'united kingdom': '🇬🇧', 'britain': '🇬🇧', 'great britain': '🇬🇧',
+    'germany': '🇩🇪', 'de': '🇩🇪', 'deu': '🇩🇪',
+    'france': '🇫🇷', 'fr': '🇫🇷', 'fra': '🇫🇷',
+    'italy': '🇮🇹', 'it': '🇮🇹', 'ita': '🇮🇹',
+    'spain': '🇪🇸', 'es': '🇪🇸', 'esp': '🇪🇸',
+    'netherlands': '🇳🇱', 'nl': '🇳🇱', 'nld': '🇳🇱', 'holland': '🇳🇱',
+    'belgium': '🇧🇪', 'be': '🇧🇪', 'bel': '🇧🇪',
+    'switzerland': '🇨🇭', 'ch': '🇨🇭', 'che': '🇨🇭', 'swiss': '🇨🇭',
+    'austria': '🇦🇹', 'at': '🇦🇹', 'aut': '🇦🇹',
+    'sweden': '🇸🇪', 'se': '🇸🇪', 'swe': '🇸🇪',
+    'norway': '🇳🇴', 'no': '🇳🇴', 'nor': '🇳🇴',
+    'denmark': '🇩🇰', 'dk': '🇩🇰', 'dnk': '🇩🇰',
+    'finland': '🇫🇮', 'fi': '🇫🇮', 'fin': '🇫🇮',
+    'ireland': '🇮🇪', 'ie': '🇮🇪', 'irl': '🇮🇪',
+    'portugal': '🇵🇹', 'pt': '🇵🇹', 'prt': '🇵🇹',
+    'greece': '🇬🇷', 'gr': '🇬🇷', 'grc': '🇬🇷',
+    'poland': '🇵🇱', 'pl': '🇵🇱', 'pol': '🇵🇱',
+    'czech': '🇨🇿', 'cz': '🇨🇿', 'czechia': '🇨🇿', 'czech republic': '🇨🇿',
+    'hungary': '🇭🇺', 'hu': '🇭🇺', 'hun': '🇭🇺',
+    'romania': '🇷🇴', 'ro': '🇷🇴', 'rou': '🇷🇴',
+    'russia': '🇷🇺', 'ru': '🇷🇺', 'rus': '🇷🇺',
+    'ukraine': '🇺🇦', 'ua': '🇺🇦', 'ukr': '🇺🇦',
+    'turkey': '🇹🇷', 'tr': '🇹🇷', 'tur': '🇹🇷', 'turkiye': '🇹🇷',
     # European Union
-    'eu': '\U0001F1EA\U0001F1FA', 'european union': '\U0001F1EA\U0001F1FA', 'europe': '\U0001F1EA\U0001F1FA', 'eurozone': '\U0001F1EA\U0001F1FA',
+    'eu': '🇪🇺', 'european union': '🇪🇺', 'europe': '🇪🇺', 'eurozone': '🇪🇺',
     # Asia Pacific
-    'japan': '\U0001F1EF\U0001F1F5', 'jp': '\U0001F1EF\U0001F1F5', 'jpn': '\U0001F1EF\U0001F1F5',
-    'china': '\U0001F1E8\U0001F1F3', 'cn': '\U0001F1E8\U0001F1F3', 'chn': '\U0001F1E8\U0001F1F3', 'prc': '\U0001F1E8\U0001F1F3',
-    'south korea': '\U0001F1F0\U0001F1F7', 'korea': '\U0001F1F0\U0001F1F7', 'kr': '\U0001F1F0\U0001F1F7', 'kor': '\U0001F1F0\U0001F1F7',
-    'india': '\U0001F1EE\U0001F1F3', 'in': '\U0001F1EE\U0001F1F3', 'ind': '\U0001F1EE\U0001F1F3',
-    'australia': '\U0001F1E6\U0001F1FA', 'au': '\U0001F1E6\U0001F1FA', 'aus': '\U0001F1E6\U0001F1FA',
-    'new zealand': '\U0001F1F3\U0001F1FF', 'nz': '\U0001F1F3\U0001F1FF', 'nzl': '\U0001F1F3\U0001F1FF',
-    'singapore': '\U0001F1F8\U0001F1EC', 'sg': '\U0001F1F8\U0001F1EC', 'sgp': '\U0001F1F8\U0001F1EC',
-    'hong kong': '\U0001F1ED\U0001F1F0', 'hk': '\U0001F1ED\U0001F1F0', 'hkg': '\U0001F1ED\U0001F1F0',
-    'taiwan': '\U0001F1F9\U0001F1FC', 'tw': '\U0001F1F9\U0001F1FC', 'twn': '\U0001F1F9\U0001F1FC',
-    'indonesia': '\U0001F1EE\U0001F1E9', 'id': '\U0001F1EE\U0001F1E9', 'idn': '\U0001F1EE\U0001F1E9',
-    'malaysia': '\U0001F1F2\U0001F1FE', 'my': '\U0001F1F2\U0001F1FE', 'mys': '\U0001F1F2\U0001F1FE',
-    'thailand': '\U0001F1F9\U0001F1ED', 'th': '\U0001F1F9\U0001F1ED', 'tha': '\U0001F1F9\U0001F1ED',
-    'vietnam': '\U0001F1FB\U0001F1F3', 'vn': '\U0001F1FB\U0001F1F3', 'vnm': '\U0001F1FB\U0001F1F3',
-    'philippines': '\U0001F1F5\U0001F1ED', 'ph': '\U0001F1F5\U0001F1ED', 'phl': '\U0001F1F5\U0001F1ED',
-    'pakistan': '\U0001F1F5\U0001F1F0', 'pk': '\U0001F1F5\U0001F1F0', 'pak': '\U0001F1F5\U0001F1F0',
-    'bangladesh': '\U0001F1E7\U0001F1E9', 'bd': '\U0001F1E7\U0001F1E9', 'bgd': '\U0001F1E7\U0001F1E9',
+    'japan': '🇯🇵', 'jp': '🇯🇵', 'jpn': '🇯🇵',
+    'china': '🇨🇳', 'cn': '🇨🇳', 'chn': '🇨🇳', 'prc': '🇨🇳',
+    'south korea': '🇰🇷', 'korea': '🇰🇷', 'kr': '🇰🇷', 'kor': '🇰🇷',
+    'india': '🇮🇳', 'in': '🇮🇳', 'ind': '🇮🇳',
+    'australia': '🇦🇺', 'au': '🇦🇺', 'aus': '🇦🇺',
+    'new zealand': '🇳🇿', 'nz': '🇳🇿', 'nzl': '🇳🇿',
+    'singapore': '🇸🇬', 'sg': '🇸🇬', 'sgp': '🇸🇬',
+    'hong kong': '🇭🇰', 'hk': '🇭🇰', 'hkg': '🇭🇰',
+    'taiwan': '🇹🇼', 'tw': '🇹🇼', 'twn': '🇹🇼',
+    'indonesia': '🇮🇩', 'id': '🇮🇩', 'idn': '🇮🇩',
+    'malaysia': '🇲🇾', 'my': '🇲🇾', 'mys': '🇲🇾',
+    'thailand': '🇹🇭', 'th': '🇹🇭', 'tha': '🇹🇭',
+    'vietnam': '🇻🇳', 'vn': '🇻🇳', 'vnm': '🇻🇳',
+    'philippines': '🇵🇭', 'ph': '🇵🇭', 'phl': '🇵🇭',
+    'pakistan': '🇵🇰', 'pk': '🇵🇰', 'pak': '🇵🇰',
+    'bangladesh': '🇧🇩', 'bd': '🇧🇩', 'bgd': '🇧🇩',
     # Middle East
-    'saudi arabia': '\U0001F1F8\U0001F1E6', 'sa': '\U0001F1F8\U0001F1E6', 'sau': '\U0001F1F8\U0001F1E6', 'saudi': '\U0001F1F8\U0001F1E6',
-    'uae': '\U0001F1E6\U0001F1EA', 'united arab emirates': '\U0001F1E6\U0001F1EA', 'emirates': '\U0001F1E6\U0001F1EA', 'dubai': '\U0001F1E6\U0001F1EA',
-    'israel': '\U0001F1EE\U0001F1F1', 'il': '\U0001F1EE\U0001F1F1', 'isr': '\U0001F1EE\U0001F1F1',
-    'iran': '\U0001F1EE\U0001F1F7', 'ir': '\U0001F1EE\U0001F1F7', 'irn': '\U0001F1EE\U0001F1F7',
-    'iraq': '\U0001F1EE\U0001F1F6', 'iq': '\U0001F1EE\U0001F1F6', 'irq': '\U0001F1EE\U0001F1F6',
-    'qatar': '\U0001F1F6\U0001F1E6', 'qa': '\U0001F1F6\U0001F1E6', 'qat': '\U0001F1F6\U0001F1E6',
-    'kuwait': '\U0001F1F0\U0001F1FC', 'kw': '\U0001F1F0\U0001F1FC', 'kwt': '\U0001F1F0\U0001F1FC',
+    'saudi arabia': '🇸🇦', 'sa': '🇸🇦', 'sau': '🇸🇦', 'saudi': '🇸🇦',
+    'uae': '🇦🇪', 'united arab emirates': '🇦🇪', 'emirates': '🇦🇪', 'dubai': '🇦🇪',
+    'israel': '🇮🇱', 'il': '🇮🇱', 'isr': '🇮🇱',
+    'iran': '🇮🇷', 'ir': '🇮🇷', 'irn': '🇮🇷',
+    'iraq': '🇮🇶', 'iq': '🇮🇶', 'irq': '🇮🇶',
+    'qatar': '🇶🇦', 'qa': '🇶🇦', 'qat': '🇶🇦',
+    'kuwait': '🇰🇼', 'kw': '🇰🇼', 'kwt': '🇰🇼',
     # Africa
-    'south africa': '\U0001F1FF\U0001F1E6', 'za': '\U0001F1FF\U0001F1E6', 'zaf': '\U0001F1FF\U0001F1E6',
-    'nigeria': '\U0001F1F3\U0001F1EC', 'ng': '\U0001F1F3\U0001F1EC', 'nga': '\U0001F1F3\U0001F1EC',
-    'egypt': '\U0001F1EA\U0001F1EC', 'eg': '\U0001F1EA\U0001F1EC', 'egy': '\U0001F1EA\U0001F1EC',
-    'kenya': '\U0001F1F0\U0001F1EA', 'ke': '\U0001F1F0\U0001F1EA', 'ken': '\U0001F1F0\U0001F1EA',
-    'morocco': '\U0001F1F2\U0001F1E6', 'ma': '\U0001F1F2\U0001F1E6', 'mar': '\U0001F1F2\U0001F1E6',
-    'ethiopia': '\U0001F1EA\U0001F1F9', 'et': '\U0001F1EA\U0001F1F9', 'eth': '\U0001F1EA\U0001F1F9',
-    'ghana': '\U0001F1EC\U0001F1ED', 'gh': '\U0001F1EC\U0001F1ED', 'gha': '\U0001F1EC\U0001F1ED',
-    'tanzania': '\U0001F1F9\U0001F1FF', 'tz': '\U0001F1F9\U0001F1FF', 'tza': '\U0001F1F9\U0001F1FF',
+    'south africa': '🇿🇦', 'za': '🇿🇦', 'zaf': '🇿🇦',
+    'nigeria': '🇳🇬', 'ng': '🇳🇬', 'nga': '🇳🇬',
+    'egypt': '🇪🇬', 'eg': '🇪🇬', 'egy': '🇪🇬',
+    'kenya': '🇰🇪', 'ke': '🇰🇪', 'ken': '🇰🇪',
+    'morocco': '🇲🇦', 'ma': '🇲🇦', 'mar': '🇲🇦',
+    'ethiopia': '🇪🇹', 'et': '🇪🇹', 'eth': '🇪🇹',
+    'ghana': '🇬🇭', 'gh': '🇬🇭', 'gha': '🇬🇭',
+    'tanzania': '🇹🇿', 'tz': '🇹🇿', 'tza': '🇹🇿',
     # South America
-    'brazil': '\U0001F1E7\U0001F1F7', 'br': '\U0001F1E7\U0001F1F7', 'bra': '\U0001F1E7\U0001F1F7',
-    'argentina': '\U0001F1E6\U0001F1F7', 'ar': '\U0001F1E6\U0001F1F7', 'arg': '\U0001F1E6\U0001F1F7',
-    'chile': '\U0001F1E8\U0001F1F1', 'cl': '\U0001F1E8\U0001F1F1', 'chl': '\U0001F1E8\U0001F1F1',
-    'colombia': '\U0001F1E8\U0001F1F4', 'co': '\U0001F1E8\U0001F1F4', 'col': '\U0001F1E8\U0001F1F4',
-    'peru': '\U0001F1F5\U0001F1EA', 'pe': '\U0001F1F5\U0001F1EA', 'per': '\U0001F1F5\U0001F1EA',
-    'venezuela': '\U0001F1FB\U0001F1EA', 've': '\U0001F1FB\U0001F1EA', 'ven': '\U0001F1FB\U0001F1EA',
-    'ecuador': '\U0001F1EA\U0001F1E8', 'ec': '\U0001F1EA\U0001F1E8', 'ecu': '\U0001F1EA\U0001F1E8',
+    'brazil': '🇧🇷', 'br': '🇧🇷', 'bra': '🇧🇷',
+    'argentina': '🇦🇷', 'ar': '🇦🇷', 'arg': '🇦🇷',
+    'chile': '🇨🇱', 'cl': '🇨🇱', 'chl': '🇨🇱',
+    'colombia': '🇨🇴', 'co': '🇨🇴', 'col': '🇨🇴',
+    'peru': '🇵🇪', 'pe': '🇵🇪', 'per': '🇵🇪',
+    'venezuela': '🇻🇪', 've': '🇻🇪', 'ven': '🇻🇪',
+    'ecuador': '🇪🇨', 'ec': '🇪🇨', 'ecu': '🇪🇨',
     # Currency codes (for forex)
-    'usd': '\U0001F1FA\U0001F1F8', 'eur': '\U0001F1EA\U0001F1FA', 'gbp': '\U0001F1EC\U0001F1E7',
-    'jpy': '\U0001F1EF\U0001F1F5', 'chf': '\U0001F1E8\U0001F1ED', 'aud': '\U0001F1E6\U0001F1FA',
-    'cad': '\U0001F1E8\U0001F1E6', 'nzd': '\U0001F1F3\U0001F1FF', 'cny': '\U0001F1E8\U0001F1F3',
-    'hkd': '\U0001F1ED\U0001F1F0', 'sgd': '\U0001F1F8\U0001F1EC', 'krw': '\U0001F1F0\U0001F1F7',
-    'inr': '\U0001F1EE\U0001F1F3', 'mxn': '\U0001F1F2\U0001F1FD', 'brl': '\U0001F1E7\U0001F1F7',
-    'zar': '\U0001F1FF\U0001F1E6', 'rub': '\U0001F1F7\U0001F1FA', 'try': '\U0001F1F9\U0001F1F7',
-    'sek': '\U0001F1F8\U0001F1EA', 'nok': '\U0001F1F3\U0001F1F4', 'dkk': '\U0001F1E9\U0001F1F0',
-    'pln': '\U0001F1F5\U0001F1F1', 'thb': '\U0001F1F9\U0001F1ED', 'idr': '\U0001F1EE\U0001F1E9',
-    'myr': '\U0001F1F2\U0001F1FE', 'php': '\U0001F1F5\U0001F1ED', 'twd': '\U0001F1F9\U0001F1FC',
+    'usd': '🇺🇸', 'eur': '🇪🇺', 'gbp': '🇬🇧',
+    'jpy': '🇯🇵', 'chf': '🇨🇭', 'aud': '🇦🇺',
+    'cad': '🇨🇦', 'nzd': '🇳🇿', 'cny': '🇨🇳',
+    'hkd': '🇭🇰', 'sgd': '🇸🇬', 'krw': '🇰🇷',
+    'inr': '🇮🇳', 'mxn': '🇲🇽', 'brl': '🇧🇷',
+    'zar': '🇿🇦', 'rub': '🇷🇺', 'try': '🇹🇷',
+    'sek': '🇸🇪', 'nok': '🇳🇴', 'dkk': '🇩🇰',
+    'pln': '🇵🇱', 'thb': '🇹🇭', 'idr': '🇮🇩',
+    'myr': '🇲🇾', 'php': '🇵🇭', 'twd': '🇹🇼',
     # Default
-    'default': '\U0001F30D',
+    'default': '🌍',
 }
 
 def get_country_flag(name):
@@ -2480,27 +2480,21 @@ elif page == "Markets":
                 else:
                     return '#f44336'  # Very Weak
 
-            # Currency to flag HTML entities for cross-platform display
-            currency_flag_html = {
-                'USD': '&#127482;&#127480;',  # 🇺🇸
-                'EUR': '&#127466;&#127482;',  # 🇪🇺
-                'GBP': '&#127468;&#127463;',  # 🇬🇧
-                'JPY': '&#127471;&#127477;',  # 🇯🇵
-                'CHF': '&#127464;&#127469;',  # 🇨🇭
-                'AUD': '&#127462;&#127482;',  # 🇦🇺
-                'CAD': '&#127464;&#127462;',  # 🇨🇦
-                'CNY': '&#127464;&#127475;',  # 🇨🇳
+            # Currency to flag mapping
+            currency_flags = {
+                'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵',
+                'CHF': '🇨🇭', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CNY': '🇨🇳',
             }
 
             str_cols = st.columns(len(sorted_strength))
             for i, (curr, score) in enumerate(sorted_strength):
                 with str_cols[i]:
                     color = get_strength_color(score)
-                    flag_html = currency_flag_html.get(curr, '&#127757;')  # Default globe
+                    flag_emoji = currency_flags.get(curr, '🌍')
                     status = "Strong" if score > 1 else "Weak" if score < -1 else "Neutral"
                     st.markdown(
                         f"""<div style="text-align:center; padding:12px; background-color:#f8fafc; border-radius:8px; border-top:4px solid {color}; border:1px solid #e2e8f0;">
-                        <div style="font-size:2.5em; line-height:1.2;">{flag_html}</div>
+                        <div style="font-size:2.5em; line-height:1.2;">{flag_emoji}</div>
                         <b>{curr}</b><br>
                         <span style="color:{color}; font-size:1.2em; font-weight:600;">{score:+.1f}</span><br>
                         <small style="color:#64748b;">{status}</small>
