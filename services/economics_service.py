@@ -19,13 +19,33 @@ class EconomicsService:
     """Service for economic indicators operations."""
     
     # Default economic indicators to track (FRED series IDs)
+    # FRED has international data series for major economies
     DEFAULT_INDICATORS = {
         'USA': {
             'GDP': {'series_id': 'GDP', 'name': 'GDP', 'unit': 'Billions USD'},
             'UNEMPLOYMENT': {'series_id': 'UNRATE', 'name': 'Unemployment Rate', 'unit': '%'},
             'INFLATION': {'series_id': 'CPIAUCSL', 'name': 'CPI Inflation', 'unit': 'Index'},
             'INTEREST_RATE': {'series_id': 'FEDFUNDS', 'name': 'Federal Funds Rate', 'unit': '%'},
-        }
+        },
+        'EU': {
+            'GDP': {'series_id': 'CLVMNACSCAB1GQEA19', 'name': 'GDP', 'unit': 'Millions EUR'},
+            'UNEMPLOYMENT': {'series_id': 'LRHUTTTTEZM156S', 'name': 'Unemployment Rate', 'unit': '%'},
+            'INFLATION': {'series_id': 'EA19CPALTT01GYM', 'name': 'CPI Inflation', 'unit': '% Change'},
+        },
+        'UK': {
+            'GDP': {'series_id': 'CLVMNACSCAB1GQUK', 'name': 'GDP', 'unit': 'Millions GBP'},
+            'UNEMPLOYMENT': {'series_id': 'LRHUTTTTGBM156S', 'name': 'Unemployment Rate', 'unit': '%'},
+            'INFLATION': {'series_id': 'GBRCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+        },
+        'Japan': {
+            'GDP': {'series_id': 'JPNRGDPEXP', 'name': 'GDP', 'unit': 'Billions JPY'},
+            'UNEMPLOYMENT': {'series_id': 'LRHUTTTTJPM156S', 'name': 'Unemployment Rate', 'unit': '%'},
+            'INFLATION': {'series_id': 'JPNCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+        },
+        'China': {
+            'GDP': {'series_id': 'MKTGDPCNA646NWDB', 'name': 'GDP', 'unit': 'USD'},
+            'INFLATION': {'series_id': 'CHNCPIALLMINMEI', 'name': 'CPI Inflation', 'unit': 'Index'},
+        },
     }
     
     def __init__(self, config: Config, repository: EconomicsRepository):

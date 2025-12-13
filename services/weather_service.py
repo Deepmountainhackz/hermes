@@ -9,7 +9,26 @@ from repositories.weather_repository import WeatherRepository
 logger = logging.getLogger(__name__)
 
 class WeatherService:
-    DEFAULT_CITIES = ['London', 'New York', 'Tokyo', 'Paris', 'Berlin', 'Moscow', 'Beijing', 'Sydney', 'Mumbai', 'Toronto']
+    # 50 major global cities for comprehensive weather coverage
+    DEFAULT_CITIES = [
+        # North America
+        'New York', 'Los Angeles', 'Chicago', 'Toronto', 'Mexico City',
+        'Miami', 'Vancouver', 'San Francisco',
+        # South America
+        'São Paulo', 'Rio de Janeiro', 'Buenos Aires', 'Lima', 'Bogotá', 'Santiago',
+        # Europe
+        'London', 'Paris', 'Berlin', 'Madrid', 'Rome', 'Amsterdam',
+        'Moscow', 'Istanbul', 'Athens', 'Stockholm',
+        # Middle East & Africa
+        'Dubai', 'Cairo', 'Tel Aviv', 'Riyadh',
+        'Johannesburg', 'Cape Town', 'Nairobi', 'Lagos',
+        # Asia
+        'Tokyo', 'Beijing', 'Shanghai', 'Hong Kong', 'Singapore',
+        'Mumbai', 'Delhi', 'Bangkok', 'Seoul', 'Jakarta', 'Manila',
+        'Kuala Lumpur', 'Taipei',
+        # Oceania
+        'Sydney', 'Melbourne', 'Auckland', 'Perth', 'Brisbane'
+    ]
     
     def __init__(self, config: Config, repository: WeatherRepository):
         self.config = config
