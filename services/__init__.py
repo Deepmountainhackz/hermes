@@ -14,6 +14,7 @@ from .space_service import SpaceService
 from .disasters_service import DisastersService
 from .news_service import NewsService
 from .eia_service import EIAService
+from .brightdata_service import BrightDataService
 
 __all__ = [
     'MarketsService',
@@ -25,4 +26,5 @@ __all__ = [
     'DisastersService',
     'NewsService',
     'EIAService',
+    'BrightDataService',
 ]

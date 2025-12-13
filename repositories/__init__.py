@@ -13,6 +13,7 @@ from .weather_repository import WeatherRepository
 from .space_repository import SpaceRepository
 from .disasters_repository import DisastersRepository
 from .news_repository import NewsRepository
+from .investor_relations_repository import InvestorRelationsRepository
 
 __all__ = [
     'MarketsRepository',
@@ -23,4 +24,5 @@ __all__ = [
     'SpaceRepository',
     'DisastersRepository',
     'NewsRepository',
+    'InvestorRelationsRepository',
 ]

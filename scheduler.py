@@ -29,6 +29,7 @@ from collectors.space_collector import SpaceCollector
 from collectors.disasters_collector import DisastersCollector
 from collectors.gdelt_collector import GdeltCollector
 from collectors.worldbank_collector import WorldBankCollector
+from collectors.investor_relations_collector import InvestorRelationsCollector
 
 # Configure logging
 logging.basicConfig(
@@ -145,6 +146,7 @@ class HermesScheduler:
         'disasters': (DisastersCollector, 'disasters', 60, True),
         'gdelt': (GdeltCollector, 'gdelt', 60, True),
         'worldbank': (WorldBankCollector, 'worldbank', 1440, True),  # Daily
+        'investor_relations': (InvestorRelationsCollector, 'investor_relations', 1440, True),  # Daily
     }
 
     def __init__(self):

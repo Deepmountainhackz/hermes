@@ -16,6 +16,7 @@ from .news_collector import NewsCollector
 from .crypto_collector import CryptoCollector
 from .gdelt_collector import GdeltCollector
 from .worldbank_collector import WorldBankCollector
+from .investor_relations_collector import InvestorRelationsCollector
 
 __all__ = [
     'MarketsCollector',
@@ -29,4 +30,5 @@ __all__ = [
     'CryptoCollector',
     'GdeltCollector',
     'WorldBankCollector',
+    'InvestorRelationsCollector',
 ]

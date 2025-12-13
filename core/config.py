@@ -38,7 +38,13 @@ class Config:
         self.NASA_API_KEY: str = os.getenv('NASA_API_KEY', 'DEMO_KEY')
         self.FRED_API_KEY: str = os.getenv('FRED_API_KEY', '')
         self.EIA_API_KEY: str = os.getenv('EIA_API_KEY', '')  # US Energy Information Administration
-        
+
+        # Bright Data Configuration (Web Scraping)
+        self.BRIGHT_DATA_API_TOKEN: str = os.getenv('BRIGHT_DATA_API_TOKEN', '')
+        self.BRIGHT_DATA_ZONE: str = os.getenv('BRIGHT_DATA_ZONE', 'web_unlocker')
+        self.BRIGHT_DATA_PROXY_HOST: str = os.getenv('BRIGHT_DATA_PROXY_HOST', 'brd.superproxy.io')
+        self.BRIGHT_DATA_PROXY_PORT: int = int(os.getenv('BRIGHT_DATA_PROXY_PORT', '33335'))
+
         # Logging Configuration
         self.LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
         self.LOG_FILE: str = os.getenv('LOG_FILE', 'logs/hermes.log')

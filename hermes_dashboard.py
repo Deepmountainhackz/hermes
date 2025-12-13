@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.20
+Hermes Intelligence Platform Dashboard v6.27
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -198,6 +198,16 @@ CUSTOM_CSS = """
     .stPlotlyChart, .stDataFrame, [data-testid="stMetric"] {
         will-change: auto;
         contain: layout style;
+    }
+
+    /* ========================================
+       GLOBAL FONT SETTING
+       ======================================== */
+    html, body, [class*="st-"], .stMarkdown, .stText, p, span, div, label,
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"],
+    [data-testid="stMetricDelta"], .stSelectbox, .stMultiSelect,
+    .stTextInput, .stNumberInput, .stDataFrame, h1, h2, h3, h4, h5, h6 {
+        font-family: 'Times New Roman', Times, serif !important;
     }
 
     /* ========================================
@@ -495,7 +505,7 @@ CUSTOM_CSS = """
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         padding: 1rem;
-        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-family: 'Courier New', Courier, monospace;  /* Keep monospace for code blocks */
         overflow-x: auto;
     }
 
@@ -538,8 +548,9 @@ CUSTOM_CSS = """
        ======================================== */
     .text-right { text-align: right !important; }
     .text-center { text-align: center !important; }
-    .font-mono { font-family: 'SF Mono', 'Fira Code', monospace !important; font-variant-numeric: tabular-nums; }
+    .font-mono { font-family: 'Courier New', Courier, monospace !important; font-variant-numeric: tabular-nums; }
     .font-semibold { font-weight: 600 !important; }
+    .font-serif { font-family: 'Times New Roman', Times, serif !important; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -1407,7 +1418,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.16 - City Flags")
+st.sidebar.caption("v6.27 - Multi-Currency Calculators")
 
 
 # ============================================================================
@@ -2119,33 +2130,33 @@ elif page == "Markets":
             mins = int((time_until_open.total_seconds() % 3600) // 60)
             return False, f"Opens in {hours}h {mins}m", market_now.strftime("%H:%M")
 
-    # Define all markets with their trading hours
+    # Define all markets with their trading hours (using ISO codes for CDN flags)
     STOCK_MARKETS = {
         # Major Markets
-        'NYSE/NASDAQ': {'tz': 'America/New_York', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇺🇸'},
-        'LSE (London)': {'tz': 'Europe/London', 'open': dt_time(8, 0), 'close': dt_time(16, 30), 'flag': '🇬🇧'},
-        'Euronext': {'tz': 'Europe/Paris', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'flag': '🇪🇺'},
-        'XETRA (Germany)': {'tz': 'Europe/Berlin', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'flag': '🇩🇪'},
-        'Tokyo (TSE)': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 0), 'flag': '🇯🇵'},
-        'Hong Kong (HKEX)': {'tz': 'Asia/Hong_Kong', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇭🇰'},
-        'Shanghai (SSE)': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 30), 'close': dt_time(15, 0), 'flag': '🇨🇳'},
-        'Sydney (ASX)': {'tz': 'Australia/Sydney', 'open': dt_time(10, 0), 'close': dt_time(16, 0), 'flag': '🇦🇺'},
+        'NYSE/NASDAQ': {'tz': 'America/New_York', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'country': 'us'},
+        'LSE (London)': {'tz': 'Europe/London', 'open': dt_time(8, 0), 'close': dt_time(16, 30), 'country': 'gb'},
+        'Euronext': {'tz': 'Europe/Paris', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'country': 'eu'},
+        'XETRA (Germany)': {'tz': 'Europe/Berlin', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'country': 'de'},
+        'Tokyo (TSE)': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 0), 'country': 'jp'},
+        'Hong Kong (HKEX)': {'tz': 'Asia/Hong_Kong', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'country': 'hk'},
+        'Shanghai (SSE)': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 30), 'close': dt_time(15, 0), 'country': 'cn'},
+        'Sydney (ASX)': {'tz': 'Australia/Sydney', 'open': dt_time(10, 0), 'close': dt_time(16, 0), 'country': 'au'},
         # Emerging Markets
-        'Mumbai (BSE)': {'tz': 'Asia/Kolkata', 'open': dt_time(9, 15), 'close': dt_time(15, 30), 'flag': '🇮🇳'},
-        'São Paulo (B3)': {'tz': 'America/Sao_Paulo', 'open': dt_time(10, 0), 'close': dt_time(17, 0), 'flag': '🇧🇷'},
-        'Toronto (TSX)': {'tz': 'America/Toronto', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇨🇦'},
-        'Singapore (SGX)': {'tz': 'Asia/Singapore', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'flag': '🇸🇬'},
-        'Seoul (KRX)': {'tz': 'Asia/Seoul', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'flag': '🇰🇷'},
-        'Johannesburg (JSE)': {'tz': 'Africa/Johannesburg', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'flag': '🇿🇦'},
-        'Mexico (BMV)': {'tz': 'America/Mexico_City', 'open': dt_time(8, 30), 'close': dt_time(15, 0), 'flag': '🇲🇽'},
+        'Mumbai (BSE)': {'tz': 'Asia/Kolkata', 'open': dt_time(9, 15), 'close': dt_time(15, 30), 'country': 'in'},
+        'São Paulo (B3)': {'tz': 'America/Sao_Paulo', 'open': dt_time(10, 0), 'close': dt_time(17, 0), 'country': 'br'},
+        'Toronto (TSX)': {'tz': 'America/Toronto', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'country': 'ca'},
+        'Singapore (SGX)': {'tz': 'Asia/Singapore', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'country': 'sg'},
+        'Seoul (KRX)': {'tz': 'Asia/Seoul', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'country': 'kr'},
+        'Johannesburg (JSE)': {'tz': 'Africa/Johannesburg', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'country': 'za'},
+        'Mexico (BMV)': {'tz': 'America/Mexico_City', 'open': dt_time(8, 30), 'close': dt_time(15, 0), 'country': 'mx'},
     }
 
     METAL_MARKETS = {
-        'COMEX (Gold/Silver)': {'tz': 'America/New_York', 'open': dt_time(8, 20), 'close': dt_time(13, 30), 'flag': '🥇'},
-        'LBMA (London Gold)': {'tz': 'Europe/London', 'open': dt_time(10, 30), 'close': dt_time(15, 0), 'flag': '🇬🇧'},
-        'Shanghai Gold': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'flag': '🇨🇳'},
-        'Tokyo Commodity': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 15), 'flag': '🇯🇵'},
-        'LME (Base Metals)': {'tz': 'Europe/London', 'open': dt_time(1, 0), 'close': dt_time(19, 0), 'flag': '🔩'},
+        'COMEX (Gold/Silver)': {'tz': 'America/New_York', 'open': dt_time(8, 20), 'close': dt_time(13, 30), 'country': 'us'},
+        'LBMA (London Gold)': {'tz': 'Europe/London', 'open': dt_time(10, 30), 'close': dt_time(15, 0), 'country': 'gb'},
+        'Shanghai Gold': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'country': 'cn'},
+        'Tokyo Commodity': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 15), 'country': 'jp'},
+        'LME (Base Metals)': {'tz': 'Europe/London', 'open': dt_time(1, 0), 'close': dt_time(19, 0), 'country': 'gb'},
     }
 
     # Display market hours in tabs
@@ -2161,14 +2172,14 @@ elif page == "Markets":
         for i, market in enumerate(major_markets):
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            flag_img = f'<img src="https://flagcdn.com/20x15/{info["country"]}.png" style="vertical-align:middle; margin-right:6px;">'
             with cols[i % 4]:
-                # Use design system colors
                 status_color = COLORS['positive'] if is_open else COLORS['negative']
                 bg_color = COLORS['positive_light'] if is_open else "#f8fafc"
                 border_color = COLORS['positive'] if is_open else COLORS['negative']
                 st.markdown(
                     f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{flag_img}{market}</div>
                     <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
                     <div style="color:#64748b; font-size:12px;">{status_text}</div>
                     <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
@@ -2181,13 +2192,14 @@ elif page == "Markets":
         for i, market in enumerate(emerging_markets):
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            flag_img = f'<img src="https://flagcdn.com/20x15/{info["country"]}.png" style="vertical-align:middle; margin-right:6px;">'
             with cols2[i % 4]:
                 status_color = COLORS['positive'] if is_open else COLORS['negative']
                 bg_color = COLORS['positive_light'] if is_open else "#f8fafc"
                 border_color = COLORS['positive'] if is_open else COLORS['negative']
                 st.markdown(
                     f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{flag_img}{market}</div>
                     <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
                     <div style="color:#64748b; font-size:12px;">{status_text}</div>
                     <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
@@ -2200,6 +2212,7 @@ elif page == "Markets":
         metal_cols = st.columns(3)
         for i, (market, info) in enumerate(METAL_MARKETS.items()):
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            flag_img = f'<img src="https://flagcdn.com/20x15/{info["country"]}.png" style="vertical-align:middle; margin-right:6px;">'
             with metal_cols[i % 3]:
                 # Gold/amber tones for metal markets
                 status_color = "#b8860b" if is_open else COLORS['negative']
@@ -2207,7 +2220,7 @@ elif page == "Markets":
                 border_color = "#d97706" if is_open else COLORS['negative']
                 st.markdown(
                     f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{flag_img}{market}</div>
                     <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
                     <div style="color:#64748b; font-size:12px;">{status_text}</div>
                     <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
@@ -2276,38 +2289,58 @@ elif page == "Markets":
         earnings_events = get_earnings_calendar()
 
         if earnings_events:
-            earn_cols = st.columns([1, 2, 2, 1, 1])
-            earn_cols[0].markdown("**Symbol**")
-            earn_cols[1].markdown("**Company**")
-            earn_cols[2].markdown("**Date**")
-            earn_cols[3].markdown("**Time**")
-            earn_cols[4].markdown("**Status**")
+            # Build styled HTML table for earnings calendar
+            earnings_html = """
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:#334155;">Symbol</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:#334155;">Company</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:#334155;">Date</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:#334155;">Time</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:#334155;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
 
-            for event in earnings_events:
+            for i, event in enumerate(earnings_events):
                 days_until = (event['date'] - datetime.now()).days
 
                 if days_until < 0:
-                    status = "✅ Reported"
-                    status_color = "#888"
+                    status_badge = '<span style="background:#e2e8f0; color:#64748b; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:500;">Reported</span>'
+                    row_bg = "#fafafa"
                 elif days_until == 0:
-                    status = "🔴 TODAY"
-                    status_color = "#d32f2f"
+                    status_badge = '<span style="background:#fee2e2; color:#dc2626; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:600;">TODAY</span>'
+                    row_bg = "#fef2f2"
+                elif days_until <= 3:
+                    status_badge = f'<span style="background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:500;">{days_until}d</span>'
+                    row_bg = "#fffbeb"
                 elif days_until <= 7:
-                    status = f"⏰ {days_until}d"
-                    status_color = "#f57c00"
+                    status_badge = f'<span style="background:#dbeafe; color:#2563eb; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:500;">{days_until}d</span>'
+                    row_bg = "#ffffff"
                 else:
-                    status = f"📅 {days_until}d"
-                    status_color = "#1976d2"
+                    status_badge = f'<span style="background:#f1f5f9; color:#64748b; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:500;">{days_until}d</span>'
+                    row_bg = "#ffffff"
 
-                timing_str = "Pre-Market" if event['timing'] == 'BMO' else "After-Hours"
+                timing_badge = '<span style="color:#059669; font-weight:500;">☀️ Pre</span>' if event['timing'] == 'BMO' else '<span style="color:#7c3aed; font-weight:500;">🌙 After</span>'
+                row_border = "border-bottom:1px solid #f1f5f9;"
 
-                earn_cols = st.columns([1, 2, 2, 1, 1])
-                earn_cols[0].markdown(f"**{event['symbol']}**")
-                earn_cols[1].markdown(event['company'])
-                earn_cols[2].markdown(event['date'].strftime('%a, %b %d'))
-                earn_cols[3].markdown(timing_str)
-                earn_cols[4].markdown(f"<span style='color:{status_color}'>{status}</span>", unsafe_allow_html=True)
+                earnings_html += f"""
+                    <tr style="background:{row_bg}; {row_border}">
+                        <td style="padding:10px 12px; font-weight:600; color:#1e293b;">{event['symbol']}</td>
+                        <td style="padding:10px 12px; color:#475569;">{event['company']}</td>
+                        <td style="padding:10px 12px; color:#334155;">{event['date'].strftime('%a, %b %d')}</td>
+                        <td style="padding:10px 12px;">{timing_badge}</td>
+                        <td style="padding:10px 12px; text-align:center;">{status_badge}</td>
+                    </tr>
+                """
 
+            earnings_html += """
+                </tbody>
+            </table>
+            """
+            st.markdown(earnings_html, unsafe_allow_html=True)
             st.caption("*Dates are approximate. Check official investor relations for confirmed dates.*")
         else:
             st.info("No upcoming earnings in the next 30 days.")
@@ -2423,37 +2456,47 @@ elif page == "Markets":
         if latest_commodities.empty:
             st.warning("No commodity data. Run: `python scheduler.py --collector commodities`")
         else:
+            # Group by category - include WTI in energy
+            energy_symbols = ['CRUDE_OIL', 'NATURAL_GAS', 'BRENT', 'WTI']
+            metals_symbols = ['GOLD', 'SILVER', 'COPPER', 'PLATINUM', 'ALUMINUM']
+            energy = latest_commodities[latest_commodities['symbol'].isin(energy_symbols) | latest_commodities['name'].str.contains('Crude|Oil|Gas', case=False, na=False)]
+            metals = latest_commodities[latest_commodities['symbol'].isin(metals_symbols) | latest_commodities['name'].str.contains('Gold|Silver|Copper|Platinum|Aluminum', case=False, na=False)]
+            agriculture = latest_commodities[~latest_commodities.index.isin(energy.index) & ~latest_commodities.index.isin(metals.index)]
 
-            # Group by category
-            energy = latest_commodities[latest_commodities['symbol'].isin(['CRUDE_OIL', 'NATURAL_GAS', 'BRENT'])]
-            metals = latest_commodities[latest_commodities['symbol'].isin(['GOLD', 'SILVER', 'COPPER', 'PLATINUM'])]
-            agriculture = latest_commodities[~latest_commodities['symbol'].isin(['CRUDE_OIL', 'NATURAL_GAS', 'BRENT', 'GOLD', 'SILVER', 'COPPER', 'PLATINUM'])]
+            def render_commodity_card(row, category_color):
+                """Render a styled commodity card."""
+                change = float(row.get('change_percent', 0) or 0)
+                price = float(row['price']) if row['price'] else 0
+                name = row['name'] or row['symbol']
+                icon = get_commodity_icon(name)
+                change_color = '#0d9488' if change >= 0 else '#e07a5f'
+                change_sign = '+' if change >= 0 else ''
+
+                return f"""<div style="background:#ffffff; padding:16px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:10px; border-top:3px solid {category_color}; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display:flex; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:1.3em; margin-right:8px;">{icon}</span>
+                        <span style="font-weight:500; color:#475569;">{name}</span>
+                    </div>
+                    <div style="font-size:1.6em; font-weight:700; color:#1e293b; font-variant-numeric:tabular-nums;">${price:,.2f}</div>
+                    <div style="color:{change_color}; font-weight:500; margin-top:4px;">{change_sign}{change:.2f}%</div>
+                </div>"""
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.markdown(f"**{get_commodity_icon('oil')} Energy**")
+                st.markdown(f"#### {get_commodity_icon('oil')} Energy")
                 for _, row in energy.iterrows():
-                    change = row.get('change_percent', 0) or 0
-                    name = row['name'] or row['symbol']
-                    icon = get_commodity_icon(name)
-                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
+                    st.markdown(render_commodity_card(row, '#f59e0b'), unsafe_allow_html=True)
 
             with col2:
-                st.markdown(f"**{get_commodity_icon('gold')} Metals**")
+                st.markdown(f"#### {get_commodity_icon('gold')} Metals")
                 for _, row in metals.iterrows():
-                    change = row.get('change_percent', 0) or 0
-                    name = row['name'] or row['symbol']
-                    icon = get_commodity_icon(name)
-                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
+                    st.markdown(render_commodity_card(row, '#fbbf24'), unsafe_allow_html=True)
 
             with col3:
-                st.markdown(f"**{get_commodity_icon('wheat')} Agriculture**")
+                st.markdown(f"#### {get_commodity_icon('wheat')} Agriculture")
                 for _, row in agriculture.iterrows():
-                    change = row.get('change_percent', 0) or 0
-                    name = row['name'] or row['symbol']
-                    icon = get_commodity_icon(name)
-                    st.metric(f"{icon} {name}", f"${row['price']:.2f}", f"{change:+.2f}%")
+                    st.markdown(render_commodity_card(row, '#22c55e'), unsafe_allow_html=True)
 
     with tab3:
         st.subheader("Foreign Exchange Rates")
@@ -2550,30 +2593,238 @@ elif page == "Markets":
 
             st.markdown("---")
 
-            # Major pairs
-            major_pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD']
+            # ========== CURRENCY CONVERTER ==========
+            st.markdown("### Currency Converter")
 
-            col1, col2 = st.columns(2)
+            # Build exchange rate lookup from forex data
+            def build_rate_matrix(forex_df):
+                """Build a rate matrix for currency conversion."""
+                rates = {'USD': 1.0}  # Base currency
 
-            with col1:
-                st.markdown("**Major Pairs**")
-                for _, row in latest_forex[latest_forex['pair'].isin(major_pairs)].iterrows():
-                    st.metric(format_forex_pair(row['pair']), f"{row['rate']:.4f}")
+                for _, row in forex_df.iterrows():
+                    pair = row['pair']
+                    rate = float(row['rate']) if row['rate'] else None
+                    if not rate:
+                        continue
 
-            with col2:
-                st.markdown("**Other Pairs**")
-                for _, row in latest_forex[~latest_forex['pair'].isin(major_pairs)].iterrows():
-                    st.metric(format_forex_pair(row['pair']), f"{row['rate']:.4f}")
+                    parts = pair.split('/')
+                    if len(parts) == 2:
+                        base_curr, quote_curr = parts
+
+                        # Store direct rates
+                        if base_curr == 'USD':
+                            rates[quote_curr] = rate
+                        elif quote_curr == 'USD':
+                            rates[base_curr] = 1 / rate
+                        else:
+                            # Cross rate - need to derive via USD
+                            if base_curr not in rates and quote_curr == 'USD':
+                                rates[base_curr] = 1 / rate
+                            elif quote_curr not in rates and base_curr == 'USD':
+                                rates[quote_curr] = rate
+
+                # Add common currencies with derived rates
+                # EUR/USD means 1 EUR = rate USD, so EUR to USD rate = rate
+                for _, row in forex_df.iterrows():
+                    pair = row['pair']
+                    rate = float(row['rate']) if row['rate'] else None
+                    if not rate:
+                        continue
+
+                    parts = pair.split('/')
+                    if len(parts) == 2:
+                        base_curr, quote_curr = parts
+                        # X/USD: 1 X = rate USD
+                        if quote_curr == 'USD' and base_curr not in rates:
+                            rates[base_curr] = rate
+                        # USD/X: 1 USD = rate X, so 1 X = 1/rate USD
+                        elif base_curr == 'USD' and quote_curr not in rates:
+                            rates[quote_curr] = 1 / rate
+
+                return rates
+
+            rate_matrix = build_rate_matrix(latest_forex)
+
+            # Available currencies for conversion
+            available_currencies = sorted(rate_matrix.keys())
+
+            conv_col1, conv_col2, conv_col3, conv_col4 = st.columns([2, 2, 2, 2])
+
+            with conv_col1:
+                from_amount = st.number_input("Amount", value=1000.0, min_value=0.01, step=100.0, key="conv_amount")
+
+            with conv_col2:
+                from_currency = st.selectbox("From", available_currencies, index=available_currencies.index('USD') if 'USD' in available_currencies else 0, key="conv_from")
+
+            with conv_col3:
+                to_currency = st.selectbox("To", available_currencies, index=available_currencies.index('EUR') if 'EUR' in available_currencies else 0, key="conv_to")
+
+            with conv_col4:
+                # Swap button
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Swap", key="conv_swap"):
+                    st.session_state.conv_from, st.session_state.conv_to = st.session_state.conv_to, st.session_state.conv_from
+                    st.rerun()
+
+            # Calculate conversion
+            if from_currency in rate_matrix and to_currency in rate_matrix:
+                # Convert via USD as base
+                from_to_usd = rate_matrix[from_currency]  # How many USD for 1 FROM
+                to_to_usd = rate_matrix[to_currency]      # How many USD for 1 TO
+
+                # 1 FROM = from_to_usd USD
+                # 1 TO = to_to_usd USD
+                # So 1 FROM = (from_to_usd / to_to_usd) TO
+                exchange_rate = from_to_usd / to_to_usd
+                converted_amount = from_amount * exchange_rate
+
+                # Display result
+                result_col1, result_col2 = st.columns(2)
+
+                with result_col1:
+                    from_flag = get_flag_html(from_currency, size=24)
+                    to_flag = get_flag_html(to_currency, size=24)
+                    st.markdown(
+                        f"""<div style="background-color:#f8fafc; padding:20px; border-radius:10px; border:1px solid #e2e8f0;">
+                        <div style="font-size:0.9em; color:#64748b; margin-bottom:8px;">You're converting</div>
+                        <div style="font-size:1.8em; font-weight:600; color:#1e293b;">
+                            {from_flag} {from_amount:,.2f} {from_currency}
+                        </div>
+                        <div style="font-size:1.2em; color:#64748b; margin:12px 0;">equals</div>
+                        <div style="font-size:2.2em; font-weight:700; color:#3b82f6;">
+                            {to_flag} {converted_amount:,.2f} {to_currency}
+                        </div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+
+                with result_col2:
+                    st.markdown(
+                        f"""<div style="background-color:#ffffff; padding:20px; border-radius:10px; border:1px solid #e2e8f0;">
+                        <div style="font-size:0.9em; color:#64748b; margin-bottom:12px;">Exchange Rate</div>
+                        <div style="font-size:1.1em; color:#1e293b; margin-bottom:8px;">
+                            1 {from_currency} = <b>{exchange_rate:.6f}</b> {to_currency}
+                        </div>
+                        <div style="font-size:1.1em; color:#1e293b;">
+                            1 {to_currency} = <b>{1/exchange_rate:.6f}</b> {from_currency}
+                        </div>
+                        <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e2e8f0;">
+                            <small style="color:#94a3b8;">Rates based on latest forex data</small>
+                        </div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.warning(f"Exchange rate not available for {from_currency}/{to_currency}")
 
             st.markdown("---")
-            st.subheader("All Rates")
-            display_forex = latest_forex[['pair', 'rate', 'bid', 'ask']].copy()
-            display_forex['pair'] = display_forex['pair'].apply(format_forex_pair)
-            display_forex['rate'] = display_forex['rate'].apply(lambda x: f"{x:.4f}" if x else "N/A")
-            display_forex['bid'] = display_forex['bid'].apply(lambda x: f"{x:.4f}" if x else "N/A")
-            display_forex['ask'] = display_forex['ask'].apply(lambda x: f"{x:.4f}" if x else "N/A")
-            display_forex.columns = ['Pair', 'Rate', 'Bid', 'Ask']
-            st.dataframe(display_forex, use_container_width=True, hide_index=True)
+
+            # Major pairs
+            # ========== FOREX PAIRS GRID ==========
+            st.markdown("### Exchange Rates")
+
+            major_pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD']
+            major_forex = latest_forex[latest_forex['pair'].isin(major_pairs)]
+            other_forex = latest_forex[~latest_forex['pair'].isin(major_pairs)]
+
+            # Major pairs in a nice grid
+            st.markdown("**Major Pairs**")
+            major_cols = st.columns(3)
+            for i, (_, row) in enumerate(major_forex.iterrows()):
+                with major_cols[i % 3]:
+                    pair = row['pair']
+                    rate = float(row['rate']) if row['rate'] else 0
+                    bid = float(row['bid']) if row['bid'] else rate
+                    ask = float(row['ask']) if row['ask'] else rate
+                    spread = (ask - bid) * 10000 if rate < 10 else (ask - bid) * 100  # pips
+
+                    # Get flags for both currencies
+                    parts = pair.split('/')
+                    flag1 = get_flag_html(parts[0], size=20) if len(parts) > 0 else ''
+                    flag2 = get_flag_html(parts[1], size=20) if len(parts) > 1 else ''
+
+                    st.markdown(
+                        f"""<div style="background:#ffffff; padding:16px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display:flex; align-items:center; margin-bottom:8px;">
+                            {flag1}<span style="margin:0 4px; color:#94a3b8;">/</span>{flag2}
+                            <span style="margin-left:8px; font-weight:600; color:#1e293b;">{pair}</span>
+                        </div>
+                        <div style="font-size:1.8em; font-weight:700; color:#1e293b; font-variant-numeric:tabular-nums;">{rate:.4f}</div>
+                        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.85em; color:#64748b;">
+                            <span>Bid: {bid:.4f}</span>
+                            <span>Ask: {ask:.4f}</span>
+                            <span>Spread: {spread:.1f}</span>
+                        </div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+
+            # Other pairs
+            if not other_forex.empty:
+                st.markdown("**Other Pairs**")
+                other_cols = st.columns(3)
+                for i, (_, row) in enumerate(other_forex.iterrows()):
+                    with other_cols[i % 3]:
+                        pair = row['pair']
+                        rate = float(row['rate']) if row['rate'] else 0
+                        parts = pair.split('/')
+                        flag1 = get_flag_html(parts[0], size=20) if len(parts) > 0 else ''
+                        flag2 = get_flag_html(parts[1], size=20) if len(parts) > 1 else ''
+
+                        st.markdown(
+                            f"""<div style="background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; margin-bottom:6px;">
+                                {flag1}<span style="margin:0 4px; color:#94a3b8;">/</span>{flag2}
+                                <span style="margin-left:8px; font-weight:500; color:#475569;">{pair}</span>
+                            </div>
+                            <div style="font-size:1.5em; font-weight:600; color:#1e293b; font-variant-numeric:tabular-nums;">{rate:.4f}</div>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+
+            st.markdown("---")
+
+            # ========== ALL RATES TABLE ==========
+            st.markdown("### All Rates")
+
+            # Build styled table
+            table_rows = ""
+            for _, row in latest_forex.iterrows():
+                pair = row['pair']
+                rate = float(row['rate']) if row['rate'] else 0
+                bid = float(row['bid']) if row['bid'] else 0
+                ask = float(row['ask']) if row['ask'] else 0
+                spread = (ask - bid) * 10000 if rate < 10 else (ask - bid) * 100
+
+                parts = pair.split('/')
+                flag1 = get_flag_html(parts[0], size=16) if len(parts) > 0 else ''
+                flag2 = get_flag_html(parts[1], size=16) if len(parts) > 1 else ''
+
+                table_rows += f"""<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 16px;">{flag1}<span style="margin:0 3px; color:#cbd5e1;">/</span>{flag2} <b>{pair}</b></td>
+                    <td style="padding:12px 16px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600;">{rate:.4f}</td>
+                    <td style="padding:12px 16px; text-align:right; font-variant-numeric:tabular-nums; color:#64748b;">{bid:.4f}</td>
+                    <td style="padding:12px 16px; text-align:right; font-variant-numeric:tabular-nums; color:#64748b;">{ask:.4f}</td>
+                    <td style="padding:12px 16px; text-align:right; font-variant-numeric:tabular-nums; color:#94a3b8;">{spread:.1f}</td>
+                </tr>"""
+
+            st.markdown(
+                f"""<div style="background:#ffffff; border-radius:10px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                        <th style="padding:12px 16px; text-align:left; font-weight:600; color:#475569;">Pair</th>
+                        <th style="padding:12px 16px; text-align:right; font-weight:600; color:#475569;">Rate</th>
+                        <th style="padding:12px 16px; text-align:right; font-weight:600; color:#475569;">Bid</th>
+                        <th style="padding:12px 16px; text-align:right; font-weight:600; color:#475569;">Ask</th>
+                        <th style="padding:12px 16px; text-align:right; font-weight:600; color:#475569;">Spread</th>
+                    </tr>
+                </thead>
+                <tbody>{table_rows}</tbody>
+                </table>
+                </div>""",
+                unsafe_allow_html=True
+            )
 
 
 # ============================================================================
@@ -2582,6 +2833,25 @@ elif page == "Markets":
 
 elif page == "Crypto":
     page_title("Crypto", "Cryptocurrency markets and blockchain analytics")
+
+    with st.expander("ℹ️ Understanding Cryptocurrency Markets", expanded=False):
+        st.markdown("""
+        **Key Metrics Explained:**
+        - **Market Cap** = Price × Circulating Supply (total market value)
+        - **24h Change** = Price movement over the last 24 hours
+        - **Volume** = Total value traded in 24h (high volume = high interest)
+        - **BTC Dominance** = Bitcoin's share of total crypto market cap
+
+        **Market Cap Tiers:**
+        - 🔵 **Large Cap** (>$10B): BTC, ETH - Lower risk, established
+        - 🟢 **Mid Cap** ($1B-$10B): SOL, ADA - Growth potential
+        - 🟡 **Small Cap** (<$1B): Higher risk, higher volatility
+
+        **Trading Tips:**
+        - Crypto markets trade 24/7, 365 days
+        - Highest volatility during US market hours (9 AM - 4 PM ET)
+        - Watch for correlation with traditional markets during risk-off events
+        """)
     st.markdown("---")
 
     # Optimized query - get only latest per symbol
@@ -2626,26 +2896,84 @@ elif page == "Crypto":
             col1, col2 = st.columns(2)
 
             with col1:
-                st.subheader("Top 10 by Market Cap")
+                st.markdown("#### Top 10 by Market Cap")
                 top_10 = latest_crypto.nlargest(10, 'market_cap')
+
+                # Crypto icons mapping
+                crypto_icons = {
+                    'BTC': 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=035',
+                    'ETH': 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',
+                    'USDT': 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=035',
+                    'BNB': 'https://cryptologos.cc/logos/bnb-bnb-logo.png?v=035',
+                    'XRP': 'https://cryptologos.cc/logos/xrp-xrp-logo.png?v=035',
+                    'SOL': 'https://cryptologos.cc/logos/solana-sol-logo.png?v=035',
+                    'DOGE': 'https://cryptologos.cc/logos/dogecoin-doge-logo.png?v=035',
+                    'ADA': 'https://cryptologos.cc/logos/cardano-ada-logo.png?v=035',
+                    'LINK': 'https://cryptologos.cc/logos/chainlink-link-logo.png?v=035',
+                    'AVAX': 'https://cryptologos.cc/logos/avalanche-avax-logo.png?v=035',
+                    'DOT': 'https://cryptologos.cc/logos/polkadot-new-dot-logo.png?v=035',
+                    'LTC': 'https://cryptologos.cc/logos/litecoin-ltc-logo.png?v=035',
+                    'UNI': 'https://cryptologos.cc/logos/uniswap-uni-logo.png?v=035',
+                    'XLM': 'https://cryptologos.cc/logos/stellar-xlm-logo.png?v=035',
+                }
+
                 for i, (_, row) in enumerate(top_10.iterrows(), 1):
                     change = row['change_percent_24h']
-                    color = "positive" if change >= 0 else "negative"
-                    price_fmt = f"${row['price']:,.2f}" if row['price'] < 10000 else f"${row['price']:,.0f}"
-                    st.markdown(f"**{i}. {row['symbol']}** {price_fmt} <span class='{color}'>{change:+.2f}%</span>",
-                               unsafe_allow_html=True)
+                    change_color = '#0d9488' if change >= 0 else '#e07a5f'
+                    change_sign = '+' if change >= 0 else ''
+                    price = float(row['price']) if row['price'] else 0
+                    price_fmt = f"${price:,.2f}" if price < 10000 else f"${price:,.0f}"
+                    market_cap = float(row['market_cap']) if row['market_cap'] else 0
+
+                    # Get icon or use placeholder
+                    icon_url = crypto_icons.get(row['symbol'], '')
+                    icon_html = f'<img src="{icon_url}" style="width:28px; height:28px; border-radius:50%; margin-right:10px;">' if icon_url else f'<div style="width:28px; height:28px; border-radius:50%; background:#e2e8f0; margin-right:10px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px;">{row["symbol"][:2]}</div>'
+
+                    st.markdown(
+                        f"""<div style="display:flex; align-items:center; padding:12px 16px; background:#ffffff; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                        <div style="width:28px; font-weight:600; color:#94a3b8; margin-right:12px;">{i}</div>
+                        {icon_html}
+                        <div style="flex:1;">
+                            <div style="font-weight:600; color:#1e293b;">{row['symbol']}</div>
+                            <div style="font-size:0.8em; color:#94a3b8;">{format_large_number(market_cap)}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:600; color:#1e293b; font-variant-numeric:tabular-nums;">{price_fmt}</div>
+                            <div style="color:{change_color}; font-weight:500; font-size:0.9em;">{change_sign}{change:.2f}%</div>
+                        </div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
 
             with col2:
-                st.subheader("Biggest Movers (24h)")
-                # Top 5 gainers and losers
+                st.markdown("#### Biggest Movers (24h)")
+
+                # Gainers
                 st.markdown("**Gainers**")
                 for _, row in gainers.head(5).iterrows():
-                    st.markdown(f"**{row['symbol']}** <span class='positive'>+{row['change_percent_24h']:.2f}%</span>",
-                               unsafe_allow_html=True)
+                    change = row['change_percent_24h']
+                    price = float(row['price']) if row['price'] else 0
+                    st.markdown(
+                        f"""<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f0fdf4; border-radius:8px; border-left:3px solid #0d9488; margin-bottom:6px;">
+                        <span style="font-weight:600; color:#1e293b;">{row['symbol']}</span>
+                        <span style="color:#0d9488; font-weight:600;">+{change:.2f}%</span>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+
+                st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
+
+                # Losers
                 st.markdown("**Losers**")
                 for _, row in losers.head(5).iterrows():
-                    st.markdown(f"**{row['symbol']}** <span class='negative'>{row['change_percent_24h']:.2f}%</span>",
-                               unsafe_allow_html=True)
+                    change = row['change_percent_24h']
+                    st.markdown(
+                        f"""<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#fef2f2; border-radius:8px; border-left:3px solid #e07a5f; margin-bottom:6px;">
+                        <span style="font-weight:600; color:#1e293b;">{row['symbol']}</span>
+                        <span style="color:#e07a5f; font-weight:600;">{change:.2f}%</span>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
 
         elif crypto_view == "Top Gainers":
             st.subheader("Top Gainers (24h)")
@@ -2912,7 +3240,7 @@ elif page == "Economic Indicators":
         ]
         for d in fomc_dates:
             if d >= today - timedelta(days=1):
-                events.append({'date': d, 'event': 'FOMC Meeting', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Central Bank'})
+                events.append({'date': d, 'event': 'FOMC Meeting', 'country': 'USA', 'importance': 'HIGH', 'category': 'Central Bank'})
 
         # US Jobs Report (First Friday of each month)
         for month_offset in range(6):
@@ -2926,7 +3254,7 @@ elif page == "Economic Indicators":
             first_friday = [week[4] for week in cal if week[4] != 0][0]
             jobs_date = datetime(target_year, target_month, first_friday)
             if jobs_date >= today - timedelta(days=1):
-                events.append({'date': jobs_date, 'event': 'US Jobs Report (NFP)', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Employment'})
+                events.append({'date': jobs_date, 'event': 'US Jobs Report (NFP)', 'country': 'USA', 'importance': 'HIGH', 'category': 'Employment'})
 
         # US CPI (Usually mid-month, ~12th-15th)
         for month_offset in range(6):
@@ -2937,7 +3265,7 @@ elif page == "Economic Indicators":
                 target_year += 1
             cpi_date = datetime(target_year, target_month, 13)
             if cpi_date >= today - timedelta(days=1):
-                events.append({'date': cpi_date, 'event': 'US CPI Inflation', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Inflation'})
+                events.append({'date': cpi_date, 'event': 'US CPI Inflation', 'country': 'USA', 'importance': 'HIGH', 'category': 'Inflation'})
 
         # US GDP (End of month, quarterly)
         gdp_months = [1, 4, 7, 10]  # Quarterly releases
@@ -2945,7 +3273,7 @@ elif page == "Economic Indicators":
             gdp_year = today.year if month >= today.month else today.year + 1
             gdp_date = datetime(gdp_year, month, 28)
             if gdp_date >= today - timedelta(days=1):
-                events.append({'date': gdp_date, 'event': 'US GDP Release', 'country': '🇺🇸 USA', 'importance': 'HIGH', 'category': 'Growth'})
+                events.append({'date': gdp_date, 'event': 'US GDP Release', 'country': 'USA', 'importance': 'HIGH', 'category': 'Growth'})
 
         # ECB Meetings (every 6 weeks approximately)
         ecb_dates = [
@@ -2955,7 +3283,7 @@ elif page == "Economic Indicators":
         ]
         for d in ecb_dates:
             if d >= today - timedelta(days=1):
-                events.append({'date': d, 'event': 'ECB Rate Decision', 'country': '🇪🇺 EU', 'importance': 'HIGH', 'category': 'Central Bank'})
+                events.append({'date': d, 'event': 'ECB Rate Decision', 'country': 'EU', 'importance': 'HIGH', 'category': 'Central Bank'})
 
         # Bank of England
         boe_dates = [
@@ -2965,7 +3293,7 @@ elif page == "Economic Indicators":
         ]
         for d in boe_dates:
             if d >= today - timedelta(days=1):
-                events.append({'date': d, 'event': 'BoE Rate Decision', 'country': '🇬🇧 UK', 'importance': 'HIGH', 'category': 'Central Bank'})
+                events.append({'date': d, 'event': 'BoE Rate Decision', 'country': 'UK', 'importance': 'HIGH', 'category': 'Central Bank'})
 
         # Bank of Japan
         boj_dates = [
@@ -2975,7 +3303,7 @@ elif page == "Economic Indicators":
         ]
         for d in boj_dates:
             if d >= today - timedelta(days=1):
-                events.append({'date': d, 'event': 'BoJ Rate Decision', 'country': '🇯🇵 Japan', 'importance': 'HIGH', 'category': 'Central Bank'})
+                events.append({'date': d, 'event': 'BoJ Rate Decision', 'country': 'Japan', 'importance': 'HIGH', 'category': 'Central Bank'})
 
         # US Retail Sales (mid-month)
         for month_offset in range(4):
@@ -2986,7 +3314,7 @@ elif page == "Economic Indicators":
                 target_year += 1
             retail_date = datetime(target_year, target_month, 16)
             if retail_date >= today - timedelta(days=1):
-                events.append({'date': retail_date, 'event': 'US Retail Sales', 'country': '🇺🇸 USA', 'importance': 'MEDIUM', 'category': 'Consumer'})
+                events.append({'date': retail_date, 'event': 'US Retail Sales', 'country': 'USA', 'importance': 'MEDIUM', 'category': 'Consumer'})
 
         # ISM Manufacturing PMI (First business day of month)
         for month_offset in range(4):
@@ -3000,7 +3328,7 @@ elif page == "Economic Indicators":
             while ism_date.weekday() >= 5:
                 ism_date += timedelta(days=1)
             if ism_date >= today - timedelta(days=1):
-                events.append({'date': ism_date, 'event': 'ISM Manufacturing PMI', 'country': '🇺🇸 USA', 'importance': 'MEDIUM', 'category': 'Manufacturing'})
+                events.append({'date': ism_date, 'event': 'ISM Manufacturing PMI', 'country': 'USA', 'importance': 'MEDIUM', 'category': 'Manufacturing'})
 
         # Sort by date
         events.sort(key=lambda x: x['date'])
@@ -3030,11 +3358,15 @@ elif page == "Economic Indicators":
 
                 importance_color = COLORS['negative'] if event['importance'] == 'HIGH' else "#f59e0b"
 
+                # Get flag image for the country (use ISO code for CDN)
+                country_iso = {'USA': 'us', 'EU': 'eu', 'UK': 'gb', 'Japan': 'jp'}.get(event['country'], 'us')
+                flag_img = f'<img src="https://flagcdn.com/20x15/{country_iso}.png" style="vertical-align:middle; margin-right:6px;">'
+
                 st.markdown(
                     f"""<div style="background-color:#ffffff; padding:12px 16px; border-radius:8px; margin:8px 0; border-left:4px solid {importance_color}; border:1px solid #e2e8f0; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <span style="color:#1e293b; font-weight:600;">{event['country']}</span> <span style="color:#334155;">{event['event']}</span><br>
+                            {flag_img}<span style="color:#334155; font-weight:500;">{event['event']}</span><br>
                             <small style="color:#64748b;">{event['category']} | {event['date'].strftime('%a, %b %d, %Y')}</small>
                         </div>
                         <div style="background-color:{bg_color}; color:white; padding:6px 12px; border-radius:6px; font-weight:600; font-size:0.85rem;">
@@ -3131,7 +3463,9 @@ elif page == "Economic Indicators":
                 )
                 # Ensure y-axis has room for outside labels
                 max_val = latest_comparison['value'].max()
-                fig.update_yaxes(range=[0, max_val * 1.15])
+                if max_val is not None:
+                    max_val = float(max_val)
+                    fig.update_yaxes(range=[0, max_val * 1.15])
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -3268,7 +3602,7 @@ elif page == "Global Development":
                             textposition='outside',
                             marker_color='#3b82f6'
                         )
-                        max_val = ind_data['value'].max()
+                        max_val = float(ind_data['value'].max())
                         fig.update_yaxes(range=[0, max_val * 1.15])
                         st.plotly_chart(fig, use_container_width=True)
 
@@ -6183,6 +6517,33 @@ elif page == "Debt & Fiscal":
 
 elif page == "Country Profile":
     page_title("Country Profile", "Comprehensive country-level economic data")
+
+    with st.expander("ℹ️ How to Use Country Profiles", expanded=False):
+        st.markdown("""
+        **Available Data Categories:**
+        - **Economy**: GDP, inflation, unemployment, trade balance
+        - **Demographics**: Population, age distribution, urbanization
+        - **Social**: GINI inequality index, poverty rate
+        - **Labor**: Unemployment rate, labor force participation
+        - **Energy**: Electricity generation, energy mix, CO₂ emissions
+        - **Trade**: Top exports/imports, trade partners
+        - **Resources**: Natural resources, agricultural production
+
+        **Key Metrics Explained:**
+
+        | Metric | What It Means | Good vs Concerning |
+        |--------|--------------|-------------------|
+        | **GDP Growth** | Economic expansion rate | >2% strong, <0% recession |
+        | **Inflation** | Price increase rate | 2% ideal, >6% concerning |
+        | **Debt/GDP** | Government debt level | <60% healthy, >100% risky |
+        | **GINI Index** | Income inequality (0-100) | <30 equal, >45 very unequal |
+        | **Credit Rating** | Borrowing creditworthiness | AAA best, BB+ below junk |
+
+        **Investment Implications:**
+        - High GDP growth + low inflation = favorable for equities
+        - High debt + low growth = currency/bond risk
+        - Resource-rich countries benefit from commodity cycles
+        """)
     st.markdown("---")
 
     # Comprehensive country data - aggregated from all our data sources
@@ -6211,6 +6572,10 @@ elif page == "Country Profile":
             'top_imports': ['Cars', 'Computers', 'Crude Petroleum', 'Packaged Medicines', 'Vehicle Parts'],
             'minerals_produced': ['Coal', 'Copper', 'Gold', 'Iron Ore', 'Zinc'],
             'crops_produced': ['Corn', 'Soybeans', 'Wheat'],
+            # Social & Labor metrics
+            'gini_index': 39.8,  # Income inequality (0=perfect equality, 100=max inequality)
+            'poverty_rate': 11.5,  # % below poverty line
+            'labor_force_participation': 62.2,  # % of working-age population in labor force
         },
         'China': {
             'flag': '🇨🇳',
@@ -6236,6 +6601,9 @@ elif page == "Country Profile":
             'top_imports': ['Crude Petroleum', 'Integrated Circuits', 'Iron Ore', 'Natural Gas', 'Cars'],
             'minerals_produced': ['Coal', 'Iron Ore', 'Rare Earths', 'Gold', 'Zinc'],
             'crops_produced': ['Rice', 'Wheat', 'Corn', 'Soybeans'],
+            'gini_index': 38.2,
+            'poverty_rate': 0.6,
+            'labor_force_participation': 68.0,
         },
         'Germany': {
             'flag': '🇩🇪',
@@ -6261,6 +6629,9 @@ elif page == "Country Profile":
             'top_imports': ['Cars', 'Crude Petroleum', 'Natural Gas', 'Vehicle Parts', 'Packaged Medicines'],
             'minerals_produced': ['Potash', 'Salt', 'Lignite'],
             'crops_produced': ['Wheat', 'Barley', 'Sugar Beets'],
+            'gini_index': 31.7,
+            'poverty_rate': 14.8,
+            'labor_force_participation': 62.0,
         },
         'Japan': {
             'flag': '🇯🇵',
@@ -6286,6 +6657,9 @@ elif page == "Country Profile":
             'top_imports': ['Crude Petroleum', 'Natural Gas', 'Integrated Circuits', 'Coal', 'Telephones'],
             'minerals_produced': ['Gold', 'Zinc', 'Lead'],
             'crops_produced': ['Rice', 'Vegetables', 'Fruits'],
+            'gini_index': 32.9,
+            'poverty_rate': 15.7,
+            'labor_force_participation': 62.4,
         },
         'India': {
             'flag': '🇮🇳',
@@ -6311,6 +6685,9 @@ elif page == "Country Profile":
             'top_imports': ['Crude Petroleum', 'Gold', 'Coal', 'Diamonds', 'Natural Gas'],
             'minerals_produced': ['Coal', 'Iron Ore', 'Bauxite', 'Zinc'],
             'crops_produced': ['Rice', 'Wheat', 'Sugar', 'Cotton'],
+            'gini_index': 35.2,
+            'poverty_rate': 21.9,
+            'labor_force_participation': 46.0,
         },
         'United Kingdom': {
             'flag': '🇬🇧',
@@ -6336,6 +6713,9 @@ elif page == "Country Profile":
             'top_imports': ['Cars', 'Crude Petroleum', 'Gold', 'Packaged Medicines', 'Computers'],
             'minerals_produced': ['Oil', 'Natural Gas', 'Salt'],
             'crops_produced': ['Wheat', 'Barley', 'Potatoes'],
+            'gini_index': 32.4,
+            'poverty_rate': 18.6,
+            'labor_force_participation': 62.1,
         },
         'Brazil': {
             'flag': '🇧🇷',
@@ -6361,6 +6741,9 @@ elif page == "Country Profile":
             'top_imports': ['Refined Petroleum', 'Fertilizers', 'Vehicle Parts', 'Integrated Circuits', 'Pesticides'],
             'minerals_produced': ['Iron Ore', 'Bauxite', 'Gold', 'Copper'],
             'crops_produced': ['Soybeans', 'Sugar', 'Coffee', 'Corn'],
+            'gini_index': 52.9,
+            'poverty_rate': 27.4,
+            'labor_force_participation': 61.5,
         },
         'Russia': {
             'flag': '🇷🇺',
@@ -6386,6 +6769,9 @@ elif page == "Country Profile":
             'top_imports': ['Cars', 'Packaged Medicines', 'Vehicle Parts', 'Telephones', 'Computers'],
             'minerals_produced': ['Oil', 'Natural Gas', 'Coal', 'Gold', 'Nickel', 'Platinum', 'Potash'],
             'crops_produced': ['Wheat', 'Barley', 'Sunflower'],
+            'gini_index': 36.0,
+            'poverty_rate': 12.1,
+            'labor_force_participation': 59.5,
         },
         'Australia': {
             'flag': '🇦🇺',
@@ -6411,6 +6797,9 @@ elif page == "Country Profile":
             'top_imports': ['Refined Petroleum', 'Cars', 'Computers', 'Telephones', 'Packaged Medicines'],
             'minerals_produced': ['Iron Ore', 'Lithium', 'Gold', 'Copper', 'Bauxite', 'Zinc', 'Uranium'],
             'crops_produced': ['Wheat', 'Barley', 'Sugar'],
+            'gini_index': 32.4,
+            'poverty_rate': 12.3,
+            'labor_force_participation': 66.3,
         },
         'South Korea': {
             'flag': '🇰🇷',
@@ -6436,6 +6825,9 @@ elif page == "Country Profile":
             'top_imports': ['Crude Petroleum', 'Integrated Circuits', 'Natural Gas', 'Refined Petroleum', 'Coal'],
             'minerals_produced': ['Zinc', 'Lead', 'Tungsten'],
             'crops_produced': ['Rice', 'Vegetables'],
+            'gini_index': 31.4,
+            'poverty_rate': 14.4,
+            'labor_force_participation': 64.0,
         },
         'Saudi Arabia': {
             'flag': '🇸🇦',
@@ -6461,6 +6853,9 @@ elif page == "Country Profile":
             'top_imports': ['Cars', 'Telephones', 'Refined Petroleum', 'Gold', 'Packaged Medicines'],
             'minerals_produced': ['Oil', 'Natural Gas', 'Gold', 'Phosphate'],
             'crops_produced': ['Dates', 'Wheat', 'Vegetables'],
+            'gini_index': 45.9,
+            'poverty_rate': 12.7,
+            'labor_force_participation': 59.8,
         },
         'Indonesia': {
             'flag': '🇮🇩',
@@ -6486,6 +6881,9 @@ elif page == "Country Profile":
             'top_imports': ['Refined Petroleum', 'Crude Petroleum', 'Telephones', 'Machinery', 'Wheat'],
             'minerals_produced': ['Nickel', 'Coal', 'Copper', 'Gold', 'Tin'],
             'crops_produced': ['Palm Oil', 'Rice', 'Rubber', 'Cocoa'],
+            'gini_index': 37.9,
+            'poverty_rate': 9.5,
+            'labor_force_participation': 67.8,
         },
     }
 
@@ -6518,7 +6916,7 @@ elif page == "Country Profile":
         st.markdown("---")
 
         # Tabs for different domains
-        profile_tabs = st.tabs(["Economy", "Demographics", "Energy", "Trade", "Resources"])
+        profile_tabs = st.tabs(["Economy", "Demographics", "Social", "Labor", "Energy", "Trade", "Resources"])
 
         with profile_tabs[0]:
             st.subheader("Economic Indicators")
@@ -6574,6 +6972,105 @@ elif page == "Country Profile":
                 st.metric("Food Security Index", f"{data['food_security']}/100")
 
         with profile_tabs[2]:
+            st.subheader("Social Metrics")
+            st.caption("Measures of equality and welfare (lower = better for inequality)")
+
+            # Calculate global averages for benchmarks
+            all_gini = [d['gini_index'] for d in COUNTRY_DATA.values()]
+            all_poverty = [d['poverty_rate'] for d in COUNTRY_DATA.values()]
+            avg_gini = sum(all_gini) / len(all_gini)
+            avg_poverty = sum(all_poverty) / len(all_poverty)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                gini_val = data['gini_index']
+                gini_delta = gini_val - avg_gini
+                # For GINI, lower is better so positive delta is bad
+                st.metric(
+                    "GINI Index",
+                    f"{gini_val}/100",
+                    delta=f"{gini_delta:+.1f} vs avg",
+                    delta_color="inverse"  # Green for lower, red for higher
+                )
+                st.caption(f"**0** = Perfect equality, **100** = Maximum inequality")
+                if gini_val < 30:
+                    st.success("Low inequality")
+                elif gini_val < 40:
+                    st.info("Moderate inequality")
+                else:
+                    st.warning("High inequality")
+
+            with col2:
+                poverty_val = data['poverty_rate']
+                poverty_delta = poverty_val - avg_poverty
+                st.metric(
+                    "Poverty Rate",
+                    f"{poverty_val}%",
+                    delta=f"{poverty_delta:+.1f}pp vs avg",
+                    delta_color="inverse"
+                )
+                st.caption(f"Population below national poverty line")
+                if poverty_val < 10:
+                    st.success("Low poverty")
+                elif poverty_val < 20:
+                    st.info("Moderate poverty")
+                else:
+                    st.warning("High poverty")
+
+            st.markdown("---")
+            st.markdown(f"**Global Averages:** GINI {avg_gini:.1f}/100 | Poverty {avg_poverty:.1f}%")
+
+        with profile_tabs[3]:
+            st.subheader("Labor Metrics")
+            st.caption("Employment and workforce statistics")
+
+            # Calculate global averages for benchmarks
+            all_unemployment = [d['unemployment'] for d in COUNTRY_DATA.values()]
+            all_lfp = [d['labor_force_participation'] for d in COUNTRY_DATA.values()]
+            avg_unemployment = sum(all_unemployment) / len(all_unemployment)
+            avg_lfp = sum(all_lfp) / len(all_lfp)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                unemp_val = data['unemployment']
+                unemp_delta = unemp_val - avg_unemployment
+                st.metric(
+                    "Unemployment Rate",
+                    f"{unemp_val}%",
+                    delta=f"{unemp_delta:+.1f}pp vs avg",
+                    delta_color="inverse"  # Lower is better
+                )
+                st.caption("Percentage of labor force without employment")
+                if unemp_val < 4:
+                    st.success("Low unemployment (near full employment)")
+                elif unemp_val < 6:
+                    st.info("Moderate unemployment")
+                else:
+                    st.warning("High unemployment")
+
+            with col2:
+                lfp_val = data['labor_force_participation']
+                lfp_delta = lfp_val - avg_lfp
+                st.metric(
+                    "Labor Force Participation",
+                    f"{lfp_val}%",
+                    delta=f"{lfp_delta:+.1f}pp vs avg",
+                    delta_color="normal"  # Higher is generally better
+                )
+                st.caption("Working-age population in labor force")
+                if lfp_val > 65:
+                    st.success("High participation")
+                elif lfp_val > 55:
+                    st.info("Moderate participation")
+                else:
+                    st.warning("Low participation")
+
+            st.markdown("---")
+            st.markdown(f"**Global Averages:** Unemployment {avg_unemployment:.1f}% | Labor Participation {avg_lfp:.1f}%")
+
+        with profile_tabs[4]:
             st.subheader("Energy Profile")
 
             col1, col2 = st.columns(2)
@@ -6606,7 +7103,7 @@ elif page == "Country Profile":
             fig_energy.update_layout(**get_clean_plotly_layout(), height=350)
             st.plotly_chart(fig_energy, use_container_width=True)
 
-        with profile_tabs[3]:
+        with profile_tabs[5]:
             st.subheader("Trade Profile")
 
             col1, col2 = st.columns(2)
@@ -6628,7 +7125,7 @@ elif page == "Country Profile":
             else:
                 st.error(f"**Trade Deficit:** ${balance:,} billion")
 
-        with profile_tabs[4]:
+        with profile_tabs[6]:
             st.subheader("Natural Resources")
 
             col1, col2 = st.columns(2)
@@ -6655,6 +7152,34 @@ elif page == "Country Profile":
 
 elif page == "Correlation Analysis":
     page_title("Correlation Analysis", "Cross-asset correlations and relationships")
+
+    with st.expander("ℹ️ Understanding Correlations", expanded=False):
+        st.markdown("""
+        **What is Correlation?**
+        A statistical measure (-1 to +1) showing how two assets move together over time.
+
+        **Reading the Heatmap:**
+        - 🔵 **+1.0** = Perfect positive correlation (move together)
+        - ⚪ **0.0** = No correlation (independent movements)
+        - 🔴 **-1.0** = Perfect negative correlation (move opposite)
+
+        **Practical Applications:**
+
+        | Correlation | Meaning | Portfolio Use |
+        |-------------|---------|---------------|
+        | > +0.7 | Strong positive | Concentrated risk |
+        | +0.3 to +0.7 | Moderate positive | Similar drivers |
+        | -0.3 to +0.3 | Weak/No correlation | Diversification benefit |
+        | < -0.3 | Negative | Hedging opportunity |
+
+        **Key Relationships to Watch:**
+        - **Stocks vs Bonds**: Usually negative (flight to safety)
+        - **Gold vs USD**: Typically negative (gold priced in dollars)
+        - **Oil vs Airlines**: Strong negative (fuel costs)
+        - **Tech vs Growth stocks**: High positive (similar risk profile)
+
+        **Caution:** Correlations change over time, especially during market stress!
+        """)
     st.markdown("---")
 
     # Load data from database for correlation
@@ -7547,32 +8072,42 @@ elif page == "Earnings Dashboard":
         }
         sector_earn_df = pd.DataFrame(SECTOR_EARNINGS)
 
+        # Table explanation
+        st.caption("""
+        **Table Guide:** Market Weight = sector's % of S&P 500 by market cap | Earnings Weight = sector's % of total S&P earnings |
+        P/E Ratio = Price-to-Earnings valuation | FWD EPS Growth = Expected earnings growth next 12 months
+        """)
+
         st.dataframe(sector_earn_df, use_container_width=True, hide_index=True)
 
         # Earnings vs Market Weight
         col1, col2 = st.columns(2)
 
         with col1:
+            st.caption("**Bubble size** = P/E Ratio | **Color** = Forward EPS Growth (green=high, red=low)")
             fig_weight = px.scatter(sector_earn_df, x='Market Weight', y='Earnings Weight',
                                    size='P/E Ratio', color='FWD EPS Growth',
                                    text='Sector',
                                    title='Market Weight vs Earnings Contribution',
-                                   color_continuous_scale='RdYlGn')
+                                   color_continuous_scale='RdYlGn',
+                                   range_color=[-10, 20])  # Fixed range for consistent colors
             fig_weight.add_trace(go.Scatter(x=[0, 35], y=[0, 35], mode='lines',
                                            line=dict(dash='dash', color='gray'),
                                            name='1:1 Line'))
-            fig_weight.update_traces(textposition='top center')
-            fig_weight.update_layout(height=450)
+            fig_weight.update_traces(textposition='top center', selector=dict(mode='markers+text'))
+            fig_weight.update_layout(height=450, coloraxis_colorbar=dict(title="FWD EPS<br>Growth %"))
             st.plotly_chart(fig_weight, use_container_width=True)
 
         with col2:
+            st.caption("**Bar color** = Forward EPS Growth | Sectors sorted by P/E valuation")
             fig_pe = px.bar(sector_earn_df.sort_values('P/E Ratio'),
                            x='P/E Ratio', y='Sector',
                            orientation='h',
                            title='P/E Ratios by Sector',
                            color='FWD EPS Growth',
-                           color_continuous_scale='RdYlGn')
-            fig_pe.update_layout(height=450)
+                           color_continuous_scale='RdYlGn',
+                           range_color=[-10, 20])  # Fixed range for consistent colors
+            fig_pe.update_layout(height=450, coloraxis_colorbar=dict(title="FWD EPS<br>Growth %"))
             st.plotly_chart(fig_pe, use_container_width=True)
 
         # Key earnings dates callout
@@ -7755,6 +8290,29 @@ elif page == "Watchlist":
 
 elif page == "Calculators":
     page_title("Calculators", "Financial and investment calculators")
+
+    with st.expander("ℹ️ Calculator Quick Reference", expanded=False):
+        st.markdown("""
+        **Available Calculators:**
+
+        | Calculator | Use Case | Key Inputs |
+        |------------|----------|------------|
+        | **Compound Interest** | Investment growth projection | Principal, rate, time, contributions |
+        | **Retirement Planner** | Estimate retirement needs | Current age, target age, expenses |
+        | **Loan Calculator** | Mortgage/loan payments | Principal, rate, term |
+        | **Investment Returns** | Compare investment strategies | Starting amount, returns, fees |
+        | **Bond Pricing** | Value fixed income securities | Face value, coupon, yield, maturity |
+
+        **Key Formulas:**
+        - **Compound Interest**: A = P(1 + r/n)^(nt) where P=principal, r=rate, n=compounds/year, t=years
+        - **Monthly Payment**: M = P[r(1+r)^n]/[(1+r)^n-1] where P=principal, r=monthly rate, n=payments
+        - **Present Value**: PV = FV/(1+r)^n - value today of future money
+
+        **Rules of Thumb:**
+        - **Rule of 72**: Divide 72 by return % to estimate doubling time (e.g., 8% → 9 years to double)
+        - **4% Rule**: Safe withdrawal rate for retirement (withdraw 4% annually)
+        - **50/30/20 Budget**: 50% needs, 30% wants, 20% savings
+        """)
     st.markdown("---")
 
     calc_tab1, calc_tab2, calc_tab3, calc_tab4, calc_tab5 = st.tabs([
@@ -7766,12 +8324,36 @@ elif page == "Calculators":
         st.markdown("*See how your investments can grow over time with the power of compounding*")
         st.markdown("---")
 
+        # Currency selector
+        calc_currency_options = {
+            'USD': ('$', 'US Dollar'),
+            'EUR': ('€', 'Euro'),
+            'GBP': ('£', 'British Pound'),
+            'JPY': ('¥', 'Japanese Yen'),
+            'CHF': ('CHF', 'Swiss Franc'),
+            'CAD': ('C$', 'Canadian Dollar'),
+            'AUD': ('A$', 'Australian Dollar'),
+            'CNY': ('¥', 'Chinese Yuan'),
+            'INR': ('₹', 'Indian Rupee'),
+            'BRL': ('R$', 'Brazilian Real'),
+            'KRW': ('₩', 'Korean Won'),
+            'SGD': ('S$', 'Singapore Dollar'),
+        }
+
+        calc_currency = st.selectbox(
+            "Currency",
+            options=list(calc_currency_options.keys()),
+            format_func=lambda x: f"{calc_currency_options[x][0]} - {calc_currency_options[x][1]}",
+            key="compound_calc_currency"
+        )
+        calc_curr_symbol = calc_currency_options[calc_currency][0]
+
         col1, col2 = st.columns(2)
 
         with col1:
             st.markdown("**Initial Investment**")
             initial_investment = st.number_input(
-                "Principal Amount ($)",
+                f"Principal Amount ({calc_curr_symbol})",
                 min_value=0.0,
                 value=10000.0,
                 step=1000.0,
@@ -7779,7 +8361,7 @@ elif page == "Calculators":
             )
 
             monthly_contribution = st.number_input(
-                "Monthly Contribution ($)",
+                f"Monthly Contribution ({calc_curr_symbol})",
                 min_value=0.0,
                 value=500.0,
                 step=100.0,
@@ -7843,15 +8425,15 @@ elif page == "Calculators":
 
             st.metric(
                 "Future Value",
-                f"${total_future_value:,.2f}",
-                f"+${total_interest:,.2f} interest earned"
+                f"{calc_curr_symbol}{total_future_value:,.2f}",
+                f"+{calc_curr_symbol}{total_interest:,.2f} interest earned"
             )
 
             col_a, col_b = st.columns(2)
             with col_a:
-                st.metric("Total Contributions", f"${total_contributions:,.2f}")
+                st.metric("Total Contributions", f"{calc_curr_symbol}{total_contributions:,.2f}")
             with col_b:
-                st.metric("Interest Earned", f"${total_interest:,.2f}")
+                st.metric("Interest Earned", f"{calc_curr_symbol}{total_interest:,.2f}")
 
             # Return percentage
             if total_contributions > 0:
@@ -8034,7 +8616,34 @@ elif page == "Calculators":
         st.markdown("*Calculate monthly payments and total interest for loans*")
         st.markdown("---")
 
-        loan_type = st.selectbox("Loan Type", ["Mortgage", "Auto Loan", "Personal Loan", "Student Loan", "Custom"])
+        # Currency selector for loan calculator
+        loan_currency_options = {
+            'USD': ('$', 'US Dollar'),
+            'EUR': ('€', 'Euro'),
+            'GBP': ('£', 'British Pound'),
+            'JPY': ('¥', 'Japanese Yen'),
+            'CHF': ('CHF', 'Swiss Franc'),
+            'CAD': ('C$', 'Canadian Dollar'),
+            'AUD': ('A$', 'Australian Dollar'),
+            'CNY': ('¥', 'Chinese Yuan'),
+            'INR': ('₹', 'Indian Rupee'),
+            'BRL': ('R$', 'Brazilian Real'),
+            'KRW': ('₩', 'Korean Won'),
+            'SGD': ('S$', 'Singapore Dollar'),
+        }
+
+        loan_col1, loan_col2 = st.columns([1, 2])
+        with loan_col1:
+            loan_currency = st.selectbox(
+                "Currency",
+                options=list(loan_currency_options.keys()),
+                format_func=lambda x: f"{loan_currency_options[x][0]} - {loan_currency_options[x][1]}",
+                key="loan_calc_currency"
+            )
+        with loan_col2:
+            loan_type = st.selectbox("Loan Type", ["Mortgage", "Auto Loan", "Personal Loan", "Student Loan", "Custom"])
+
+        loan_curr_symbol = loan_currency_options[loan_currency][0]
 
         # Pre-fill based on loan type
         defaults = {
@@ -8049,12 +8658,12 @@ elif page == "Calculators":
         col1, col2 = st.columns(2)
 
         with col1:
-            loan_amount = st.number_input("Loan Amount ($)", min_value=1000.0, value=float(default_amount), step=1000.0)
+            loan_amount = st.number_input(f"Loan Amount ({loan_curr_symbol})", min_value=1000.0, value=float(default_amount), step=1000.0)
             interest_rate = st.number_input("Annual Interest Rate (%)", min_value=0.1, max_value=30.0, value=default_rate, step=0.1)
             loan_term_years = st.number_input("Loan Term (Years)", min_value=1, max_value=40, value=default_years)
 
             # Extra payment option
-            extra_payment = st.number_input("Extra Monthly Payment ($)", min_value=0.0, value=0.0, step=50.0)
+            extra_payment = st.number_input(f"Extra Monthly Payment ({loan_curr_symbol})", min_value=0.0, value=0.0, step=50.0)
 
         with col2:
             # Calculate monthly payment
@@ -8071,9 +8680,9 @@ elif page == "Calculators":
 
             st.markdown("### Loan Summary")
 
-            st.metric("Monthly Payment", f"${monthly_payment:,.2f}")
-            st.metric("Total Interest", f"${total_interest:,.2f}")
-            st.metric("Total Cost", f"${total_payment:,.2f}")
+            st.metric("Monthly Payment", f"{loan_curr_symbol}{monthly_payment:,.2f}")
+            st.metric("Total Interest", f"{loan_curr_symbol}{total_interest:,.2f}")
+            st.metric("Total Cost", f"{loan_curr_symbol}{total_payment:,.2f}")
 
             # With extra payments
             if extra_payment > 0:
@@ -8099,7 +8708,7 @@ elif page == "Calculators":
                 with col_a:
                     st.metric("New Payoff Time", f"{months_paid // 12}y {months_paid % 12}m")
                 with col_b:
-                    st.metric("Interest Saved", f"${interest_saved:,.2f}")
+                    st.metric("Interest Saved", f"{loan_curr_symbol}{interest_saved:,.2f}")
 
         # Amortization schedule
         st.markdown("---")
@@ -8131,16 +8740,40 @@ elif page == "Calculators":
         st.markdown("*Calculate returns on your investment portfolio*")
         st.markdown("---")
 
+        # Currency selector
+        currency_options = {
+            'USD': ('$', 'US Dollar'),
+            'EUR': ('€', 'Euro'),
+            'GBP': ('£', 'British Pound'),
+            'JPY': ('¥', 'Japanese Yen'),
+            'CHF': ('CHF', 'Swiss Franc'),
+            'CAD': ('C$', 'Canadian Dollar'),
+            'AUD': ('A$', 'Australian Dollar'),
+            'CNY': ('¥', 'Chinese Yuan'),
+            'INR': ('₹', 'Indian Rupee'),
+            'BRL': ('R$', 'Brazilian Real'),
+            'KRW': ('₩', 'Korean Won'),
+            'SGD': ('S$', 'Singapore Dollar'),
+        }
+
+        selected_currency = st.selectbox(
+            "Currency",
+            options=list(currency_options.keys()),
+            format_func=lambda x: f"{currency_options[x][0]} - {currency_options[x][1]}",
+            key="inv_returns_currency"
+        )
+        curr_symbol = currency_options[selected_currency][0]
+
         col1, col2 = st.columns(2)
 
         with col1:
-            initial_value = st.number_input("Initial Investment ($)", min_value=0.0, value=10000.0, step=1000.0)
-            final_value = st.number_input("Current/Final Value ($)", min_value=0.0, value=15000.0, step=1000.0)
+            initial_value = st.number_input(f"Initial Investment ({curr_symbol})", min_value=0.0, value=10000.0, step=1000.0)
+            final_value = st.number_input(f"Current/Final Value ({curr_symbol})", min_value=0.0, value=15000.0, step=1000.0)
             investment_period = st.number_input("Investment Period (Years)", min_value=0.1, max_value=100.0, value=5.0, step=0.5)
 
             # Additional contributions
             total_contributions = st.number_input(
-                "Total Additional Contributions ($)",
+                f"Total Additional Contributions ({curr_symbol})",
                 min_value=0.0,
                 value=0.0,
                 step=1000.0,
@@ -8166,14 +8799,14 @@ elif page == "Calculators":
 
             st.markdown("### Returns Analysis")
 
-            st.metric("Total Return", f"${absolute_return:,.2f}", f"{percentage_return:+.2f}%")
+            st.metric("Total Return", f"{curr_symbol}{absolute_return:,.2f}", f"{percentage_return:+.2f}%")
             st.metric("CAGR", f"{cagr:.2f}%", help="Compound Annual Growth Rate")
 
             col_a, col_b = st.columns(2)
             with col_a:
-                st.metric("Total Invested", f"${total_invested:,.2f}")
+                st.metric("Total Invested", f"{curr_symbol}{total_invested:,.2f}")
             with col_b:
-                st.metric("Final Value", f"${final_value:,.2f}")
+                st.metric("Final Value", f"{curr_symbol}{final_value:,.2f}")
 
             # Compare to benchmarks
             st.markdown("---")
@@ -8190,7 +8823,7 @@ elif page == "Calculators":
                 benchmark_value = initial_value * ((1 + rate/100) ** investment_period)
                 vs_benchmark = final_value - benchmark_value
                 icon = "✅" if vs_benchmark >= 0 else "❌"
-                st.markdown(f"{icon} vs {name}: {'+' if vs_benchmark >= 0 else ''}{vs_benchmark:,.0f}")
+                st.markdown(f"{icon} vs {name}: {'+' if vs_benchmark >= 0 else ''}{curr_symbol}{vs_benchmark:,.0f}")
 
     with calc_tab5:
         st.subheader("Bond Pricing Calculator")
@@ -8823,6 +9456,35 @@ elif page == "Sector Analysis":
 
 elif page == "Market Sentiment":
     page_title("Market Sentiment", "Fear & greed indices and sentiment analysis")
+
+    with st.expander("ℹ️ Understanding Market Sentiment", expanded=False):
+        st.markdown("""
+        **What is Market Sentiment?**
+        The overall attitude of investors toward a particular market or security. Often measured through surveys, positioning data, and market indicators.
+
+        **Key Sentiment Indicators:**
+
+        | Indicator | Extreme Fear | Neutral | Extreme Greed |
+        |-----------|-------------|---------|---------------|
+        | **Fear & Greed Index** | 0-25 | 45-55 | 75-100 |
+        | **VIX (Volatility)** | >30 | 15-20 | <12 |
+        | **Put/Call Ratio** | >1.1 | 0.9-1.0 | <0.7 |
+        | **AAII Bull/Bear** | <25% bulls | 35-40% | >50% bulls |
+
+        **Contrarian Signals:**
+        - **Extreme Fear** → Often a buying opportunity (others selling)
+        - **Extreme Greed** → Caution warranted (market may be overextended)
+        - **"Buy when others are fearful, sell when others are greedy"** - Warren Buffett
+
+        **Components of Fear & Greed:**
+        - Stock Price Momentum (vs 125-day average)
+        - Stock Price Strength (new highs vs lows)
+        - Stock Price Breadth (advancing vs declining volume)
+        - Put/Call Ratio (options positioning)
+        - Market Volatility (VIX level)
+        - Safe Haven Demand (bonds vs stocks)
+        - Junk Bond Demand (risk appetite)
+        """)
     st.markdown("---")
 
     # Load economic data to get VIX and yield curve
@@ -9241,6 +9903,30 @@ elif page == "Weather & Globe":
 
 elif page == "Space":
     page_title("Space", "Satellite data, launches, and space weather")
+
+    with st.expander("ℹ️ Why Space Data Matters for Markets", expanded=False):
+        st.markdown("""
+        **Space Industry ($400B+ Market):**
+        - **Satellite Communications**: Starlink, OneWeb - disrupting telecoms
+        - **Earth Observation**: Weather, agriculture, defense applications
+        - **Space Tourism**: Emerging sector with Virgin Galactic, Blue Origin
+        - **Launch Services**: SpaceX, Rocket Lab - exponential growth
+
+        **Data Tracked Here:**
+        - 🛰️ **Near-Earth Objects (NEOs)**: Asteroids passing close to Earth
+        - 🚀 **Upcoming Launches**: Scheduled rocket launches worldwide
+        - ☀️ **Space Weather**: Solar flares can affect GPS, satellites, power grids
+
+        **Investment Relevance:**
+        - **Defense contractors**: Lockheed Martin, Northrop Grumman, Raytheon
+        - **Satellite operators**: Iridium, Viasat, SES
+        - **Space ETFs**: UFO, ARKX, ROKT track the sector
+
+        **Key Metrics:**
+        - **Miss Distance**: How close an asteroid passes to Earth (in km or lunar distances)
+        - **Diameter**: Size of the object (larger = more potentially hazardous)
+        - **Velocity**: Speed relative to Earth
+        """)
     st.markdown("---")
 
     tab1, tab2, tab3 = st.tabs(["ISS Tracker", "Near-Earth Objects", "Solar Activity"])
@@ -9415,6 +10101,33 @@ elif page == "Space":
 
 elif page == "Global Events":
     page_title("Global Events", "Geopolitical events and social unrest tracking")
+
+    with st.expander("ℹ️ Understanding GDELT Events Data", expanded=False):
+        st.markdown("""
+        **What is GDELT?**
+        The GDELT Project monitors news media worldwide in 100+ languages, identifying events, themes, and sentiment in real-time.
+
+        **Event Types Tracked:**
+        - **Conflict**: Military actions, protests, violence
+        - **Cooperation**: Diplomatic meetings, agreements, aid
+        - **Government**: Elections, policy changes, political statements
+        - **Economic**: Trade deals, sanctions, corporate actions
+        - **Humanitarian**: Disasters, refugee crises, health emergencies
+
+        **Tone Score:**
+        - **Positive (>0)**: Favorable coverage, cooperation, progress
+        - **Neutral (~0)**: Factual reporting
+        - **Negative (<0)**: Conflict, criticism, negative outlook
+        - Range is typically -10 to +10
+
+        **Market Implications:**
+        - **Geopolitical tensions** → Safe haven flows (gold, USD, CHF)
+        - **Trade conflicts** → Sector-specific impacts (tariffs)
+        - **Political instability** → Currency/equity volatility
+        - **Natural disasters** → Commodity price spikes, insurance losses
+
+        **Data Source:** GDELT Project (gdeltproject.org)
+        """)
     st.markdown("---")
 
     if not table_exists('gdelt_events'):
@@ -10504,6 +11217,33 @@ elif page == "Options Flow":
 
 elif page == "Portfolio":
     page_title("Portfolio", "Portfolio management and allocation")
+
+    with st.expander("ℹ️ Portfolio Management Tips", expanded=False):
+        st.markdown("""
+        **Diversification Guidelines:**
+
+        | Asset Class | Conservative | Moderate | Aggressive |
+        |-------------|-------------|----------|------------|
+        | Stocks | 30-40% | 50-60% | 70-80% |
+        | Bonds | 40-50% | 25-35% | 10-20% |
+        | Cash | 10-20% | 5-10% | 5% |
+        | Alternatives | 0-10% | 5-15% | 10-20% |
+
+        **Key Metrics to Track:**
+        - **Total Return**: Price change + dividends
+        - **Cost Basis**: Your average purchase price
+        - **Unrealized P/L**: Current profit/loss if you sold now
+        - **Weight**: Each position's % of total portfolio
+
+        **Rebalancing:**
+        - Review quarterly or when any position drifts >5% from target
+        - Consider tax implications before selling winners
+
+        **Risk Management:**
+        - No single stock >10% of portfolio (diversification)
+        - Set stop-losses for speculative positions
+        - Keep 3-6 months expenses in cash reserves
+        """)
     st.markdown("---")
 
     port_tab1, port_tab2, port_tab3 = st.tabs(["💼 Holdings Tracker", "👁️ Watchlist", "📊 Correlation Analysis"])
@@ -11682,6 +12422,34 @@ LIMIT 20"""
 
 elif page == "Technical Analysis":
     page_title("Technical Analysis", "Charts, indicators, and technical patterns")
+
+    with st.expander("ℹ️ Technical Analysis Guide", expanded=False):
+        st.markdown("""
+        **What is Technical Analysis?**
+        The study of price patterns and indicators to predict future price movements.
+
+        **Key Indicators Explained:**
+
+        | Indicator | What It Shows | How to Read |
+        |-----------|--------------|-------------|
+        | **SMA** (Simple Moving Average) | Average price over N periods | Price above SMA = bullish trend |
+        | **EMA** (Exponential MA) | Recent-weighted average | Faster to react than SMA |
+        | **RSI** (Relative Strength Index) | Momentum (0-100) | >70 overbought, <30 oversold |
+        | **MACD** | Trend momentum | Signal line crossovers indicate changes |
+        | **Bollinger Bands** | Volatility range | Price touching bands may signal reversal |
+
+        **Common Signals:**
+        - 📈 **Golden Cross**: 50-day MA crosses above 200-day MA (bullish)
+        - 📉 **Death Cross**: 50-day MA crosses below 200-day MA (bearish)
+        - **RSI Divergence**: Price makes new high but RSI doesn't (reversal warning)
+
+        **Support & Resistance:**
+        - **Support**: Price level where buying pressure emerges
+        - **Resistance**: Price level where selling pressure emerges
+        - Broken resistance often becomes new support (and vice versa)
+
+        **Tips:** Technical analysis works best when combined with fundamental analysis and proper risk management.
+        """)
     st.markdown("---")
 
     # Asset type selector
