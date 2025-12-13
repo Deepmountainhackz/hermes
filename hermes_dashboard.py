@@ -2324,8 +2324,8 @@ elif page == "Energy & Resources":
         latest_year = energy_df[energy_df['electricity_generation'].notna()]['year'].max()
 
         # Create tabs for different views
-        energy_tab1, energy_tab2, energy_tab3, energy_tab4, energy_tab5, energy_tab6, energy_tab7 = st.tabs([
-            "Electricity Generation", "Energy Mix", "Oil & Gas", "Nuclear", "Renewables", "CO2 Emissions", "Per Capita"
+        energy_tab1, energy_tab2, energy_tab3, energy_tab4, energy_tab5, energy_tab6, energy_tab7, energy_tab8 = st.tabs([
+            "Electricity Generation", "Energy Mix", "Oil & Gas", "Nuclear", "Renewables", "CO2 Emissions", "Per Capita", "Mining & Resources"
         ])
 
         with energy_tab1:
@@ -3022,6 +3022,513 @@ elif page == "Energy & Resources":
                 percap_table['Electricity (kWh/person)'] = percap_table['Electricity (kWh/person)'].apply(lambda x: f"{x:,.0f}")
                 percap_table['Energy Intensity (kWh/$)'] = percap_table['Energy Intensity (kWh/$)'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "N/A")
                 st.dataframe(percap_table, use_container_width=True, hide_index=True)
+
+        with energy_tab8:
+            st.subheader("Global Mining & Critical Resources")
+            st.markdown("*World production, exports, and imports of key mineral resources*")
+
+            # Curated mining data from USGS Mineral Commodity Summaries 2024 & World Mining Data 2024
+            # Production figures in thousand metric tons unless otherwise noted
+
+            MINING_DATA = {
+                'Lithium': {
+                    'unit': 'metric tons Li content',
+                    'total_world': 180000,
+                    'producers': [
+                        ('Australia', 86000, 47.8),
+                        ('Chile', 44000, 24.4),
+                        ('China', 33000, 18.3),
+                        ('Argentina', 9600, 5.3),
+                        ('Brazil', 4900, 2.7),
+                        ('Zimbabwe', 3400, 1.9),
+                        ('Portugal', 490, 0.3),
+                        ('USA', 0, 0.0),
+                    ],
+                    'top_exporters': ['Australia', 'Chile', 'Argentina'],
+                    'top_importers': ['China', 'South Korea', 'Japan', 'USA', 'EU'],
+                    'use': 'EV batteries, electronics, energy storage',
+                    'criticality': 'Critical'
+                },
+                'Cobalt': {
+                    'unit': 'metric tons',
+                    'total_world': 230000,
+                    'producers': [
+                        ('DR Congo', 170000, 73.9),
+                        ('Indonesia', 17000, 7.4),
+                        ('Russia', 8900, 3.9),
+                        ('Australia', 5600, 2.4),
+                        ('Philippines', 4800, 2.1),
+                        ('Cuba', 3800, 1.7),
+                        ('Canada', 3400, 1.5),
+                        ('Madagascar', 2800, 1.2),
+                    ],
+                    'top_exporters': ['DR Congo', 'Indonesia', 'Australia'],
+                    'top_importers': ['China', 'Finland', 'Belgium', 'Japan'],
+                    'use': 'EV batteries, superalloys, catalysts',
+                    'criticality': 'Critical'
+                },
+                'Rare Earth Elements': {
+                    'unit': 'metric tons REO',
+                    'total_world': 350000,
+                    'producers': [
+                        ('China', 240000, 68.6),
+                        ('USA', 43000, 12.3),
+                        ('Australia', 18000, 5.1),
+                        ('Myanmar', 17000, 4.9),
+                        ('Thailand', 7100, 2.0),
+                        ('India', 6000, 1.7),
+                        ('Russia', 5400, 1.5),
+                        ('Vietnam', 4300, 1.2),
+                    ],
+                    'top_exporters': ['China', 'Myanmar', 'Australia'],
+                    'top_importers': ['Japan', 'USA', 'EU', 'South Korea'],
+                    'use': 'Magnets, EV motors, wind turbines, electronics',
+                    'criticality': 'Critical'
+                },
+                'Copper': {
+                    'unit': 'thousand metric tons',
+                    'total_world': 22000,
+                    'producers': [
+                        ('Chile', 5300, 24.1),
+                        ('Peru', 2700, 12.3),
+                        ('DR Congo', 2500, 11.4),
+                        ('China', 1900, 8.6),
+                        ('USA', 1100, 5.0),
+                        ('Indonesia', 1000, 4.5),
+                        ('Russia', 920, 4.2),
+                        ('Australia', 870, 4.0),
+                    ],
+                    'top_exporters': ['Chile', 'Peru', 'Australia', 'Indonesia'],
+                    'top_importers': ['China', 'Japan', 'Germany', 'South Korea'],
+                    'use': 'Electrical wiring, construction, EVs, electronics',
+                    'criticality': 'High'
+                },
+                'Nickel': {
+                    'unit': 'thousand metric tons',
+                    'total_world': 3600,
+                    'producers': [
+                        ('Indonesia', 1800, 50.0),
+                        ('Philippines', 400, 11.1),
+                        ('Russia', 220, 6.1),
+                        ('New Caledonia', 190, 5.3),
+                        ('Australia', 160, 4.4),
+                        ('Canada', 130, 3.6),
+                        ('China', 120, 3.3),
+                        ('Brazil', 83, 2.3),
+                    ],
+                    'top_exporters': ['Indonesia', 'Philippines', 'Russia'],
+                    'top_importers': ['China', 'Japan', 'EU', 'USA'],
+                    'use': 'Stainless steel, EV batteries, alloys',
+                    'criticality': 'High'
+                },
+                'Iron Ore': {
+                    'unit': 'million metric tons',
+                    'total_world': 2500,
+                    'producers': [
+                        ('Australia', 960, 38.4),
+                        ('Brazil', 440, 17.6),
+                        ('China', 310, 12.4),
+                        ('India', 290, 11.6),
+                        ('Russia', 110, 4.4),
+                        ('Ukraine', 81, 3.2),
+                        ('South Africa', 68, 2.7),
+                        ('Canada', 67, 2.7),
+                    ],
+                    'top_exporters': ['Australia', 'Brazil', 'South Africa'],
+                    'top_importers': ['China', 'Japan', 'South Korea', 'EU'],
+                    'use': 'Steel production, construction, automotive',
+                    'criticality': 'Medium'
+                },
+                'Aluminum (Bauxite)': {
+                    'unit': 'million metric tons',
+                    'total_world': 400,
+                    'producers': [
+                        ('Australia', 100, 25.0),
+                        ('Guinea', 95, 23.8),
+                        ('China', 90, 22.5),
+                        ('Brazil', 34, 8.5),
+                        ('Indonesia', 23, 5.8),
+                        ('India', 23, 5.8),
+                        ('Jamaica', 8, 2.0),
+                        ('Russia', 6, 1.5),
+                    ],
+                    'top_exporters': ['Australia', 'Guinea', 'Brazil', 'Indonesia'],
+                    'top_importers': ['China', 'EU', 'USA', 'Japan'],
+                    'use': 'Transportation, packaging, construction, electronics',
+                    'criticality': 'Medium'
+                },
+                'Gold': {
+                    'unit': 'metric tons',
+                    'total_world': 3100,
+                    'producers': [
+                        ('China', 370, 11.9),
+                        ('Australia', 310, 10.0),
+                        ('Russia', 310, 10.0),
+                        ('Canada', 200, 6.5),
+                        ('USA', 170, 5.5),
+                        ('Mexico', 120, 3.9),
+                        ('Ghana', 110, 3.5),
+                        ('South Africa', 100, 3.2),
+                    ],
+                    'top_exporters': ['Switzerland', 'Hong Kong', 'UAE', 'UK'],
+                    'top_importers': ['India', 'China', 'Switzerland', 'UAE'],
+                    'use': 'Jewelry, investment, electronics, dentistry',
+                    'criticality': 'Low'
+                },
+                'Silver': {
+                    'unit': 'metric tons',
+                    'total_world': 26000,
+                    'producers': [
+                        ('Mexico', 6300, 24.2),
+                        ('China', 3400, 13.1),
+                        ('Peru', 3100, 11.9),
+                        ('Chile', 1400, 5.4),
+                        ('Australia', 1300, 5.0),
+                        ('Poland', 1300, 5.0),
+                        ('Russia', 1200, 4.6),
+                        ('Bolivia', 1100, 4.2),
+                    ],
+                    'top_exporters': ['Mexico', 'Peru', 'China', 'Poland'],
+                    'top_importers': ['USA', 'UK', 'India', 'Japan'],
+                    'use': 'Electronics, solar panels, jewelry, photography',
+                    'criticality': 'Medium'
+                },
+                'Platinum Group Metals': {
+                    'unit': 'metric tons',
+                    'total_world': 480,
+                    'producers': [
+                        ('South Africa', 300, 62.5),
+                        ('Russia', 90, 18.8),
+                        ('Zimbabwe', 38, 7.9),
+                        ('Canada', 17, 3.5),
+                        ('USA', 14, 2.9),
+                        ('Other', 21, 4.4),
+                    ],
+                    'top_exporters': ['South Africa', 'Russia', 'Zimbabwe'],
+                    'top_importers': ['Germany', 'USA', 'Japan', 'UK'],
+                    'use': 'Catalytic converters, jewelry, electronics, hydrogen fuel cells',
+                    'criticality': 'Critical'
+                },
+                'Uranium': {
+                    'unit': 'metric tons U',
+                    'total_world': 58500,
+                    'producers': [
+                        ('Kazakhstan', 21200, 36.2),
+                        ('Canada', 7400, 12.6),
+                        ('Namibia', 5600, 9.6),
+                        ('Australia', 4100, 7.0),
+                        ('Uzbekistan', 3500, 6.0),
+                        ('Russia', 2600, 4.4),
+                        ('Niger', 2000, 3.4),
+                        ('China', 1700, 2.9),
+                    ],
+                    'top_exporters': ['Kazakhstan', 'Canada', 'Australia', 'Namibia'],
+                    'top_importers': ['USA', 'France', 'China', 'Japan', 'South Korea'],
+                    'use': 'Nuclear power generation',
+                    'criticality': 'High'
+                },
+                'Zinc': {
+                    'unit': 'thousand metric tons',
+                    'total_world': 13000,
+                    'producers': [
+                        ('China', 4200, 32.3),
+                        ('Peru', 1500, 11.5),
+                        ('Australia', 1400, 10.8),
+                        ('India', 800, 6.2),
+                        ('USA', 720, 5.5),
+                        ('Mexico', 670, 5.2),
+                        ('Bolivia', 550, 4.2),
+                        ('Kazakhstan', 380, 2.9),
+                    ],
+                    'top_exporters': ['Australia', 'Peru', 'USA'],
+                    'top_importers': ['China', 'South Korea', 'Belgium'],
+                    'use': 'Galvanizing steel, alloys, batteries',
+                    'criticality': 'Medium'
+                },
+            }
+
+            # Mineral selector
+            mining_subtabs = st.tabs(["Critical Minerals", "Industrial Metals", "Precious Metals", "Trade Flows"])
+
+            with mining_subtabs[0]:
+                st.markdown("##### Critical Minerals for Clean Energy Transition")
+                critical_minerals = ['Lithium', 'Cobalt', 'Rare Earth Elements', 'Nickel', 'Platinum Group Metals']
+
+                selected_critical = st.selectbox(
+                    "Select mineral:",
+                    critical_minerals,
+                    key="critical_mineral_select"
+                )
+
+                mineral_data = MINING_DATA[selected_critical]
+
+                # Info card
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("World Production", f"{mineral_data['total_world']:,} {mineral_data['unit'].split()[0]}")
+                with col2:
+                    st.metric("Primary Use", mineral_data['use'].split(',')[0])
+                with col3:
+                    criticality_color = {'Critical': '🔴', 'High': '🟠', 'Medium': '🟡', 'Low': '🟢'}
+                    st.metric("Supply Risk", f"{criticality_color.get(mineral_data['criticality'], '⚪')} {mineral_data['criticality']}")
+
+                st.markdown(f"**Applications:** {mineral_data['use']}")
+
+                # Production chart
+                prod_df = pd.DataFrame(mineral_data['producers'], columns=['Country', 'Production', 'Share %'])
+
+                fig_prod = px.bar(
+                    prod_df,
+                    x='Production',
+                    y='Country',
+                    orientation='h',
+                    title=f'{selected_critical} Production by Country ({mineral_data["unit"]})',
+                    color='Share %',
+                    color_continuous_scale='Viridis'
+                )
+                fig_prod.update_layout(**get_clean_plotly_layout(), height=400)
+                fig_prod.update_yaxes(categoryorder='total ascending')
+                st.plotly_chart(fig_prod, use_container_width=True)
+
+                # Pie chart
+                fig_pie = px.pie(
+                    prod_df,
+                    values='Production',
+                    names='Country',
+                    title=f'{selected_critical} Global Market Share'
+                )
+                fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+                # Trade info
+                st.markdown("---")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**Top Exporters:**")
+                    for exp in mineral_data['top_exporters']:
+                        st.markdown(f"- 📤 {exp}")
+                with col2:
+                    st.markdown("**Top Importers:**")
+                    for imp in mineral_data['top_importers']:
+                        st.markdown(f"- 📥 {imp}")
+
+            with mining_subtabs[1]:
+                st.markdown("##### Industrial Metals Production")
+                industrial_metals = ['Iron Ore', 'Copper', 'Aluminum (Bauxite)', 'Zinc']
+
+                selected_industrial = st.selectbox(
+                    "Select metal:",
+                    industrial_metals,
+                    key="industrial_metal_select"
+                )
+
+                metal_data = MINING_DATA[selected_industrial]
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("World Production", f"{metal_data['total_world']:,} {metal_data['unit'].split()[0]}")
+                with col2:
+                    st.metric("Primary Use", metal_data['use'].split(',')[0])
+                with col3:
+                    criticality_color = {'Critical': '🔴', 'High': '🟠', 'Medium': '🟡', 'Low': '🟢'}
+                    st.metric("Supply Risk", f"{criticality_color.get(metal_data['criticality'], '⚪')} {metal_data['criticality']}")
+
+                st.markdown(f"**Applications:** {metal_data['use']}")
+
+                prod_df = pd.DataFrame(metal_data['producers'], columns=['Country', 'Production', 'Share %'])
+
+                fig_prod = px.bar(
+                    prod_df,
+                    x='Production',
+                    y='Country',
+                    orientation='h',
+                    title=f'{selected_industrial} Production by Country ({metal_data["unit"]})',
+                    color='Share %',
+                    color_continuous_scale='Blues'
+                )
+                fig_prod.update_layout(**get_clean_plotly_layout(), height=400)
+                fig_prod.update_yaxes(categoryorder='total ascending')
+                st.plotly_chart(fig_prod, use_container_width=True)
+
+                fig_pie = px.pie(
+                    prod_df,
+                    values='Production',
+                    names='Country',
+                    title=f'{selected_industrial} Global Market Share'
+                )
+                fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+                st.markdown("---")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**Top Exporters:**")
+                    for exp in metal_data['top_exporters']:
+                        st.markdown(f"- 📤 {exp}")
+                with col2:
+                    st.markdown("**Top Importers:**")
+                    for imp in metal_data['top_importers']:
+                        st.markdown(f"- 📥 {imp}")
+
+            with mining_subtabs[2]:
+                st.markdown("##### Precious Metals Production")
+                precious_metals = ['Gold', 'Silver', 'Platinum Group Metals']
+
+                selected_precious = st.selectbox(
+                    "Select metal:",
+                    precious_metals,
+                    key="precious_metal_select"
+                )
+
+                precious_data = MINING_DATA[selected_precious]
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("World Production", f"{precious_data['total_world']:,} {precious_data['unit'].split()[0]}")
+                with col2:
+                    st.metric("Primary Use", precious_data['use'].split(',')[0])
+                with col3:
+                    criticality_color = {'Critical': '🔴', 'High': '🟠', 'Medium': '🟡', 'Low': '🟢'}
+                    st.metric("Supply Risk", f"{criticality_color.get(precious_data['criticality'], '⚪')} {precious_data['criticality']}")
+
+                st.markdown(f"**Applications:** {precious_data['use']}")
+
+                prod_df = pd.DataFrame(precious_data['producers'], columns=['Country', 'Production', 'Share %'])
+
+                fig_prod = px.bar(
+                    prod_df,
+                    x='Production',
+                    y='Country',
+                    orientation='h',
+                    title=f'{selected_precious} Production by Country ({precious_data["unit"]})',
+                    color='Share %',
+                    color_continuous_scale='YlOrRd'
+                )
+                fig_prod.update_layout(**get_clean_plotly_layout(), height=400)
+                fig_prod.update_yaxes(categoryorder='total ascending')
+                st.plotly_chart(fig_prod, use_container_width=True)
+
+                fig_pie = px.pie(
+                    prod_df,
+                    values='Production',
+                    names='Country',
+                    title=f'{selected_precious} Global Market Share'
+                )
+                fig_pie.update_layout(**get_clean_plotly_layout(), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+                st.markdown("---")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**Top Exporters:**")
+                    for exp in precious_data['top_exporters']:
+                        st.markdown(f"- 📤 {exp}")
+                with col2:
+                    st.markdown("**Top Importers:**")
+                    for imp in precious_data['top_importers']:
+                        st.markdown(f"- 📥 {imp}")
+
+            with mining_subtabs[3]:
+                st.markdown("##### Global Resource Trade Flows")
+                st.markdown("*Understanding who exports what and who depends on imports*")
+
+                # Summary table of all minerals
+                summary_data = []
+                for mineral, data in MINING_DATA.items():
+                    top_producer = data['producers'][0][0] if data['producers'] else 'N/A'
+                    top_share = data['producers'][0][2] if data['producers'] else 0
+                    summary_data.append({
+                        'Mineral': mineral,
+                        'Top Producer': top_producer,
+                        'Market Share': f"{top_share:.1f}%",
+                        'World Production': f"{data['total_world']:,}",
+                        'Unit': data['unit'],
+                        'Criticality': data['criticality']
+                    })
+
+                summary_df = pd.DataFrame(summary_data)
+                st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+                st.markdown("---")
+                st.markdown("##### Major Exporting Countries")
+
+                # Aggregate export dominance
+                export_counts = {}
+                for mineral, data in MINING_DATA.items():
+                    for exp in data['top_exporters']:
+                        if exp not in export_counts:
+                            export_counts[exp] = []
+                        export_counts[exp].append(mineral)
+
+                export_df = pd.DataFrame([
+                    {'Country': k, 'Resources Exported': len(v), 'Resources': ', '.join(v[:3]) + ('...' if len(v) > 3 else '')}
+                    for k, v in sorted(export_counts.items(), key=lambda x: -len(x[1]))
+                ])
+
+                fig_export = px.bar(
+                    export_df.head(15),
+                    x='Resources Exported',
+                    y='Country',
+                    orientation='h',
+                    title='Top Resource Exporting Countries (by number of minerals)',
+                    hover_data=['Resources']
+                )
+                fig_export.update_layout(**get_clean_plotly_layout(), height=400)
+                fig_export.update_yaxes(categoryorder='total ascending')
+                st.plotly_chart(fig_export, use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("##### Major Importing Countries")
+
+                import_counts = {}
+                for mineral, data in MINING_DATA.items():
+                    for imp in data['top_importers']:
+                        if imp not in import_counts:
+                            import_counts[imp] = []
+                        import_counts[imp].append(mineral)
+
+                import_df = pd.DataFrame([
+                    {'Country': k, 'Resources Imported': len(v), 'Resources': ', '.join(v[:3]) + ('...' if len(v) > 3 else '')}
+                    for k, v in sorted(import_counts.items(), key=lambda x: -len(x[1]))
+                ])
+
+                fig_import = px.bar(
+                    import_df.head(15),
+                    x='Resources Imported',
+                    y='Country',
+                    orientation='h',
+                    title='Top Resource Importing Countries (by number of minerals)',
+                    hover_data=['Resources'],
+                    color_discrete_sequence=['#e74c3c']
+                )
+                fig_import.update_layout(**get_clean_plotly_layout(), height=400)
+                fig_import.update_yaxes(categoryorder='total ascending')
+                st.plotly_chart(fig_import, use_container_width=True)
+
+                # Supply chain risk analysis
+                st.markdown("---")
+                st.markdown("##### Supply Concentration Risk")
+                st.markdown("*Minerals where a single country controls >50% of production*")
+
+                concentration_risk = []
+                for mineral, data in MINING_DATA.items():
+                    if data['producers'] and data['producers'][0][2] > 50:
+                        concentration_risk.append({
+                            'Mineral': mineral,
+                            'Dominant Producer': data['producers'][0][0],
+                            'Share': f"{data['producers'][0][2]:.1f}%",
+                            'Criticality': data['criticality']
+                        })
+
+                if concentration_risk:
+                    risk_df = pd.DataFrame(concentration_risk)
+                    st.dataframe(risk_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No minerals with >50% single-country concentration.")
+
+            st.markdown("---")
+            st.caption("Data sources: USGS Mineral Commodity Summaries 2024, World Mining Data 2024 (Austrian Federal Ministry of Finance)")
+            st.caption("Trade flow data based on UN Comtrade and industry reports. Production figures are estimates for 2023.")
 
         # Data source attribution
         st.markdown("---")
