@@ -603,6 +603,36 @@ COLORS = {
     'text_primary': '#1e293b',
     'text_secondary': '#64748b',
     'border': '#e2e8f0',
+    # Category colors for page grouping
+    'cat_markets': '#3b82f6',      # Blue - Markets & Trading
+    'cat_analytics': '#8b5cf6',    # Purple - Analytics & Analysis
+    'cat_economics': '#0d9488',    # Teal - Economics
+    'cat_commodities': '#d97706',  # Amber - Commodities
+    'cat_global': '#0891b2',       # Cyan - Global/Demographics
+    'cat_news': '#dc2626',         # Red - News & Events
+    'cat_tools': '#64748b',        # Slate - Tools & Utilities
+}
+
+# Page to category mapping
+PAGE_CATEGORIES = {
+    # Markets
+    'Overview': 'cat_markets', 'Markets': 'cat_markets', 'Crypto': 'cat_markets',
+    'Bond Markets': 'cat_markets', 'Sector Analysis': 'cat_markets',
+    # Analytics
+    'Technical Analysis': 'cat_analytics', 'Correlation Analysis': 'cat_analytics',
+    'Risk Metrics': 'cat_analytics', 'Time Series': 'cat_analytics', 'Options Flow': 'cat_analytics',
+    # Economics
+    'Economic Indicators': 'cat_economics', 'Economic Calendar': 'cat_economics',
+    'Earnings Dashboard': 'cat_economics', 'Global Development': 'cat_economics', 'Country Profile': 'cat_economics',
+    # Commodities
+    'Energy & Resources': 'cat_commodities', 'Agriculture & Food': 'cat_commodities', 'Trade & Shipping': 'cat_commodities',
+    # Global
+    'Demographics': 'cat_global', 'Debt & Fiscal': 'cat_global', 'Weather & Globe': 'cat_global', 'Space': 'cat_global',
+    # News & Events
+    'News': 'cat_news', 'Market Sentiment': 'cat_news', 'Global Events': 'cat_news',
+    # Tools
+    'Portfolio': 'cat_tools', 'Watchlist': 'cat_tools', 'Calculators': 'cat_tools',
+    'Currency Converter': 'cat_tools', 'Query Builder': 'cat_tools', 'Alerts & Export': 'cat_tools', 'Collection Status': 'cat_tools',
 }
 
 
@@ -611,6 +641,20 @@ def format_change(value):
     if value is None:
         return "—"
     return f"+{value:.2f}%" if value > 0 else f"{value:.2f}%"
+
+
+def page_title(title, subtitle=None):
+    """Display a colored page title based on its category grouping."""
+    category = PAGE_CATEGORIES.get(title, 'cat_tools')
+    color = COLORS.get(category, COLORS['primary'])
+
+    # Title with colored left border accent
+    st.markdown(f'''
+        <div style="border-left: 4px solid {color}; padding-left: 16px; margin-bottom: 8px;">
+            <h1 style="color: {color}; margin: 0; font-size: 2rem; font-weight: 600;">{title}</h1>
+            {f'<p style="color: {COLORS["text_secondary"]}; margin: 4px 0 0 0; font-size: 0.95rem;">{subtitle}</p>' if subtitle else ''}
+        </div>
+    ''', unsafe_allow_html=True)
 
 
 def format_price(value, decimals=2, currency="$"):
@@ -1025,7 +1069,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.4 - Grouped Navigation")
+st.sidebar.caption("v6.10 - Colored Page Titles")
 
 
 # ============================================================================
@@ -1033,8 +1077,7 @@ st.sidebar.caption("v6.4 - Grouped Navigation")
 # ============================================================================
 
 if page == "Overview":
-    st.title("Hermes Intelligence Platform")
-    st.markdown("*Real-time Multi-Layer Intelligence Dashboard*")
+    page_title("Overview", "Real-time Multi-Layer Intelligence Dashboard")
 
     with st.expander("ℹ️ How to Use This Dashboard", expanded=False):
         st.markdown("""
@@ -1658,8 +1701,7 @@ if page == "Overview":
 # ============================================================================
 
 elif page == "Markets":
-    st.title("Market Intelligence")
-    st.markdown("*Stocks, Commodities, and Forex*")
+    page_title("Markets", "Live market data and trading analysis")
 
     with st.expander("ℹ️ Understanding Stock Markets", expanded=False):
         st.markdown("""
@@ -2195,8 +2237,7 @@ elif page == "Markets":
 # ============================================================================
 
 elif page == "Crypto":
-    st.title("Cryptocurrency Intelligence")
-    st.markdown("*Real-time crypto prices and market data*")
+    page_title("Crypto", "Cryptocurrency markets and blockchain analytics")
     st.markdown("---")
 
     # Optimized query - get only latest per symbol
@@ -2474,7 +2515,7 @@ elif page == "Crypto":
 # ============================================================================
 
 elif page == "Economic Indicators":
-    st.title("Economic Indicators")
+    page_title("Economic Indicators", "Key economic metrics across 23 countries")
 
     with st.expander("ℹ️ Understanding Economic Indicators", expanded=False):
         st.markdown("""
@@ -2734,8 +2775,7 @@ elif page == "Economic Indicators":
 # ============================================================================
 
 elif page == "Global Development":
-    st.title("Global Development Indicators")
-    st.markdown("*Data from World Bank - 20 countries, 20+ indicators*")
+    page_title("Global Development", "World Bank development metrics and trends")
     st.markdown("---")
 
     # Check if table exists
@@ -2964,8 +3004,7 @@ elif page == "Global Development":
 # ============================================================================
 
 elif page == "Energy & Resources":
-    st.title("Energy & Resources")
-    st.markdown("*Global Energy Production, Consumption, and Emissions Data*")
+    page_title("Energy & Resources", "Oil, gas, and natural resources data")
     st.markdown("---")
 
     # Our World in Data energy dataset URL
@@ -4217,8 +4256,7 @@ elif page == "Energy & Resources":
 # ============================================================================
 
 elif page == "Agriculture & Food":
-    st.title("Agriculture & Food Security")
-    st.markdown("*Global crop production, food prices, and food security metrics*")
+    page_title("Agriculture & Food", "Crops, livestock, and food security metrics")
     st.markdown("---")
 
     # Curated agricultural data from FAO, USDA, and World Bank (2023 estimates)
@@ -4765,8 +4803,7 @@ elif page == "Agriculture & Food":
 # ============================================================================
 
 elif page == "Trade & Shipping":
-    st.title("Global Trade & Shipping")
-    st.markdown("*World trade volumes, shipping indices, and trade balances*")
+    page_title("Trade & Shipping", "International trade flows and shipping data")
     st.markdown("---")
 
     # Baltic Dry Index historical context
@@ -5043,8 +5080,7 @@ elif page == "Trade & Shipping":
 # ============================================================================
 
 elif page == "Demographics":
-    st.title("Global Demographics & Population")
-    st.markdown("*World population, growth trends, and demographic indicators*")
+    page_title("Demographics", "Population, urbanization, and demographic trends")
     st.markdown("---")
 
     # World population data
@@ -5411,8 +5447,7 @@ elif page == "Demographics":
 # ============================================================================
 
 elif page == "Debt & Fiscal":
-    st.title("Government Debt & Fiscal Data")
-    st.markdown("*National debt, budget deficits, and sovereign credit ratings*")
+    page_title("Debt & Fiscal", "Government debt, deficits, and fiscal policy")
     st.markdown("---")
 
     # Global debt overview
@@ -5683,8 +5718,7 @@ elif page == "Debt & Fiscal":
 # ============================================================================
 
 elif page == "Country Profile":
-    st.title("Country Profile")
-    st.markdown("*Comprehensive view of a single country across all data domains*")
+    page_title("Country Profile", "Comprehensive country-level economic data")
     st.markdown("---")
 
     # Comprehensive country data - aggregated from all our data sources
@@ -6156,8 +6190,7 @@ elif page == "Country Profile":
 # ============================================================================
 
 elif page == "Correlation Analysis":
-    st.title("Correlation Analysis")
-    st.markdown("*Explore relationships between different assets and indicators*")
+    page_title("Correlation Analysis", "Cross-asset correlations and relationships")
     st.markdown("---")
 
     # Load data from database for correlation
@@ -6428,8 +6461,7 @@ elif page == "Correlation Analysis":
 # ============================================================================
 
 elif page == "Risk Metrics":
-    st.title("Risk Metrics & Portfolio Analytics")
-    st.markdown("*Value at Risk, volatility analysis, and risk-adjusted returns*")
+    page_title("Risk Metrics", "Portfolio risk analytics and volatility")
 
     with st.expander("ℹ️ Understanding Risk Metrics", expanded=False):
         st.markdown("""
@@ -6723,8 +6755,7 @@ elif page == "Risk Metrics":
 # ============================================================================
 
 elif page == "Economic Calendar":
-    st.title("Economic Calendar")
-    st.markdown("*Upcoming data releases and market-moving events*")
+    page_title("Economic Calendar", "Upcoming economic events and releases")
 
     with st.expander("ℹ️ Trading the Economic Calendar", expanded=False):
         st.markdown("""
@@ -6869,8 +6900,7 @@ elif page == "Economic Calendar":
 # ============================================================================
 
 elif page == "Earnings Dashboard":
-    st.title("Earnings Dashboard")
-    st.markdown("*Corporate earnings, EPS surprises, and revenue trends*")
+    page_title("Earnings Dashboard", "Corporate earnings reports and estimates")
     st.markdown("---")
 
     earn_tab1, earn_tab2, earn_tab3, earn_tab4 = st.tabs([
@@ -7096,8 +7126,7 @@ elif page == "Earnings Dashboard":
 # ============================================================================
 
 elif page == "Watchlist":
-    st.title("Watchlist")
-    st.markdown("*Track your favorite assets and set price alerts*")
+    page_title("Watchlist", "Track your favorite assets")
     st.markdown("---")
 
     # Initialize session state for watchlist
@@ -7261,8 +7290,7 @@ elif page == "Watchlist":
 # ============================================================================
 
 elif page == "Calculators":
-    st.title("Financial Calculators")
-    st.markdown("*Investment planning and financial analysis tools*")
+    page_title("Calculators", "Financial and investment calculators")
     st.markdown("---")
 
     calc_tab1, calc_tab2, calc_tab3, calc_tab4, calc_tab5 = st.tabs([
@@ -7826,8 +7854,7 @@ elif page == "Calculators":
 # ============================================================================
 
 elif page == "Bond Markets":
-    st.title("Bond Markets & Fixed Income")
-    st.markdown("*Treasury yields, credit spreads, and global sovereign debt*")
+    page_title("Bond Markets", "Treasury yields and fixed income analysis")
 
     with st.expander("ℹ️ Understanding Bond Markets", expanded=False):
         st.markdown("""
@@ -8044,8 +8071,7 @@ elif page == "Bond Markets":
 # ============================================================================
 
 elif page == "Sector Analysis":
-    st.title("S&P 500 Sector Analysis")
-    st.markdown("*Sector performance, rotation analysis, and ETF comparisons*")
+    page_title("Sector Analysis", "S&P 500 sector performance and rotation")
 
     with st.expander("ℹ️ Understanding Sector Analysis", expanded=False):
         st.markdown("""
@@ -8332,7 +8358,7 @@ elif page == "Sector Analysis":
 # ============================================================================
 
 elif page == "Market Sentiment":
-    st.title("Market Sentiment & Risk Indicators")
+    page_title("Market Sentiment", "Fear & greed indices and sentiment analysis")
     st.markdown("---")
 
     # Load economic data to get VIX and yield curve
@@ -8639,7 +8665,7 @@ elif page == "Market Sentiment":
 # ============================================================================
 
 elif page == "Weather & Globe":
-    st.title("Weather & 3D Globe Visualization")
+    page_title("Weather & Globe", "Global weather patterns and 3D visualization")
     st.markdown("---")
 
     weather_df = load_data("""
@@ -8744,8 +8770,7 @@ elif page == "Weather & Globe":
 # ============================================================================
 
 elif page == "Space":
-    st.title("Space Intelligence")
-    st.markdown("*ISS Tracking, Near-Earth Objects, and Solar Activity*")
+    page_title("Space", "Satellite data, launches, and space weather")
     st.markdown("---")
 
     tab1, tab2, tab3 = st.tabs(["ISS Tracker", "Near-Earth Objects", "Solar Activity"])
@@ -8919,8 +8944,7 @@ elif page == "Space":
 # ============================================================================
 
 elif page == "Global Events":
-    st.title("Global Events & Social Unrest")
-    st.markdown("*Powered by GDELT Project*")
+    page_title("Global Events", "Geopolitical events and social unrest tracking")
     st.markdown("---")
 
     if not table_exists('gdelt_events'):
@@ -8995,8 +9019,7 @@ elif page == "Global Events":
 # ============================================================================
 
 elif page == "News":
-    st.title("News Intelligence")
-    st.markdown("*AI-powered sentiment analysis and market impact*")
+    page_title("News", "Financial news and market sentiment")
     st.markdown("---")
 
     news_df = load_data("""
@@ -9173,8 +9196,7 @@ elif page == "News":
 # ============================================================================
 
 elif page == "Time Series":
-    st.title("Time Series Analysis")
-    st.markdown("*Historical trends and pattern analysis*")
+    page_title("Time Series", "Historical trends and time series analytics")
     st.markdown("---")
 
     # Date range selector
@@ -9695,8 +9717,7 @@ elif page == "Time Series":
 # ============================================================================
 
 elif page == "Options Flow":
-    st.title("Options Flow & Derivatives")
-    st.markdown("*Put/call ratios, unusual activity, and implied volatility*")
+    page_title("Options Flow", "Options activity and derivatives analytics")
 
     with st.expander("ℹ️ Understanding Options Flow", expanded=False):
         st.markdown("""
@@ -10012,8 +10033,7 @@ elif page == "Options Flow":
 # ============================================================================
 
 elif page == "Portfolio":
-    st.title("Portfolio & Watchlist")
-    st.markdown("*Track holdings, monitor watchlist, analyze correlations*")
+    page_title("Portfolio", "Portfolio management and allocation")
     st.markdown("---")
 
     port_tab1, port_tab2, port_tab3 = st.tabs(["💼 Holdings Tracker", "👁️ Watchlist", "📊 Correlation Analysis"])
@@ -10379,8 +10399,7 @@ elif page == "Portfolio":
 # ============================================================================
 
 elif page == "Currency Converter":
-    st.title("Currency Converter & FX Rates")
-    st.markdown("*Live exchange rates, conversions, and historical trends*")
+    page_title("Currency Converter", "Foreign exchange rates and conversion")
     st.markdown("---")
 
     fx_tab1, fx_tab2, fx_tab3 = st.tabs([
@@ -10588,7 +10607,7 @@ elif page == "Currency Converter":
 # ============================================================================
 
 elif page == "Query Builder":
-    st.title("Custom Query Builder")
+    page_title("Query Builder", "Build custom data queries")
     st.markdown("---")
 
     st.markdown("""
@@ -10757,8 +10776,7 @@ LIMIT 10"""
 # ============================================================================
 
 elif page == "Alerts & Export":
-    st.title("Alerts & Data Export")
-    st.markdown("*Monitor market movements and export data*")
+    page_title("Alerts & Export", "Price alerts and data export tools")
     st.markdown("---")
 
     tab1, tab2, tab3, tab4 = st.tabs(["Live Alerts", "Custom Alerts", "Alert History", "Export Data"])
@@ -11193,8 +11211,7 @@ LIMIT 20"""
 # ============================================================================
 
 elif page == "Technical Analysis":
-    st.title("Technical Analysis")
-    st.markdown("*RSI, MACD, Moving Averages, Bollinger Bands*")
+    page_title("Technical Analysis", "Charts, indicators, and technical patterns")
     st.markdown("---")
 
     # Asset type selector
@@ -11483,8 +11500,7 @@ elif page == "Technical Analysis":
 # ============================================================================
 
 elif page == "Collection Status":
-    st.title("Data Collection Status")
-    st.markdown("*Monitor collector health and data freshness*")
+    page_title("Collection Status", "Data pipeline health and status")
     st.markdown("---")
 
     # Check all tables for freshness - this always works
