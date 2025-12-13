@@ -601,7 +601,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.3 - Bloomberg Enhancement")
+st.sidebar.caption("v5.4 - Global Market Hours")
 
 
 # ============================================================================
@@ -1166,6 +1166,156 @@ if page == "Overview":
 elif page == "Markets":
     st.title("Market Intelligence")
     st.markdown("*Stocks, Commodities, and Forex*")
+    st.markdown("---")
+
+    # ========== GLOBAL MARKET HOURS SECTION ==========
+    st.subheader("🌍 Global Market Hours")
+
+    from datetime import datetime, time as dt_time
+    import pytz
+
+    def get_market_status(market_tz, open_time, close_time, name, weekend_closed=True):
+        """Calculate market status and time until open/close."""
+        now_utc = datetime.now(pytz.UTC)
+        market_now = now_utc.astimezone(pytz.timezone(market_tz))
+        current_time = market_now.time()
+        weekday = market_now.weekday()  # 0=Monday, 6=Sunday
+
+        # Check if weekend (most markets closed Sat-Sun)
+        if weekend_closed and weekday >= 5:
+            # Calculate time until Monday open
+            days_until_monday = (7 - weekday) % 7
+            if days_until_monday == 0:
+                days_until_monday = 7
+            next_open = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0)
+            next_open = next_open + timedelta(days=days_until_monday - (weekday - 4) if weekday == 6 else days_until_monday)
+            if weekday == 6:  # Sunday
+                next_open = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0) + timedelta(days=1)
+            elif weekday == 5:  # Saturday
+                next_open = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0) + timedelta(days=2)
+            time_until = next_open - market_now
+            hours = int(time_until.total_seconds() // 3600)
+            mins = int((time_until.total_seconds() % 3600) // 60)
+            return False, f"Opens Mon {hours}h {mins}m", market_now.strftime("%H:%M")
+
+        is_open = open_time <= current_time <= close_time
+
+        if is_open:
+            # Calculate time until close
+            close_dt = market_now.replace(hour=close_time.hour, minute=close_time.minute, second=0, microsecond=0)
+            time_until_close = close_dt - market_now
+            hours = int(time_until_close.total_seconds() // 3600)
+            mins = int((time_until_close.total_seconds() % 3600) // 60)
+            return True, f"Closes in {hours}h {mins}m", market_now.strftime("%H:%M")
+        else:
+            # Calculate time until open
+            if current_time < open_time:
+                # Opens later today
+                open_dt = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0)
+            else:
+                # Opens tomorrow (or Monday if Friday)
+                if weekday == 4:  # Friday after close
+                    open_dt = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0) + timedelta(days=3)
+                else:
+                    open_dt = market_now.replace(hour=open_time.hour, minute=open_time.minute, second=0, microsecond=0) + timedelta(days=1)
+            time_until_open = open_dt - market_now
+            hours = int(time_until_open.total_seconds() // 3600)
+            mins = int((time_until_open.total_seconds() % 3600) // 60)
+            return False, f"Opens in {hours}h {mins}m", market_now.strftime("%H:%M")
+
+    # Define all markets with their trading hours
+    STOCK_MARKETS = {
+        # Major Markets
+        'NYSE/NASDAQ': {'tz': 'America/New_York', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇺🇸'},
+        'LSE (London)': {'tz': 'Europe/London', 'open': dt_time(8, 0), 'close': dt_time(16, 30), 'flag': '🇬🇧'},
+        'Euronext': {'tz': 'Europe/Paris', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'flag': '🇪🇺'},
+        'XETRA (Germany)': {'tz': 'Europe/Berlin', 'open': dt_time(9, 0), 'close': dt_time(17, 30), 'flag': '🇩🇪'},
+        'Tokyo (TSE)': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 0), 'flag': '🇯🇵'},
+        'Hong Kong (HKEX)': {'tz': 'Asia/Hong_Kong', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇭🇰'},
+        'Shanghai (SSE)': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 30), 'close': dt_time(15, 0), 'flag': '🇨🇳'},
+        'Sydney (ASX)': {'tz': 'Australia/Sydney', 'open': dt_time(10, 0), 'close': dt_time(16, 0), 'flag': '🇦🇺'},
+        # Emerging Markets
+        'Mumbai (BSE)': {'tz': 'Asia/Kolkata', 'open': dt_time(9, 15), 'close': dt_time(15, 30), 'flag': '🇮🇳'},
+        'São Paulo (B3)': {'tz': 'America/Sao_Paulo', 'open': dt_time(10, 0), 'close': dt_time(17, 0), 'flag': '🇧🇷'},
+        'Toronto (TSX)': {'tz': 'America/Toronto', 'open': dt_time(9, 30), 'close': dt_time(16, 0), 'flag': '🇨🇦'},
+        'Singapore (SGX)': {'tz': 'Asia/Singapore', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'flag': '🇸🇬'},
+        'Seoul (KRX)': {'tz': 'Asia/Seoul', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'flag': '🇰🇷'},
+        'Johannesburg (JSE)': {'tz': 'Africa/Johannesburg', 'open': dt_time(9, 0), 'close': dt_time(17, 0), 'flag': '🇿🇦'},
+        'Mexico (BMV)': {'tz': 'America/Mexico_City', 'open': dt_time(8, 30), 'close': dt_time(15, 0), 'flag': '🇲🇽'},
+    }
+
+    METAL_MARKETS = {
+        'COMEX (Gold/Silver)': {'tz': 'America/New_York', 'open': dt_time(8, 20), 'close': dt_time(13, 30), 'flag': '🥇'},
+        'LBMA (London Gold)': {'tz': 'Europe/London', 'open': dt_time(10, 30), 'close': dt_time(15, 0), 'flag': '🇬🇧'},
+        'Shanghai Gold': {'tz': 'Asia/Shanghai', 'open': dt_time(9, 0), 'close': dt_time(15, 30), 'flag': '🇨🇳'},
+        'Tokyo Commodity': {'tz': 'Asia/Tokyo', 'open': dt_time(9, 0), 'close': dt_time(15, 15), 'flag': '🇯🇵'},
+        'LME (Base Metals)': {'tz': 'Europe/London', 'open': dt_time(1, 0), 'close': dt_time(19, 0), 'flag': '🔩'},
+    }
+
+    # Display market hours in tabs
+    mkt_tab1, mkt_tab2 = st.tabs(["📈 Stock Exchanges", "🥇 Metal Markets"])
+
+    with mkt_tab1:
+        # Split into major and emerging
+        major_markets = ['NYSE/NASDAQ', 'LSE (London)', 'Euronext', 'XETRA (Germany)', 'Tokyo (TSE)', 'Hong Kong (HKEX)', 'Shanghai (SSE)', 'Sydney (ASX)']
+        emerging_markets = ['Mumbai (BSE)', 'São Paulo (B3)', 'Toronto (TSX)', 'Singapore (SGX)', 'Seoul (KRX)', 'Johannesburg (JSE)', 'Mexico (BMV)']
+
+        st.markdown("**Major Exchanges**")
+        cols = st.columns(4)
+        for i, market in enumerate(major_markets):
+            info = STOCK_MARKETS[market]
+            is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            with cols[i % 4]:
+                status_color = "#00a86b" if is_open else "#ff6b6b"
+                status_icon = "🟢" if is_open else "🔴"
+                st.markdown(
+                    f"""<div style="background-color:#1e1e1e; padding:8px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
+                    <b>{info['flag']} {market}</b><br>
+                    <span style="color:{status_color};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
+                    <small>{status_text}</small><br>
+                    <small style="color:#888;">Local: {local_time}</small>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+        st.markdown("**Emerging Markets**")
+        cols2 = st.columns(4)
+        for i, market in enumerate(emerging_markets):
+            info = STOCK_MARKETS[market]
+            is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            with cols2[i % 4]:
+                status_color = "#00a86b" if is_open else "#ff6b6b"
+                status_icon = "🟢" if is_open else "🔴"
+                st.markdown(
+                    f"""<div style="background-color:#1e1e1e; padding:8px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
+                    <b>{info['flag']} {market}</b><br>
+                    <span style="color:{status_color};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
+                    <small>{status_text}</small><br>
+                    <small style="color:#888;">Local: {local_time}</small>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+    with mkt_tab2:
+        st.markdown("**Precious & Base Metal Markets**")
+        metal_cols = st.columns(3)
+        for i, (market, info) in enumerate(METAL_MARKETS.items()):
+            is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
+            with metal_cols[i % 3]:
+                status_color = "#FFD700" if is_open else "#666"  # Gold color for open
+                status_icon = "🟢" if is_open else "🔴"
+                st.markdown(
+                    f"""<div style="background-color:#1e1e1e; padding:10px; border-radius:5px; margin:3px; border-left:4px solid {status_color};">
+                    <b>{info['flag']} {market}</b><br>
+                    <span style="color:{'#FFD700' if is_open else '#ff6b6b'};">{status_icon} {'OPEN' if is_open else 'CLOSED'}</span><br>
+                    <small>{status_text}</small><br>
+                    <small style="color:#888;">Local: {local_time}</small>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+
+        st.caption("Note: Metal markets often have extended/overnight trading. Hours shown are core trading sessions.")
+
     st.markdown("---")
 
     tab1, tab2, tab3 = st.tabs(["Stocks", "Commodities", "Forex"])
