@@ -577,34 +577,75 @@ st.sidebar.markdown(f'<p><span class="{status_class}">US Markets: {market_status
 
 st.sidebar.markdown("---")
 
-page = st.sidebar.radio(
-    "Navigate to:",
-    ["Overview", "Markets", "Crypto", "Economic Indicators", "Global Development",
-     "Energy & Resources", "Agriculture & Food", "Trade & Shipping", "Demographics",
-     "Debt & Fiscal", "Country Profile", "Market Sentiment", "Weather & Globe", "Space", "Global Events", "News",
-     "Time Series", "Technical Analysis", "Correlation Analysis", "Risk Metrics", "Economic Calendar", "Watchlist",
-     "Bond Markets", "Portfolio", "Query Builder", "Collection Status", "Alerts & Export"]
-)
+# Initialize page in session state if not exists
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "Overview"
+
+# Navigation structure with categories
+NAV_STRUCTURE = {
+    "📊 Markets": ["Overview", "Markets", "Crypto", "Bond Markets"],
+    "📈 Analytics": ["Technical Analysis", "Correlation Analysis", "Risk Metrics", "Time Series"],
+    "🌍 Economics": ["Economic Indicators", "Economic Calendar", "Global Development", "Country Profile"],
+    "🏭 Commodities": ["Energy & Resources", "Agriculture & Food", "Trade & Shipping"],
+    "🌐 Global": ["Demographics", "Debt & Fiscal", "Weather & Globe", "Space"],
+    "📰 News & Events": ["News", "Market Sentiment", "Global Events"],
+    "🛠️ Tools": ["Portfolio", "Watchlist", "Query Builder", "Alerts & Export", "Collection Status"],
+}
+
+# Helper function to create navigation button
+def nav_button(page_name, current_page):
+    """Create a navigation button that updates session state."""
+    is_selected = current_page == page_name
+    button_type = "primary" if is_selected else "secondary"
+
+    # Add indicator for current page
+    label = f"● {page_name}" if is_selected else page_name
+
+    if st.sidebar.button(label, key=f"nav_{page_name}", use_container_width=True,
+                         type=button_type if is_selected else "secondary"):
+        st.session_state.current_page = page_name
+        st.rerun()
+
+# Render grouped navigation
+for category, pages in NAV_STRUCTURE.items():
+    # Check if any page in this category is currently selected
+    category_has_selection = st.session_state.current_page in pages
+
+    with st.sidebar.expander(category, expanded=category_has_selection):
+        for page_name in pages:
+            is_selected = st.session_state.current_page == page_name
+            prefix = "→ " if is_selected else "   "
+
+            if st.button(
+                f"{prefix}{page_name}",
+                key=f"nav_{page_name}",
+                use_container_width=True,
+                type="primary" if is_selected else "secondary"
+            ):
+                st.session_state.current_page = page_name
+                st.rerun()
+
+# Get current page from session state
+page = st.session_state.current_page
 
 st.sidebar.markdown("---")
 
-# Data Freshness Indicators
-st.sidebar.markdown("**Data Freshness**")
-freshness_tables = ['stocks', 'crypto', 'weather', 'news']
-for table in freshness_tables:
-    _, status, age_str = get_data_freshness(table)
-    icon = "🟢" if status == "good" else "🟡" if status == "warning" else "🔴"
-    st.sidebar.caption(f"{icon} {table.title()}: {age_str}")
+# Data Freshness Indicators (collapsed by default)
+with st.sidebar.expander("📡 Data Freshness", expanded=False):
+    freshness_tables = ['stocks', 'crypto', 'weather', 'news']
+    for table in freshness_tables:
+        _, status, age_str = get_data_freshness(table)
+        icon = "🟢" if status == "good" else "🟡" if status == "warning" else "🔴"
+        st.caption(f"{icon} {table.title()}: {age_str}")
 
-st.sidebar.markdown("---")
-
-if st.sidebar.button("Refresh Data", type="primary"):
+# Refresh button
+if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.8 - Oil, Gas & Nuclear")
+st.sidebar.caption("v6.4 - Grouped Navigation")
 
 
 # ============================================================================
