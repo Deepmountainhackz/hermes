@@ -22,26 +22,57 @@ class EconomicsService:
     # FRED has international data series for major economies
     DEFAULT_INDICATORS = {
         'USA': {
+            # Core Economic
             'GDP': {'series_id': 'GDP', 'name': 'GDP', 'unit': 'Billions USD'},
+            'GDP_GROWTH': {'series_id': 'A191RL1Q225SBEA', 'name': 'Real GDP Growth', 'unit': '% Change'},
             'UNEMPLOYMENT': {'series_id': 'UNRATE', 'name': 'Unemployment Rate', 'unit': '%'},
+            'NONFARM_PAYROLLS': {'series_id': 'PAYEMS', 'name': 'Nonfarm Payrolls', 'unit': 'Thousands'},
+            'INITIAL_CLAIMS': {'series_id': 'ICSA', 'name': 'Initial Jobless Claims', 'unit': 'Thousands'},
+            # Inflation
             'INFLATION': {'series_id': 'CPIAUCSL', 'name': 'CPI Inflation', 'unit': 'Index'},
+            'CORE_CPI': {'series_id': 'CPILFESL', 'name': 'Core CPI (ex Food/Energy)', 'unit': 'Index'},
+            'PCE': {'series_id': 'PCEPI', 'name': 'PCE Price Index', 'unit': 'Index'},
+            'CORE_PCE': {'series_id': 'PCEPILFE', 'name': 'Core PCE Price Index', 'unit': 'Index'},
+            'PPI': {'series_id': 'PPIACO', 'name': 'Producer Price Index', 'unit': 'Index'},
+            # Interest Rates
             'INTEREST_RATE': {'series_id': 'FEDFUNDS', 'name': 'Federal Funds Rate', 'unit': '%'},
+            'PRIME_RATE': {'series_id': 'DPRIME', 'name': 'Prime Rate', 'unit': '%'},
+            # Manufacturing & Production
             'PMI_MANUFACTURING': {'series_id': 'MANEMP', 'name': 'Manufacturing Employment', 'unit': 'Thousands'},
+            'ISM_PMI': {'series_id': 'NAPM', 'name': 'ISM Manufacturing PMI', 'unit': 'Index'},
+            'INDUSTRIAL_PRODUCTION': {'series_id': 'INDPRO', 'name': 'Industrial Production', 'unit': 'Index'},
+            'CAPACITY_UTIL': {'series_id': 'TCU', 'name': 'Capacity Utilization', 'unit': '%'},
+            'DURABLE_GOODS': {'series_id': 'DGORDER', 'name': 'Durable Goods Orders', 'unit': 'Millions USD'},
+            # Consumer
             'CONSUMER_CONFIDENCE': {'series_id': 'UMCSENT', 'name': 'Consumer Sentiment', 'unit': 'Index'},
             'RETAIL_SALES': {'series_id': 'RSXFS', 'name': 'Retail Sales', 'unit': 'Millions USD'},
-            'INDUSTRIAL_PRODUCTION': {'series_id': 'INDPRO', 'name': 'Industrial Production', 'unit': 'Index'},
+            'PERSONAL_INCOME': {'series_id': 'PI', 'name': 'Personal Income', 'unit': 'Billions USD'},
+            'PERSONAL_SPENDING': {'series_id': 'PCE', 'name': 'Personal Consumption', 'unit': 'Billions USD'},
+            'SAVINGS_RATE': {'series_id': 'PSAVERT', 'name': 'Personal Savings Rate', 'unit': '%'},
+            # Housing
+            'HOUSING_STARTS': {'series_id': 'HOUST', 'name': 'Housing Starts', 'unit': 'Thousands'},
+            'BUILDING_PERMITS': {'series_id': 'PERMIT', 'name': 'Building Permits', 'unit': 'Thousands'},
+            'NEW_HOME_SALES': {'series_id': 'HSN1F', 'name': 'New Home Sales', 'unit': 'Thousands'},
+            'EXISTING_HOME_SALES': {'series_id': 'EXHOSLUSM495S', 'name': 'Existing Home Sales', 'unit': 'Thousands'},
+            'CASE_SHILLER': {'series_id': 'CSUSHPINSA', 'name': 'Case-Shiller Home Price', 'unit': 'Index'},
+            'MORTGAGE_RATE_30Y': {'series_id': 'MORTGAGE30US', 'name': '30-Year Mortgage Rate', 'unit': '%'},
             # Treasury Yields
             'TREASURY_3M': {'series_id': 'DGS3MO', 'name': '3-Month Treasury', 'unit': '%'},
             'TREASURY_2Y': {'series_id': 'DGS2', 'name': '2-Year Treasury', 'unit': '%'},
             'TREASURY_5Y': {'series_id': 'DGS5', 'name': '5-Year Treasury', 'unit': '%'},
             'TREASURY_10Y': {'series_id': 'DGS10', 'name': '10-Year Treasury', 'unit': '%'},
             'TREASURY_30Y': {'series_id': 'DGS30', 'name': '30-Year Treasury', 'unit': '%'},
-            # Yield Curve Spread (10Y - 2Y, recession indicator)
+            # Yield Spreads
             'YIELD_CURVE_10Y2Y': {'series_id': 'T10Y2Y', 'name': '10Y-2Y Yield Spread', 'unit': '%'},
-            # VIX Volatility Index
+            'YIELD_CURVE_10Y3M': {'series_id': 'T10Y3M', 'name': '10Y-3M Yield Spread', 'unit': '%'},
+            # Market Indicators
             'VIX': {'series_id': 'VIXCLS', 'name': 'VIX Volatility Index', 'unit': 'Index'},
-            # US Dollar Index (Trade Weighted)
             'DXY': {'series_id': 'DTWEXBGS', 'name': 'US Dollar Index', 'unit': 'Index'},
+            # Credit & Money
+            'M2': {'series_id': 'M2SL', 'name': 'M2 Money Supply', 'unit': 'Billions USD'},
+            'CONSUMER_CREDIT': {'series_id': 'TOTALSL', 'name': 'Consumer Credit', 'unit': 'Billions USD'},
+            # Trade
+            'TRADE_BALANCE': {'series_id': 'BOPGSTB', 'name': 'Trade Balance', 'unit': 'Millions USD'},
         },
         'EU': {
             'GDP': {'series_id': 'CLVMNACSCAB1GQEA19', 'name': 'GDP', 'unit': 'Millions EUR'},
