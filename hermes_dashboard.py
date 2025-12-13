@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v5.1
+Hermes Intelligence Platform Dashboard v5.2
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 """
@@ -236,9 +236,9 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # DATA LOADING FUNCTIONS
 # ============================================================================
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=300)  # 5 minute cache for general queries
 def load_data(query):
-    """Load data from PostgreSQL database"""
+    """Load data from PostgreSQL database with caching"""
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -252,24 +252,101 @@ def load_data(query):
         return pd.DataFrame()
 
 
-def get_count(table):
-    """Safely get count from a table"""
+@st.cache_data(ttl=60)  # 1 minute cache for frequently updated data
+def load_realtime_data(query):
+    """Load frequently updated data with shorter cache"""
     try:
-        df = load_data(f'SELECT COUNT(*) as c FROM {table}')
-        if df.empty:
-            return 0
-        return int(df['c'].iloc[0]) if 'c' in df.columns else int(df.iloc[0, 0])
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                if not rows:
+                    return pd.DataFrame()
+                return pd.DataFrame(rows)
+    except Exception as e:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=600)  # 10 minute cache for slow-changing data
+def load_static_data(query):
+    """Load slow-changing data with longer cache"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                if not rows:
+                    return pd.DataFrame()
+                return pd.DataFrame(rows)
+    except Exception as e:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=3600)  # 1 hour cache for table existence checks
+def _check_table_exists(table_name):
+    """Internal cached table existence check"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT 1 FROM {table_name} LIMIT 1")
+                return True
+    except Exception:
+        return False
+
+
+def table_exists(table_name):
+    """Check if a table exists in the database (cached)"""
+    return _check_table_exists(table_name)
+
+
+@st.cache_data(ttl=300)
+def get_count(table):
+    """Safely get count from a table (cached)"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f'SELECT COUNT(*) FROM {table}')
+                result = cur.fetchone()
+                return int(result[0]) if result else 0
     except Exception:
         return 0
 
 
-def table_exists(table_name):
-    """Check if a table exists in the database"""
-    try:
-        df = load_data(f"SELECT 1 FROM {table_name} LIMIT 1")
-        return True
-    except Exception:
-        return False
+# Pre-defined optimized queries for common operations
+@st.cache_data(ttl=120)
+def get_latest_stocks():
+    """Get latest stock data - optimized"""
+    return load_data("""
+        SELECT DISTINCT ON (symbol) symbol, price, change_percent, volume, timestamp
+        FROM stocks ORDER BY symbol, timestamp DESC
+    """)
+
+
+@st.cache_data(ttl=120)
+def get_latest_crypto():
+    """Get latest crypto data - optimized"""
+    return load_data("""
+        SELECT DISTINCT ON (symbol) symbol, name, price, change_percent_24h, market_cap, volume_24h, timestamp
+        FROM crypto ORDER BY symbol, timestamp DESC
+    """)
+
+
+@st.cache_data(ttl=120)
+def get_latest_forex():
+    """Get latest forex data - optimized"""
+    return load_data("""
+        SELECT DISTINCT ON (symbol) symbol, rate, change_percent, timestamp
+        FROM forex ORDER BY symbol, timestamp DESC
+    """)
+
+
+@st.cache_data(ttl=120)
+def get_latest_commodities():
+    """Get latest commodities data - optimized"""
+    return load_data("""
+        SELECT DISTINCT ON (symbol) symbol, name, price, change_percent, category, timestamp
+        FROM commodities ORDER BY symbol, timestamp DESC
+    """)
 
 
 # ============================================================================
@@ -524,7 +601,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.1 - Enhanced UX & Custom Alerts")
+st.sidebar.caption("v5.2 - Performance Optimized")
 
 
 # ============================================================================
@@ -755,16 +832,15 @@ elif page == "Markets":
     tab1, tab2, tab3 = st.tabs(["Stocks", "Commodities", "Forex"])
 
     with tab1:
-        stocks_df = load_data("""
-            SELECT symbol, name, price, change, change_percent, volume, timestamp
-            FROM stocks ORDER BY timestamp DESC, symbol
+        # Optimized query - get only latest per symbol using DISTINCT ON
+        latest_stocks = load_data("""
+            SELECT DISTINCT ON (symbol) symbol, name, price, change, change_percent, volume, timestamp
+            FROM stocks ORDER BY symbol, timestamp DESC
         """)
 
-        if stocks_df.empty:
+        if latest_stocks.empty:
             st.warning("No stock data available. Run: `python scheduler.py --collector markets`")
         else:
-            stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-            latest_stocks = stocks_df.groupby('symbol').first().reset_index()
             latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
 
             gainers = latest_stocks[latest_stocks['change_percent'] > 0].sort_values('change_percent', ascending=False)
@@ -853,16 +929,15 @@ elif page == "Markets":
 
     with tab2:
         st.subheader("Commodity Prices")
-        commodities_df = load_data("""
-            SELECT symbol, name, price, change_percent, unit, timestamp
-            FROM commodities ORDER BY timestamp DESC, symbol
+        # Optimized query - get only latest per symbol
+        latest_commodities = load_data("""
+            SELECT DISTINCT ON (symbol) symbol, name, price, change_percent, unit, timestamp
+            FROM commodities ORDER BY symbol, timestamp DESC
         """)
 
-        if commodities_df.empty:
+        if latest_commodities.empty:
             st.warning("No commodity data. Run: `python scheduler.py --collector commodities`")
         else:
-            commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
-            latest_commodities = commodities_df.groupby('symbol').first().reset_index()
 
             # Group by category
             energy = latest_commodities[latest_commodities['symbol'].isin(['CRUDE_OIL', 'NATURAL_GAS', 'BRENT'])]
@@ -891,16 +966,15 @@ elif page == "Markets":
 
     with tab3:
         st.subheader("Foreign Exchange Rates")
-        forex_df = load_data("""
-            SELECT pair, rate, bid, ask, timestamp FROM forex
-            ORDER BY timestamp DESC, pair
+        # Optimized query - get only latest per pair
+        latest_forex = load_data("""
+            SELECT DISTINCT ON (pair) pair, rate, bid, ask, timestamp FROM forex
+            ORDER BY pair, timestamp DESC
         """)
 
-        if forex_df.empty:
+        if latest_forex.empty:
             st.warning("No forex data. Run: `python scheduler.py --collector forex`")
         else:
-            forex_df['timestamp'] = pd.to_datetime(forex_df['timestamp'])
-            latest_forex = forex_df.groupby('pair').first().reset_index()
 
             # Major pairs
             major_pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD', 'USD/CAD']
@@ -936,17 +1010,16 @@ elif page == "Crypto":
     st.markdown("*Real-time crypto prices and market data*")
     st.markdown("---")
 
-    crypto_df = load_data("""
-        SELECT symbol, name, price, change_24h, change_percent_24h,
+    # Optimized query - get only latest per symbol
+    latest_crypto = load_data("""
+        SELECT DISTINCT ON (symbol) symbol, name, price, change_24h, change_percent_24h,
                market_cap, volume_24h, timestamp
-        FROM crypto ORDER BY timestamp DESC, market_cap DESC NULLS LAST
+        FROM crypto ORDER BY symbol, timestamp DESC
     """)
 
-    if crypto_df.empty:
+    if latest_crypto.empty:
         st.warning("No cryptocurrency data. Run: `python scheduler.py --collector crypto`")
     else:
-        crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
-        latest_crypto = crypto_df.groupby('symbol').first().reset_index()
         latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
         latest_crypto['market_cap'] = pd.to_numeric(latest_crypto['market_cap'], errors='coerce').fillna(0)
 
@@ -2892,12 +2965,13 @@ elif page == "Alerts & Export":
         col_alert1, col_alert2 = st.columns(2)
 
         with col_alert1:
-            # Stock alerts
+            # Stock alerts - optimized query
             st.markdown("#### Stocks")
-            stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp DESC")
-            if not stocks_df.empty:
-                stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-                latest_stocks = stocks_df.groupby('symbol').first().reset_index()
+            latest_stocks = load_data("""
+                SELECT DISTINCT ON (symbol) symbol, price, change_percent
+                FROM stocks ORDER BY symbol, timestamp DESC
+            """)
+            if not latest_stocks.empty:
                 latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
                 big_movers = latest_stocks[abs(latest_stocks['change_percent']) > 5]
                 if not big_movers.empty:
@@ -2913,12 +2987,13 @@ elif page == "Alerts & Export":
             else:
                 st.info("No stock data available")
 
-            # Commodities alerts
+            # Commodities alerts - optimized query
             st.markdown("#### Commodities")
-            commodities_df = load_data("SELECT * FROM commodities ORDER BY timestamp DESC")
-            if not commodities_df.empty:
-                commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
-                latest_comm = commodities_df.groupby('symbol').first().reset_index()
+            latest_comm = load_data("""
+                SELECT DISTINCT ON (symbol) symbol, name, price, change_percent
+                FROM commodities ORDER BY symbol, timestamp DESC
+            """)
+            if not latest_comm.empty:
                 latest_comm['change_percent'] = pd.to_numeric(latest_comm['change_percent'], errors='coerce').fillna(0)
                 big_comm = latest_comm[abs(latest_comm['change_percent']) > 3]
                 if not big_comm.empty:
@@ -2933,12 +3008,13 @@ elif page == "Alerts & Export":
                     st.info("No significant commodity movements (>3%)")
 
         with col_alert2:
-            # Crypto alerts
+            # Crypto alerts - optimized query
             st.markdown("#### Crypto")
-            crypto_df = load_data("SELECT * FROM crypto ORDER BY timestamp DESC")
-            if not crypto_df.empty:
-                crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
-                latest_crypto = crypto_df.groupby('symbol').first().reset_index()
+            latest_crypto = load_data("""
+                SELECT DISTINCT ON (symbol) symbol, price, change_percent_24h
+                FROM crypto ORDER BY symbol, timestamp DESC
+            """)
+            if not latest_crypto.empty:
                 latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
                 big_crypto = latest_crypto[abs(latest_crypto['change_percent_24h']) > 10]
                 if not big_crypto.empty:
