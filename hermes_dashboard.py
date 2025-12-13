@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.15
+Hermes Intelligence Platform Dashboard v6.16
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -79,6 +79,55 @@ CITY_COORDS = {
     'Brisbane': {'lat': -27.4698, 'lon': 153.0251}
 }
 
+# City to country mapping for flags
+CITY_COUNTRIES = {
+    # North America
+    'New York': 'USA', 'Los Angeles': 'USA', 'Chicago': 'USA', 'Miami': 'USA', 'San Francisco': 'USA',
+    'Toronto': 'Canada', 'Vancouver': 'Canada',
+    'Mexico City': 'Mexico',
+    # South America
+    'São Paulo': 'Brazil', 'Rio de Janeiro': 'Brazil',
+    'Buenos Aires': 'Argentina',
+    'Lima': 'Peru',
+    'Bogotá': 'Colombia',
+    'Santiago': 'Chile',
+    # Europe
+    'London': 'UK',
+    'Paris': 'France',
+    'Berlin': 'Germany',
+    'Madrid': 'Spain',
+    'Rome': 'Italy',
+    'Amsterdam': 'Netherlands',
+    'Moscow': 'Russia',
+    'Istanbul': 'Turkey',
+    'Athens': 'Greece',
+    'Stockholm': 'Sweden',
+    # Middle East
+    'Dubai': 'UAE',
+    'Cairo': 'Egypt',
+    'Tel Aviv': 'Israel',
+    'Riyadh': 'Saudi Arabia',
+    # Africa
+    'Johannesburg': 'South Africa', 'Cape Town': 'South Africa',
+    'Nairobi': 'Kenya',
+    'Lagos': 'Nigeria',
+    # Asia
+    'Tokyo': 'Japan',
+    'Beijing': 'China', 'Shanghai': 'China',
+    'Hong Kong': 'Hong Kong',
+    'Singapore': 'Singapore',
+    'Mumbai': 'India', 'Delhi': 'India',
+    'Bangkok': 'Thailand',
+    'Seoul': 'South Korea',
+    'Jakarta': 'Indonesia',
+    'Manila': 'Philippines',
+    'Kuala Lumpur': 'Malaysia',
+    'Taipei': 'Taiwan',
+    # Oceania
+    'Sydney': 'Australia', 'Melbourne': 'Australia', 'Perth': 'Australia', 'Brisbane': 'Australia',
+    'Auckland': 'New Zealand',
+}
+
 
 # ============================================================================
 # DATABASE CONFIGURATION
@@ -133,7 +182,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling - Modern Dashboard Design v6.15
+# Custom CSS for styling - Modern Dashboard Design v6.16
 CUSTOM_CSS = """
 <style>
     /* ========================================
@@ -799,6 +848,13 @@ def format_forex_pair(pair):
         return f"{base_flag} {parts[0]}/{parts[1]} {quote_flag}"
     return pair
 
+def get_city_flag(city):
+    """Get a flag emoji for a city based on its country."""
+    country = CITY_COUNTRIES.get(city, '')
+    if country:
+        return get_country_flag(country)
+    return COUNTRY_FLAGS['default']
+
 # Page to category mapping
 PAGE_CATEGORIES = {
     # Markets
@@ -1299,7 +1355,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.15 - Country Flags")
+st.sidebar.caption("v6.16 - City Flags")
 
 
 # ============================================================================
@@ -8991,12 +9047,12 @@ elif page == "Weather & Globe":
         with col2:
             if not latest_weather.empty:
                 hottest = latest_weather.loc[latest_weather['temperature'].idxmax()]
-                hottest_flag = get_country_flag(hottest.get('country', ''))
+                hottest_flag = get_city_flag(hottest['city'])
                 st.metric(f"Hottest {hottest_flag}", f"{hottest['city']}", f"{hottest['temperature']:.1f}°C")
         with col3:
             if not latest_weather.empty:
                 coldest = latest_weather.loc[latest_weather['temperature'].idxmin()]
-                coldest_flag = get_country_flag(coldest.get('country', ''))
+                coldest_flag = get_city_flag(coldest['city'])
                 st.metric(f"Coldest {coldest_flag}", f"{coldest['city']}", f"{coldest['temperature']:.1f}°C")
         with col4:
             avg_temp = latest_weather['temperature'].mean()
@@ -9015,7 +9071,7 @@ elif page == "Weather & Globe":
         # Globe controls
         col1, col2 = st.columns(2)
         with col1:
-            projection = st.selectbox("Projection", ["orthographic", "naturalEarth", "equirectangular"])
+            projection = st.selectbox("Projection", ["orthographic", "natural earth", "equirectangular"])
         with col2:
             rotation = st.slider("Rotation (Longitude)", -180, 180, 0)
 
@@ -9026,9 +9082,9 @@ elif page == "Weather & Globe":
             # Calculate marker sizes as a list (not Series) to avoid Plotly errors
             marker_sizes = [max(abs(t) / 3 + 8, 6) for t in map_data['temperature'].tolist()]
 
-            # Add flag to hover text
+            # Add flag to hover text using city lookup
             map_data['hover_text'] = map_data.apply(
-                lambda r: f"{get_country_flag(r.get('country', ''))} <b>{r['city']}</b><br>Temp: {r['temperature']:.1f}°C<br>{r['description']}", axis=1
+                lambda r: f"{get_city_flag(r['city'])} <b>{r['city']}</b><br>Temp: {r['temperature']:.1f}°C<br>{r['description']}", axis=1
             )
             fig.add_trace(go.Scattergeo(
                 lon=map_data['lon'].tolist(),
