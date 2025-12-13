@@ -533,73 +533,83 @@ st.sidebar.caption("v5.0 - Technical Analysis & Automation")
 
 if page == "Overview":
     st.title("Hermes Intelligence Platform")
-    st.markdown("### Real-time Multi-Layer Intelligence Dashboard")
-
-    # Key Highlights Section
-    st.markdown("---")
-    st.subheader("Key Highlights")
-
-    highlights = []
-
-    # Get key data for highlights
-    stocks_df = load_data("""
-        SELECT symbol, price, change_percent
-        FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
-        ORDER BY ABS(change_percent) DESC NULLS LAST LIMIT 1
-    """)
-    if not stocks_df.empty:
-        row = stocks_df.iloc[0]
-        change = row.get('change_percent', 0) or 0
-        direction = "up" if change > 0 else "down"
-        highlights.append(f"**{row['symbol']}** {direction} **{abs(change):.1f}%** at ${row['price']:.2f}")
-
-    crypto_df = load_data("""
-        SELECT symbol, price, change_percent_24h
-        FROM crypto WHERE timestamp = (SELECT MAX(timestamp) FROM crypto)
-        ORDER BY ABS(change_percent_24h) DESC NULLS LAST LIMIT 1
-    """)
-    if not crypto_df.empty:
-        row = crypto_df.iloc[0]
-        change = row.get('change_percent_24h', 0) or 0
-        direction = "up" if change > 0 else "down"
-        highlights.append(f"**{row['symbol']}** {direction} **{abs(change):.1f}%** (24h)")
-
-    # VIX from economics
-    vix_df = load_data("""
-        SELECT value FROM economic_indicators
-        WHERE indicator = 'VIXCLS' AND country = 'USA'
-        ORDER BY timestamp DESC LIMIT 1
-    """)
-    if not vix_df.empty and vix_df['value'].iloc[0]:
-        vix = float(vix_df['value'].iloc[0])
-        vix_status = "elevated" if vix > 20 else "low" if vix < 15 else "normal"
-        highlights.append(f"**VIX** at **{vix:.1f}** ({vix_status} volatility)")
-
-    # Crypto Fear & Greed (quick fetch)
-    try:
-        import requests
-        fng_resp = requests.get("https://api.alternative.me/fng/?limit=1", timeout=5)
-        if fng_resp.status_code == 200:
-            fng_data = fng_resp.json()
-            if 'data' in fng_data and fng_data['data']:
-                fng_val = fng_data['data'][0]['value']
-                fng_class = fng_data['data'][0]['value_classification']
-                highlights.append(f"Crypto sentiment: **{fng_class}** ({fng_val})")
-    except Exception:
-        pass
-
-    if highlights:
-        cols = st.columns(len(highlights))
-        for i, highlight in enumerate(highlights):
-            with cols[i]:
-                st.info(highlight)
-    else:
-        st.info("Run collectors to see key highlights")
-
+    st.markdown("*Real-time Multi-Layer Intelligence Dashboard*")
     st.markdown("---")
 
-    # System Stats
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Key Highlights Section - Top movers and sentiment
+    st.subheader("Market Pulse")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    # Top stock mover
+    with col1:
+        stocks_df = load_data("""
+            SELECT symbol, price, change_percent
+            FROM stocks WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
+            ORDER BY ABS(change_percent) DESC NULLS LAST LIMIT 1
+        """)
+        if not stocks_df.empty:
+            row = stocks_df.iloc[0]
+            change = row.get('change_percent', 0) or 0
+            delta_color = "normal" if change >= 0 else "inverse"
+            st.metric(f"Top Mover: {row['symbol']}", f"${row['price']:.2f}",
+                     f"{change:+.2f}%", delta_color=delta_color)
+        else:
+            st.metric("Top Stock", "N/A", "Run collector")
+
+    # Top crypto mover
+    with col2:
+        crypto_df = load_data("""
+            SELECT symbol, price, change_percent_24h
+            FROM crypto WHERE timestamp = (SELECT MAX(timestamp) FROM crypto)
+            ORDER BY ABS(change_percent_24h) DESC NULLS LAST LIMIT 1
+        """)
+        if not crypto_df.empty:
+            row = crypto_df.iloc[0]
+            change = row.get('change_percent_24h', 0) or 0
+            delta_color = "normal" if change >= 0 else "inverse"
+            st.metric(f"Crypto: {row['symbol']}", f"${row['price']:,.2f}",
+                     f"{change:+.2f}% (24h)", delta_color=delta_color)
+        else:
+            st.metric("Top Crypto", "N/A", "Run collector")
+
+    # VIX
+    with col3:
+        vix_df = load_data("""
+            SELECT value FROM economic_indicators
+            WHERE indicator = 'VIXCLS' AND country = 'USA'
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        if not vix_df.empty and vix_df['value'].iloc[0]:
+            vix = float(vix_df['value'].iloc[0])
+            vix_status = "High" if vix > 25 else "Elevated" if vix > 20 else "Low" if vix < 15 else "Normal"
+            st.metric("VIX", f"{vix:.1f}", vix_status)
+        else:
+            st.metric("VIX", "N/A", "Run economics")
+
+    # Crypto Fear & Greed
+    with col4:
+        try:
+            import requests
+            fng_resp = requests.get("https://api.alternative.me/fng/?limit=1", timeout=3)
+            if fng_resp.status_code == 200:
+                fng_data = fng_resp.json()
+                if 'data' in fng_data and fng_data['data']:
+                    fng_val = int(fng_data['data'][0]['value'])
+                    fng_class = fng_data['data'][0]['value_classification']
+                    st.metric("Crypto F&G", fng_val, fng_class)
+                else:
+                    st.metric("Crypto F&G", "N/A", "-")
+            else:
+                st.metric("Crypto F&G", "N/A", "-")
+        except Exception:
+            st.metric("Crypto F&G", "N/A", "-")
+
+    st.markdown("---")
+
+    # Data stats row
+    st.subheader("Data Overview")
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
         st.metric("Stocks", f"{get_count('stocks'):,}")
@@ -608,36 +618,37 @@ if page == "Overview":
     with col3:
         st.metric("Forex", f"{get_count('forex'):,}")
     with col4:
-        st.metric("Weather", f"{get_count('weather'):,}")
+        st.metric("Commodities", f"{get_count('commodities'):,}")
     with col5:
+        st.metric("Weather", f"{get_count('weather'):,}")
+    with col6:
         st.metric("News", f"{get_count('news'):,}")
 
     st.markdown("---")
 
-    # Market Overview
+    # Three-column market overview
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.subheader("Top Stocks")
+        st.subheader("Stocks")
         stocks = load_data("""
             SELECT symbol, price, change_percent
             FROM stocks
             WHERE timestamp = (SELECT MAX(timestamp) FROM stocks)
-            ORDER BY symbol LIMIT 8
+            ORDER BY ABS(change_percent) DESC NULLS LAST LIMIT 8
         """)
         if not stocks.empty:
             for _, row in stocks.iterrows():
                 change = row.get('change_percent', 0) or 0
                 color = "positive" if change >= 0 else "negative"
-                arrow = "+" if change >= 0 else ""
-                st.markdown(f"**{row['symbol']}**: ${row['price']:.2f} "
-                           f"<span class='{color}'>{arrow}{change:.2f}%</span>",
+                st.markdown(f"**{row['symbol']}** ${row['price']:.2f} "
+                           f"<span class='{color}'>{change:+.2f}%</span>",
                            unsafe_allow_html=True)
         else:
-            st.info("No stock data yet")
+            st.info("No stock data - run markets collector")
 
     with col2:
-        st.subheader("Top Crypto")
+        st.subheader("Crypto")
         crypto = load_data("""
             SELECT symbol, price, change_percent_24h
             FROM crypto
@@ -648,67 +659,86 @@ if page == "Overview":
             for _, row in crypto.iterrows():
                 change = row.get('change_percent_24h', 0) or 0
                 color = "positive" if change >= 0 else "negative"
-                arrow = "+" if change >= 0 else ""
-                st.markdown(f"**{row['symbol']}**: ${row['price']:,.2f} "
-                           f"<span class='{color}'>{arrow}{change:.2f}%</span>",
+                price_fmt = f"${row['price']:,.2f}" if row['price'] < 1000 else f"${row['price']:,.0f}"
+                st.markdown(f"**{row['symbol']}** {price_fmt} "
+                           f"<span class='{color}'>{change:+.2f}%</span>",
                            unsafe_allow_html=True)
         else:
-            st.info("No crypto data yet")
+            st.info("No crypto data - run crypto collector")
 
     with col3:
-        st.subheader("Forex Rates")
-        forex = load_data("""
-            SELECT pair, rate FROM forex
-            WHERE timestamp = (SELECT MAX(timestamp) FROM forex)
-            ORDER BY pair LIMIT 8
+        st.subheader("Commodities")
+        commodities = load_data("""
+            SELECT symbol, name, price, change_percent
+            FROM commodities
+            WHERE timestamp = (SELECT MAX(timestamp) FROM commodities)
+            ORDER BY symbol LIMIT 8
         """)
-        if not forex.empty:
-            for _, row in forex.iterrows():
-                st.write(f"**{row['pair']}**: {row['rate']:.4f}")
+        if not commodities.empty:
+            for _, row in commodities.iterrows():
+                change = row.get('change_percent', 0) or 0
+                color = "positive" if change >= 0 else "negative"
+                name = row.get('name', row['symbol'])[:15]
+                st.markdown(f"**{name}** ${row['price']:.2f} "
+                           f"<span class='{color}'>{change:+.2f}%</span>",
+                           unsafe_allow_html=True)
         else:
-            st.info("No forex data yet")
+            st.info("No commodity data - run commodities collector")
 
     st.markdown("---")
 
-    # Quick Stats Row
+    # Bottom row - Global data
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.subheader("ISS Position")
-        iss = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 1")
-        if not iss.empty:
-            latest = iss.iloc[0]
-            st.write(f"Lat: {latest['latitude']:.4f}")
-            st.write(f"Lon: {latest['longitude']:.4f}")
+        st.subheader("Forex")
+        forex = load_data("""
+            SELECT pair, rate FROM forex
+            WHERE timestamp = (SELECT MAX(timestamp) FROM forex)
+            ORDER BY pair LIMIT 6
+        """)
+        if not forex.empty:
+            for _, row in forex.iterrows():
+                st.caption(f"**{row['pair']}**: {row['rate']:.4f}")
         else:
-            st.info("No ISS data")
+            st.info("No forex data")
 
     with col2:
-        st.subheader("Weather Sample")
+        st.subheader("Weather")
         weather = load_data("""
             SELECT city, temperature FROM weather
-            WHERE timestamp = (SELECT MAX(timestamp) FROM weather) LIMIT 4
+            WHERE timestamp = (SELECT MAX(timestamp) FROM weather)
+            ORDER BY city LIMIT 6
         """)
         if not weather.empty:
             for _, row in weather.iterrows():
-                st.write(f"{row['city']}: {row['temperature']:.1f}C")
+                temp = row['temperature']
+                temp_color = "negative" if temp > 30 else "positive" if temp < 10 else "neutral"
+                st.caption(f"{row['city']}: <span class='{temp_color}'>{temp:.1f}°C</span>",
+                          unsafe_allow_html=True)
         else:
             st.info("No weather data")
 
     with col3:
-        st.subheader("Global Events")
-        if table_exists('gdelt_events'):
-            event_count = get_count('gdelt_events')
-            st.metric("Total Events", event_count)
+        st.subheader("Space")
+        iss = load_data("SELECT latitude, longitude, altitude FROM iss_positions ORDER BY timestamp DESC LIMIT 1")
+        if not iss.empty:
+            latest = iss.iloc[0]
+            st.caption(f"ISS: {latest['latitude']:.2f}°, {latest['longitude']:.2f}°")
+            st.caption(f"Altitude: {latest['altitude']:.0f} km")
+
+        neo = load_data("SELECT COUNT(*) as cnt FROM near_earth_objects WHERE date >= CURRENT_DATE")
+        if not neo.empty:
+            st.caption(f"NEOs today: {neo['cnt'].iloc[0]}")
         else:
-            st.info("GDELT not active")
+            st.info("No space data")
 
     with col4:
         st.subheader("Latest News")
-        news = load_data("SELECT source, title FROM news ORDER BY published_at DESC LIMIT 3")
+        news = load_data("SELECT source, title FROM news ORDER BY published_at DESC LIMIT 4")
         if not news.empty:
             for _, row in news.iterrows():
-                st.caption(f"[{row['source']}] {row['title'][:40]}...")
+                st.caption(f"• {row['title'][:50]}...")
         else:
             st.info("No news")
 
@@ -2650,185 +2680,232 @@ elif page == "Technical Analysis":
 
 elif page == "Collection Status":
     st.title("Data Collection Status")
-    st.markdown("*Monitor collector health and run manual collections*")
+    st.markdown("*Monitor collector health and data freshness*")
     st.markdown("---")
 
-    # Load collection metadata
-    metadata_df = load_data("""
-        SELECT collector_name, last_run, last_success, last_duration_seconds,
-               records_collected, status, error_message, run_count
-        FROM collection_metadata
-        ORDER BY collector_name
-    """)
-
-    # Check all tables for freshness
+    # Check all tables for freshness - this always works
     all_tables = ['stocks', 'crypto', 'forex', 'commodities', 'weather', 'news',
                   'economic_indicators', 'gdelt_events', 'worldbank_indicators',
                   'iss_positions', 'near_earth_objects', 'earthquakes']
 
-    if metadata_df.empty:
-        st.info("No collection data yet. Run the scheduler or collectors to populate this page.")
-        st.markdown("---")
-        st.markdown("### Quick Start")
-        st.code("""
-# Run scheduler (continuous collection)
-python scheduler.py
+    # Check if collection_metadata table exists
+    metadata_exists = table_exists('collection_metadata')
 
-# Run all collectors once
-python scheduler.py --run-once
+    # Tab layout for different views
+    tab1, tab2, tab3 = st.tabs(["Data Freshness", "Collector Status", "Commands"])
 
-# Run specific collector
-python scheduler.py --collector crypto
-        """)
-    else:
+    with tab1:
+        st.subheader("Data Freshness by Table")
+        st.markdown("Shows how fresh the data is in each table")
+
+        freshness_data = []
+        total_records = 0
+
+        for table in all_tables:
+            try:
+                if not table_exists(table):
+                    freshness_data.append({
+                        'Status': "⚪",
+                        'Table': table,
+                        'Records': "Not created",
+                        'Age': "N/A"
+                    })
+                    continue
+
+                count_result = load_data(f"SELECT COUNT(*) as cnt FROM {table}")
+                count = count_result['cnt'].iloc[0] if not count_result.empty else 0
+                total_records += count
+
+                if count > 0:
+                    ts_col = 'published_at' if table == 'news' else 'date' if table == 'near_earth_objects' else 'timestamp'
+                    latest_result = load_data(f"SELECT MAX({ts_col}) as latest FROM {table}")
+                    latest = latest_result['latest'].iloc[0] if not latest_result.empty else None
+
+                    if latest:
+                        age = datetime.now() - pd.to_datetime(latest).replace(tzinfo=None)
+                        hours = age.total_seconds() / 3600
+                        if hours < 1:
+                            age_str = f"{int(age.total_seconds() / 60)}m"
+                        elif hours < 24:
+                            age_str = f"{hours:.1f}h"
+                        else:
+                            age_str = f"{hours / 24:.1f}d"
+
+                        status = "🟢" if hours < 6 else "🟡" if hours < 24 else "🔴"
+                    else:
+                        age_str = "N/A"
+                        status = "⚪"
+                else:
+                    age_str = "Empty"
+                    status = "⚪"
+                    count = 0
+
+                freshness_data.append({
+                    'Status': status,
+                    'Table': table,
+                    'Records': f"{count:,}",
+                    'Age': age_str
+                })
+            except Exception as e:
+                freshness_data.append({
+                    'Status': "❌",
+                    'Table': table,
+                    'Records': "Error",
+                    'Age': str(e)[:30]
+                })
+
         # Summary metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            total = len(metadata_df)
-            st.metric("Total Collectors", total)
+            st.metric("Total Tables", len(all_tables))
         with col2:
-            success = len(metadata_df[metadata_df['status'] == 'success'])
-            st.metric("Successful", success)
+            active = sum(1 for f in freshness_data if f['Status'] == '🟢')
+            st.metric("Fresh (< 6h)", active)
         with col3:
-            failed = len(metadata_df[metadata_df['status'] == 'failed'])
-            st.metric("Failed", failed, delta=f"-{failed}" if failed > 0 else None,
-                     delta_color="inverse")
+            stale = sum(1 for f in freshness_data if f['Status'] == '🔴')
+            st.metric("Stale (> 24h)", stale)
         with col4:
-            total_records = metadata_df['records_collected'].sum()
-            st.metric("Total Records", f"{int(total_records):,}" if pd.notna(total_records) else "0")
+            st.metric("Total Records", f"{total_records:,}")
 
         st.markdown("---")
 
-        # Collector status cards
-        st.subheader("Collector Status")
+        # Freshness table
+        freshness_df = pd.DataFrame(freshness_data)
+        st.dataframe(freshness_df, use_container_width=True, hide_index=True)
 
-        for _, row in metadata_df.iterrows():
-            col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
+        # Legend
+        st.caption("🟢 Fresh (< 6h) | 🟡 Warning (6-24h) | 🔴 Stale (> 24h) | ⚪ Empty/N/A | ❌ Error")
 
-            status = row['status']
-            if status == 'success':
-                icon = "🟢"
-                status_class = "positive"
-            elif status == 'failed':
-                icon = "🔴"
-                status_class = "negative"
-            elif status == 'running':
-                icon = "🔵"
-                status_class = "neutral"
+    with tab2:
+        st.subheader("Collector Run History")
+
+        if not metadata_exists:
+            st.warning("Collection metadata table not found. Run `python initialize_database.py` or start the scheduler to create it.")
+            st.code("python scheduler.py --run-once")
+        else:
+            # Load collection metadata
+            metadata_df = load_data("""
+                SELECT collector_name, last_run, last_success, last_duration_seconds,
+                       records_collected, status, error_message, run_count
+                FROM collection_metadata
+                ORDER BY last_run DESC NULLS LAST
+            """)
+
+            if metadata_df.empty:
+                st.info("No collection runs recorded yet. Run the scheduler to start collecting data.")
             else:
-                icon = "⚪"
-                status_class = "neutral"
+                # Summary
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Collectors", len(metadata_df))
+                with col2:
+                    success = len(metadata_df[metadata_df['status'] == 'success'])
+                    st.metric("Successful", success)
+                with col3:
+                    failed = len(metadata_df[metadata_df['status'] == 'failed'])
+                    st.metric("Failed", failed, delta=f"-{failed}" if failed > 0 else None,
+                             delta_color="inverse")
+                with col4:
+                    total_runs = metadata_df['run_count'].sum()
+                    st.metric("Total Runs", f"{int(total_runs):,}" if pd.notna(total_runs) else "0")
 
-            with col1:
-                st.markdown(f"**{icon} {row['collector_name'].title()}**")
+                st.markdown("---")
 
-            with col2:
-                last_run = row['last_run']
-                if pd.notna(last_run):
-                    age = datetime.now() - pd.to_datetime(last_run).replace(tzinfo=None)
-                    hours = age.total_seconds() / 3600
-                    if hours < 1:
-                        age_str = f"{int(age.total_seconds() / 60)}m ago"
-                    elif hours < 24:
-                        age_str = f"{hours:.1f}h ago"
+                # Collector cards
+                for _, row in metadata_df.iterrows():
+                    status = row['status'] or 'idle'
+                    if status == 'success':
+                        icon = "🟢"
+                        box_class = "success-box"
+                    elif status == 'failed':
+                        icon = "🔴"
+                        box_class = "alert-box"
+                    elif status == 'running':
+                        icon = "🔵"
+                        box_class = "warning-box"
                     else:
-                        age_str = f"{hours / 24:.1f}d ago"
-                    st.caption(f"Last run: {age_str}")
-                else:
-                    st.caption("Never run")
+                        icon = "⚪"
+                        box_class = ""
 
-            with col3:
-                duration = row['last_duration_seconds']
-                records = row['records_collected']
-                if pd.notna(duration):
-                    st.caption(f"{duration:.1f}s | {int(records) if pd.notna(records) else 0} records")
-                else:
-                    st.caption("No data")
+                    col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
 
-            with col4:
-                st.caption(f"Runs: {row['run_count'] or 0}")
+                    with col1:
+                        st.markdown(f"**{icon} {row['collector_name'].upper()}**")
 
-            with col5:
-                st.markdown(f"<span class='{status_class}'>{status.upper()}</span>",
-                           unsafe_allow_html=True)
+                    with col2:
+                        last_run = row['last_run']
+                        if pd.notna(last_run):
+                            age = datetime.now() - pd.to_datetime(last_run).replace(tzinfo=None)
+                            hours = age.total_seconds() / 3600
+                            if hours < 1:
+                                age_str = f"{int(age.total_seconds() / 60)}m ago"
+                            elif hours < 24:
+                                age_str = f"{hours:.1f}h ago"
+                            else:
+                                age_str = f"{hours / 24:.1f}d ago"
+                            st.caption(f"Last: {age_str}")
+                        else:
+                            st.caption("Never run")
 
-            # Show error if failed
-            if status == 'failed' and row['error_message']:
-                st.error(f"Error: {row['error_message'][:200]}...")
+                    with col3:
+                        duration = row['last_duration_seconds']
+                        records = row['records_collected']
+                        if pd.notna(duration):
+                            st.caption(f"{duration:.1f}s | {int(records) if pd.notna(records) else 0} rec")
+                        else:
+                            st.caption("-")
 
-            st.markdown("---")
+                    with col4:
+                        st.caption(f"Runs: {row['run_count'] or 0}")
 
-    # Data freshness by table
-    st.subheader("Data Freshness by Table")
+                    # Show error if failed
+                    if status == 'failed' and row['error_message']:
+                        st.error(f"Error: {row['error_message'][:200]}...")
 
-    freshness_data = []
-    for table in all_tables:
-        try:
-            count_result = load_data(f"SELECT COUNT(*) as cnt FROM {table}")
-            count = count_result['cnt'].iloc[0] if not count_result.empty else 0
+                st.markdown("---")
 
-            if count > 0:
-                ts_col = 'published_at' if table == 'news' else 'date' if table == 'near_earth_objects' else 'timestamp'
-                latest_result = load_data(f"SELECT MAX({ts_col}) as latest FROM {table}")
-                latest = latest_result['latest'].iloc[0] if not latest_result.empty else None
+    with tab3:
+        st.subheader("Scheduler Commands")
+        st.markdown("Use these commands to manage data collection:")
 
-                if latest:
-                    age = datetime.now() - pd.to_datetime(latest).replace(tzinfo=None)
-                    hours = age.total_seconds() / 3600
-                    if hours < 1:
-                        age_str = f"{int(age.total_seconds() / 60)}m"
-                    elif hours < 24:
-                        age_str = f"{hours:.1f}h"
-                    else:
-                        age_str = f"{hours / 24:.1f}d"
-
-                    status = "🟢" if hours < 6 else "🟡" if hours < 24 else "🔴"
-                else:
-                    age_str = "N/A"
-                    status = "⚪"
-            else:
-                age_str = "Empty"
-                status = "⚪"
-                count = 0
-
-            freshness_data.append({
-                'Status': status,
-                'Table': table,
-                'Records': f"{count:,}",
-                'Age': age_str
-            })
-        except Exception:
-            freshness_data.append({
-                'Status': "❌",
-                'Table': table,
-                'Records': "Error",
-                'Age': "N/A"
-            })
-
-    freshness_df = pd.DataFrame(freshness_data)
-    st.dataframe(freshness_df, use_container_width=True, hide_index=True)
-
-    # Scheduler commands
-    st.markdown("---")
-    st.subheader("Scheduler Commands")
-    st.code("""
-# Start continuous scheduler
+        st.code("""
+# Start continuous scheduler (runs in background)
 python scheduler.py
 
-# Run all collectors once
+# Run all collectors once and exit
 python scheduler.py --run-once
 
-# Run specific collector
-python scheduler.py --collector [name]
-# Available: markets, crypto, forex, commodities, weather, news,
-#           economics, space, disasters, gdelt, worldbank
+# Run a specific collector
+python scheduler.py --collector crypto
+python scheduler.py --collector markets
+python scheduler.py --collector weather
 
-# Check status
+# Check collector status
 python scheduler.py --status
 
-# Skip initial collection
+# Start scheduler without initial collection
 python scheduler.py --no-initial
-    """)
+        """, language="bash")
+
+        st.markdown("---")
+        st.subheader("Available Collectors")
+
+        collectors_info = {
+            'markets': 'Stock prices from major exchanges (15 min)',
+            'crypto': 'Cryptocurrency prices and market caps (10 min)',
+            'forex': 'Foreign exchange rates (15 min)',
+            'commodities': 'Commodity prices - gold, oil, etc. (30 min)',
+            'weather': 'Weather data for 50+ cities (30 min)',
+            'news': 'Financial news headlines (60 min)',
+            'economics': 'Economic indicators - GDP, inflation (daily)',
+            'space': 'ISS position, NEO tracking (daily)',
+            'disasters': 'Earthquake data (60 min)',
+            'gdelt': 'Global events and unrest (60 min)',
+            'worldbank': 'Development indicators (daily)',
+        }
+
+        for name, desc in collectors_info.items():
+            st.markdown(f"- **{name}**: {desc}")
 
 
 # ============================================================================
