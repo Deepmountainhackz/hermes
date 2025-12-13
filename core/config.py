@@ -37,6 +37,7 @@ class Config:
         self.OPENWEATHER_API_KEY: str = os.getenv('OPENWEATHER_API_KEY', '')
         self.NASA_API_KEY: str = os.getenv('NASA_API_KEY', 'DEMO_KEY')
         self.FRED_API_KEY: str = os.getenv('FRED_API_KEY', '')
+        self.EIA_API_KEY: str = os.getenv('EIA_API_KEY', '')  # US Energy Information Administration
         
         # Logging Configuration
         self.LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')

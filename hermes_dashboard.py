@@ -603,7 +603,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.7 - Energy & Resources")
+st.sidebar.caption("v5.8 - Oil, Gas & Nuclear")
 
 
 # ============================================================================
@@ -2314,8 +2314,8 @@ elif page == "Energy & Resources":
         latest_year = energy_df[energy_df['electricity_generation'].notna()]['year'].max()
 
         # Create tabs for different views
-        energy_tab1, energy_tab2, energy_tab3, energy_tab4, energy_tab5 = st.tabs([
-            "Electricity Generation", "Energy Mix", "Renewables", "CO2 Emissions", "Per Capita"
+        energy_tab1, energy_tab2, energy_tab3, energy_tab4, energy_tab5, energy_tab6, energy_tab7 = st.tabs([
+            "Electricity Generation", "Energy Mix", "Oil & Gas", "Nuclear", "Renewables", "CO2 Emissions", "Per Capita"
         ])
 
         with energy_tab1:
@@ -2487,6 +2487,278 @@ elif page == "Energy & Resources":
                     st.plotly_chart(fig_area, use_container_width=True)
 
         with energy_tab3:
+            st.subheader("Oil & Gas Production")
+
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                oilgas_countries = st.multiselect(
+                    "Select countries:",
+                    options=MAJOR_COUNTRIES,
+                    default=['United States', 'Russia', 'Saudi Arabia', 'China', 'Canada'],
+                    key="oilgas_countries"
+                )
+
+            if oilgas_countries:
+                # Oil Production
+                st.markdown("### Oil Production")
+                oil_prod_data = major_energy[
+                    (major_energy['country'].isin(oilgas_countries)) &
+                    (major_energy['year'] >= 1990) &
+                    (major_energy['oil_production'].notna())
+                ]
+
+                if not oil_prod_data.empty:
+                    fig_oil = px.line(
+                        oil_prod_data,
+                        x='year',
+                        y='oil_production',
+                        color='country',
+                        title='Oil Production (TWh)',
+                        labels={'oil_production': 'TWh', 'year': 'Year', 'country': 'Country'}
+                    )
+                    fig_oil.update_layout(**get_clean_plotly_layout(), height=400)
+                    st.plotly_chart(fig_oil, use_container_width=True)
+
+                # Gas Production
+                st.markdown("---")
+                st.markdown("### Natural Gas Production")
+                gas_prod_data = major_energy[
+                    (major_energy['country'].isin(oilgas_countries)) &
+                    (major_energy['year'] >= 1990) &
+                    (major_energy['gas_production'].notna())
+                ]
+
+                if not gas_prod_data.empty:
+                    fig_gas = px.line(
+                        gas_prod_data,
+                        x='year',
+                        y='gas_production',
+                        color='country',
+                        title='Natural Gas Production (TWh)',
+                        labels={'gas_production': 'TWh', 'year': 'Year', 'country': 'Country'}
+                    )
+                    fig_gas.update_layout(**get_clean_plotly_layout(), height=400)
+                    st.plotly_chart(fig_gas, use_container_width=True)
+
+                # Oil vs Gas consumption comparison
+                st.markdown("---")
+                st.markdown("### Oil vs Gas Consumption")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    oil_cons_data = major_energy[
+                        (major_energy['country'].isin(oilgas_countries)) &
+                        (major_energy['year'] == latest_year) &
+                        (major_energy['oil_consumption'].notna())
+                    ].sort_values('oil_consumption', ascending=True)
+
+                    if not oil_cons_data.empty:
+                        fig_oil_cons = px.bar(
+                            oil_cons_data,
+                            x='oil_consumption',
+                            y='country',
+                            orientation='h',
+                            title=f'Oil Consumption ({int(latest_year)})',
+                            labels={'oil_consumption': 'TWh', 'country': ''},
+                            color='oil_consumption',
+                            color_continuous_scale='Reds'
+                        )
+                        fig_oil_cons.update_layout(**get_clean_plotly_layout(), height=350, showlegend=False)
+                        st.plotly_chart(fig_oil_cons, use_container_width=True)
+
+                with col2:
+                    gas_cons_data = major_energy[
+                        (major_energy['country'].isin(oilgas_countries)) &
+                        (major_energy['year'] == latest_year) &
+                        (major_energy['gas_consumption'].notna())
+                    ].sort_values('gas_consumption', ascending=True)
+
+                    if not gas_cons_data.empty:
+                        fig_gas_cons = px.bar(
+                            gas_cons_data,
+                            x='gas_consumption',
+                            y='country',
+                            orientation='h',
+                            title=f'Gas Consumption ({int(latest_year)})',
+                            labels={'gas_consumption': 'TWh', 'country': ''},
+                            color='gas_consumption',
+                            color_continuous_scale='Blues'
+                        )
+                        fig_gas_cons.update_layout(**get_clean_plotly_layout(), height=350, showlegend=False)
+                        st.plotly_chart(fig_gas_cons, use_container_width=True)
+
+            # Top Oil & Gas Producers Table
+            st.markdown("---")
+            st.subheader(f"Top Oil & Gas Producers ({int(latest_year)})")
+
+            top_oil = energy_df[
+                (energy_df['year'] == latest_year) &
+                (energy_df['oil_production'].notna()) &
+                (~energy_df['country'].isin(['World', 'Europe', 'Asia Pacific', 'North America', 'Africa', 'OPEC']))
+            ].nlargest(15, 'oil_production')[['country', 'oil_production', 'oil_share_energy']].copy()
+
+            top_gas = energy_df[
+                (energy_df['year'] == latest_year) &
+                (energy_df['gas_production'].notna()) &
+                (~energy_df['country'].isin(['World', 'Europe', 'Asia Pacific', 'North America', 'Africa']))
+            ].nlargest(15, 'gas_production')[['country', 'gas_production', 'gas_share_energy']].copy()
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Top Oil Producers**")
+                if not top_oil.empty:
+                    top_oil = top_oil.rename(columns={
+                        'country': 'Country',
+                        'oil_production': 'Production (TWh)',
+                        'oil_share_energy': 'Oil % of Energy'
+                    })
+                    top_oil['Production (TWh)'] = top_oil['Production (TWh)'].apply(lambda x: f"{x:,.0f}")
+                    top_oil['Oil % of Energy'] = top_oil['Oil % of Energy'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "N/A")
+                    st.dataframe(top_oil, use_container_width=True, hide_index=True, height=400)
+
+            with col2:
+                st.markdown("**Top Gas Producers**")
+                if not top_gas.empty:
+                    top_gas = top_gas.rename(columns={
+                        'country': 'Country',
+                        'gas_production': 'Production (TWh)',
+                        'gas_share_energy': 'Gas % of Energy'
+                    })
+                    top_gas['Production (TWh)'] = top_gas['Production (TWh)'].apply(lambda x: f"{x:,.0f}")
+                    top_gas['Gas % of Energy'] = top_gas['Gas % of Energy'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "N/A")
+                    st.dataframe(top_gas, use_container_width=True, hide_index=True, height=400)
+
+        with energy_tab4:
+            st.subheader("Nuclear Energy")
+
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                nuclear_countries = st.multiselect(
+                    "Select countries:",
+                    options=MAJOR_COUNTRIES,
+                    default=['United States', 'France', 'China', 'Russia', 'South Korea', 'Japan'],
+                    key="nuclear_countries"
+                )
+
+            if nuclear_countries:
+                # Nuclear electricity generation
+                nuclear_elec_data = major_energy[
+                    (major_energy['country'].isin(nuclear_countries)) &
+                    (major_energy['year'] >= 1970) &
+                    (major_energy['nuclear_electricity'].notna())
+                ]
+
+                if not nuclear_elec_data.empty:
+                    fig_nuclear = px.line(
+                        nuclear_elec_data,
+                        x='year',
+                        y='nuclear_electricity',
+                        color='country',
+                        title='Nuclear Electricity Generation (TWh)',
+                        labels={'nuclear_electricity': 'TWh', 'year': 'Year', 'country': 'Country'}
+                    )
+                    fig_nuclear.update_layout(**get_clean_plotly_layout(), height=400)
+                    st.plotly_chart(fig_nuclear, use_container_width=True)
+
+                # Nuclear share of electricity
+                st.markdown("---")
+                st.markdown("### Nuclear Share of Electricity Mix")
+
+                nuclear_share_data = major_energy[
+                    (major_energy['country'].isin(nuclear_countries)) &
+                    (major_energy['year'] >= 1980) &
+                    (major_energy['nuclear_share_elec'].notna())
+                ]
+
+                if not nuclear_share_data.empty:
+                    fig_nuclear_share = px.line(
+                        nuclear_share_data,
+                        x='year',
+                        y='nuclear_share_elec',
+                        color='country',
+                        title='Nuclear Share of Electricity (%)',
+                        labels={'nuclear_share_elec': '% of Electricity', 'year': 'Year', 'country': 'Country'}
+                    )
+                    fig_nuclear_share.update_layout(**get_clean_plotly_layout(), height=400)
+                    st.plotly_chart(fig_nuclear_share, use_container_width=True)
+
+                # Latest year comparison
+                st.markdown("---")
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("### Nuclear Generation")
+                    nuclear_latest = major_energy[
+                        (major_energy['country'].isin(nuclear_countries)) &
+                        (major_energy['year'] == latest_year) &
+                        (major_energy['nuclear_electricity'].notna())
+                    ].sort_values('nuclear_electricity', ascending=True)
+
+                    if not nuclear_latest.empty:
+                        fig_nuc_bar = px.bar(
+                            nuclear_latest,
+                            x='nuclear_electricity',
+                            y='country',
+                            orientation='h',
+                            title=f'Nuclear Generation ({int(latest_year)})',
+                            labels={'nuclear_electricity': 'TWh', 'country': ''},
+                            color='nuclear_electricity',
+                            color_continuous_scale='Purples'
+                        )
+                        fig_nuc_bar.update_layout(**get_clean_plotly_layout(), height=350, showlegend=False)
+                        st.plotly_chart(fig_nuc_bar, use_container_width=True)
+
+                with col2:
+                    st.markdown("### Nuclear % of Mix")
+                    nuclear_pct = major_energy[
+                        (major_energy['country'].isin(nuclear_countries)) &
+                        (major_energy['year'] == latest_year) &
+                        (major_energy['nuclear_share_elec'].notna())
+                    ].sort_values('nuclear_share_elec', ascending=True)
+
+                    if not nuclear_pct.empty:
+                        fig_nuc_pct = px.bar(
+                            nuclear_pct,
+                            x='nuclear_share_elec',
+                            y='country',
+                            orientation='h',
+                            title=f'Nuclear Share ({int(latest_year)})',
+                            labels={'nuclear_share_elec': '% of Electricity', 'country': ''},
+                            color='nuclear_share_elec',
+                            color_continuous_scale='Purples'
+                        )
+                        fig_nuc_pct.update_layout(**get_clean_plotly_layout(), height=350, showlegend=False)
+                        st.plotly_chart(fig_nuc_pct, use_container_width=True)
+
+            # Top Nuclear Countries Table
+            st.markdown("---")
+            st.subheader(f"Top Nuclear Energy Countries ({int(latest_year)})")
+
+            top_nuclear = energy_df[
+                (energy_df['year'] == latest_year) &
+                (energy_df['nuclear_electricity'].notna()) &
+                (energy_df['nuclear_electricity'] > 0) &
+                (~energy_df['country'].isin(['World', 'Europe', 'Asia Pacific', 'North America', 'Africa']))
+            ].nlargest(20, 'nuclear_electricity')[['country', 'nuclear_electricity', 'nuclear_share_elec', 'nuclear_consumption']].copy()
+
+            if not top_nuclear.empty:
+                top_nuclear = top_nuclear.rename(columns={
+                    'country': 'Country',
+                    'nuclear_electricity': 'Generation (TWh)',
+                    'nuclear_share_elec': 'Nuclear % of Elec',
+                    'nuclear_consumption': 'Consumption (TWh)'
+                })
+                top_nuclear['Generation (TWh)'] = top_nuclear['Generation (TWh)'].apply(lambda x: f"{x:,.0f}")
+                top_nuclear['Nuclear % of Elec'] = top_nuclear['Nuclear % of Elec'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "N/A")
+                top_nuclear['Consumption (TWh)'] = top_nuclear['Consumption (TWh)'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "N/A")
+                st.dataframe(top_nuclear, use_container_width=True, hide_index=True)
+
+            # Nuclear fun fact
+            st.info("France generates ~70% of its electricity from nuclear power, the highest share in the world.")
+
+        with energy_tab5:
             st.subheader("Renewable Energy Adoption")
 
             col1, col2 = st.columns([2, 1])
@@ -2580,7 +2852,7 @@ elif page == "Energy & Resources":
                 top_renewable['Renewable TWh'] = top_renewable['Renewable TWh'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "N/A")
                 st.dataframe(top_renewable, use_container_width=True, hide_index=True)
 
-        with energy_tab4:
+        with energy_tab6:
             st.subheader("CO2 Emissions from Electricity")
 
             col1, col2 = st.columns([2, 1])
@@ -2667,7 +2939,7 @@ elif page == "Energy & Resources":
                         fig_fossil.update_layout(**get_clean_plotly_layout(), height=400)
                         st.plotly_chart(fig_fossil, use_container_width=True)
 
-        with energy_tab5:
+        with energy_tab7:
             st.subheader("Per Capita Energy Consumption")
 
             col1, col2 = st.columns([2, 1])
