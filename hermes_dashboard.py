@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v5.0
+Hermes Intelligence Platform Dashboard v5.1
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 """
@@ -524,7 +524,7 @@ if st.sidebar.button("Refresh Data", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v5.0 - Technical Analysis & Automation")
+st.sidebar.caption("v5.1 - Enhanced UX & Custom Alerts")
 
 
 # ============================================================================
@@ -1776,46 +1776,173 @@ elif page == "Weather & Globe":
 
 elif page == "Space":
     st.title("Space Intelligence")
+    st.markdown("*ISS Tracking, Near-Earth Objects, and Solar Activity*")
     st.markdown("---")
 
-    st.subheader("International Space Station")
-    iss_df = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 50")
+    tab1, tab2, tab3 = st.tabs(["ISS Tracker", "Near-Earth Objects", "Solar Activity"])
 
-    if not iss_df.empty:
-        latest = iss_df.iloc[0]
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Latitude", f"{latest['latitude']:.4f}")
-        with col2:
-            st.metric("Longitude", f"{latest['longitude']:.4f}")
-        with col3:
-            st.metric("Altitude", f"{latest['altitude']:.2f} km")
-        with col4:
-            st.metric("Velocity", f"{latest['velocity']:,.0f} km/h")
+    with tab1:
+        st.subheader("International Space Station")
+        iss_df = load_data("SELECT * FROM iss_positions ORDER BY timestamp DESC LIMIT 100")
 
-    st.markdown("---")
+        if not iss_df.empty:
+            latest = iss_df.iloc[0]
 
-    st.subheader("Near-Earth Objects")
-    neo_df = load_data("""
-        SELECT name, date, estimated_diameter_max, relative_velocity,
-               miss_distance, is_potentially_hazardous
-        FROM near_earth_objects WHERE date >= CURRENT_DATE - 7
-        ORDER BY date DESC LIMIT 20
-    """)
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Latitude", f"{latest['latitude']:.4f}°")
+            with col2:
+                st.metric("Longitude", f"{latest['longitude']:.4f}°")
+            with col3:
+                st.metric("Altitude", f"{latest['altitude']:.0f} km")
+            with col4:
+                st.metric("Velocity", f"{latest['velocity']:,.0f} km/h")
 
-    if not neo_df.empty:
-        neo_df['date'] = pd.to_datetime(neo_df['date'])
-        neo_df['estimated_diameter_max'] = pd.to_numeric(neo_df['estimated_diameter_max'], errors='coerce')
-        neo_df['relative_velocity'] = pd.to_numeric(neo_df['relative_velocity'], errors='coerce')
+            # ISS position on map
+            st.markdown("---")
+            st.subheader("Current Position")
 
-        display_neo = neo_df.copy()
-        display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: 'YES' if x else 'No')
-        display_neo['Diameter'] = display_neo['estimated_diameter_max'].apply(lambda x: f"{x:.0f}m" if pd.notna(x) else "N/A")
-        display_neo['Velocity'] = display_neo['relative_velocity'].apply(lambda x: f"{x:,.0f} km/h" if pd.notna(x) else "N/A")
-        st.dataframe(display_neo[['name', 'date', 'Diameter', 'Velocity', 'Hazardous']],
-                    use_container_width=True, hide_index=True)
-    else:
-        st.info("No NEO data available.")
+            iss_df['latitude'] = pd.to_numeric(iss_df['latitude'], errors='coerce')
+            iss_df['longitude'] = pd.to_numeric(iss_df['longitude'], errors='coerce')
+
+            # Create globe visualization
+            fig = go.Figure()
+            fig.add_trace(go.Scattergeo(
+                lon=iss_df['longitude'],
+                lat=iss_df['latitude'],
+                mode='lines+markers',
+                marker=dict(size=8, color='red'),
+                line=dict(width=2, color='blue'),
+                name='ISS Track'
+            ))
+            # Current position
+            fig.add_trace(go.Scattergeo(
+                lon=[latest['longitude']],
+                lat=[latest['latitude']],
+                mode='markers',
+                marker=dict(size=15, color='red', symbol='star'),
+                name='Current Position'
+            ))
+            fig.update_layout(
+                geo=dict(
+                    projection_type='orthographic',
+                    showland=True,
+                    landcolor='rgb(243, 243, 243)',
+                    countrycolor='rgb(204, 204, 204)',
+                    showocean=True,
+                    oceancolor='rgb(230, 245, 255)',
+                    projection_rotation=dict(lon=latest['longitude'], lat=latest['latitude'])
+                ),
+                height=500,
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Track history
+            st.subheader("Recent Track History")
+            track_df = iss_df[['timestamp', 'latitude', 'longitude', 'altitude', 'velocity']].head(20)
+            track_df['timestamp'] = pd.to_datetime(track_df['timestamp']).dt.strftime('%H:%M:%S')
+            st.dataframe(track_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No ISS data available. Run: `python scheduler.py --collector space`")
+
+    with tab2:
+        st.subheader("Near-Earth Objects")
+        neo_df = load_data("""
+            SELECT name, date, estimated_diameter_max, relative_velocity,
+                   miss_distance, is_potentially_hazardous
+            FROM near_earth_objects WHERE date >= CURRENT_DATE - 14
+            ORDER BY date DESC
+        """)
+
+        if not neo_df.empty:
+            neo_df['date'] = pd.to_datetime(neo_df['date'])
+            neo_df['estimated_diameter_max'] = pd.to_numeric(neo_df['estimated_diameter_max'], errors='coerce')
+            neo_df['relative_velocity'] = pd.to_numeric(neo_df['relative_velocity'], errors='coerce')
+            neo_df['miss_distance'] = pd.to_numeric(neo_df['miss_distance'], errors='coerce')
+
+            # Summary
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total NEOs", len(neo_df))
+            with col2:
+                hazardous = neo_df['is_potentially_hazardous'].sum()
+                st.metric("Hazardous", hazardous, delta=f"{hazardous}" if hazardous > 0 else None, delta_color="inverse")
+            with col3:
+                avg_diameter = neo_df['estimated_diameter_max'].mean()
+                st.metric("Avg Diameter", f"{avg_diameter:.0f}m")
+            with col4:
+                today_count = len(neo_df[neo_df['date'].dt.date == datetime.now().date()])
+                st.metric("Today", today_count)
+
+            st.markdown("---")
+
+            # Hazardous NEOs alert
+            hazardous_neos = neo_df[neo_df['is_potentially_hazardous'] == True]
+            if not hazardous_neos.empty:
+                st.warning(f"**{len(hazardous_neos)} Potentially Hazardous Objects** approaching in the next 2 weeks")
+                for _, neo in hazardous_neos.iterrows():
+                    miss_km = neo['miss_distance'] / 1000 if pd.notna(neo['miss_distance']) else 0
+                    st.markdown(f"- **{neo['name']}** on {neo['date'].strftime('%Y-%m-%d')} - "
+                               f"Miss distance: {miss_km:,.0f} km | Diameter: {neo['estimated_diameter_max']:.0f}m")
+
+            st.markdown("---")
+
+            # Size distribution chart
+            st.subheader("NEO Size Distribution")
+            fig = px.scatter(
+                neo_df,
+                x='date',
+                y='estimated_diameter_max',
+                size='estimated_diameter_max',
+                color='is_potentially_hazardous',
+                color_discrete_map={True: 'red', False: 'blue'},
+                hover_name='name',
+                labels={'estimated_diameter_max': 'Diameter (m)', 'is_potentially_hazardous': 'Hazardous'},
+                title='NEO Approaches by Size'
+            )
+            fig.update_layout(**get_clean_plotly_layout(), height=400)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Full table
+            st.subheader("All Near-Earth Objects")
+            display_neo = neo_df.copy()
+            display_neo['Hazardous'] = display_neo['is_potentially_hazardous'].apply(lambda x: '⚠️ YES' if x else 'No')
+            display_neo['Diameter'] = display_neo['estimated_diameter_max'].apply(lambda x: f"{x:.0f}m" if pd.notna(x) else "N/A")
+            display_neo['Velocity'] = display_neo['relative_velocity'].apply(lambda x: f"{x:,.0f} km/h" if pd.notna(x) else "N/A")
+            display_neo['Miss Distance'] = display_neo['miss_distance'].apply(lambda x: f"{x/1000:,.0f} km" if pd.notna(x) else "N/A")
+            display_neo['Date'] = display_neo['date'].dt.strftime('%Y-%m-%d')
+            st.dataframe(display_neo[['name', 'Date', 'Diameter', 'Velocity', 'Miss Distance', 'Hazardous']],
+                        use_container_width=True, hide_index=True)
+        else:
+            st.info("No NEO data available. Run: `python scheduler.py --collector space`")
+
+    with tab3:
+        st.subheader("Solar Activity")
+        solar_df = load_data("SELECT * FROM solar_flares ORDER BY peak_time DESC LIMIT 50")
+
+        if not solar_df.empty:
+            solar_df['peak_time'] = pd.to_datetime(solar_df['peak_time'])
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Flares", len(solar_df))
+            with col2:
+                x_class = len(solar_df[solar_df['class_type'].str.startswith('X', na=False)])
+                st.metric("X-Class Flares", x_class)
+            with col3:
+                m_class = len(solar_df[solar_df['class_type'].str.startswith('M', na=False)])
+                st.metric("M-Class Flares", m_class)
+
+            st.markdown("---")
+            st.subheader("Recent Solar Flares")
+
+            display_solar = solar_df[['class_type', 'peak_time', 'source_location', 'active_region_num']].copy()
+            display_solar['peak_time'] = display_solar['peak_time'].dt.strftime('%Y-%m-%d %H:%M')
+            display_solar.columns = ['Class', 'Peak Time', 'Source Location', 'Active Region']
+            st.dataframe(display_solar, use_container_width=True, hide_index=True)
+        else:
+            st.info("No solar flare data available. Run: `python scheduler.py --collector space`")
 
 
 # ============================================================================
@@ -1983,11 +2110,46 @@ elif page == "Time Series":
     st.markdown("*Historical trends and pattern analysis*")
     st.markdown("---")
 
-    analysis_type = st.selectbox("Select Data Type", ["Stocks", "Crypto", "Economic Indicators", "Weather"])
+    # Date range selector
+    col_range1, col_range2, col_range3 = st.columns([2, 2, 1])
+    with col_range1:
+        date_preset = st.selectbox(
+            "Date Range",
+            ["Last 24 Hours", "Last 7 Days", "Last 30 Days", "Last 90 Days", "All Time", "Custom"],
+            index=2
+        )
+
+    # Calculate date range based on preset
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    if date_preset == "Last 24 Hours":
+        start_date = now - timedelta(days=1)
+    elif date_preset == "Last 7 Days":
+        start_date = now - timedelta(days=7)
+    elif date_preset == "Last 30 Days":
+        start_date = now - timedelta(days=30)
+    elif date_preset == "Last 90 Days":
+        start_date = now - timedelta(days=90)
+    elif date_preset == "All Time":
+        start_date = now - timedelta(days=3650)  # ~10 years
+    else:
+        start_date = now - timedelta(days=30)
+
+    with col_range2:
+        if date_preset == "Custom":
+            custom_start = st.date_input("Start Date", value=now - timedelta(days=30))
+            start_date = datetime.combine(custom_start, datetime.min.time())
+
+    with col_range3:
+        normalize_prices = st.checkbox("Normalize %", help="Show percentage change from first value")
+
+    st.markdown("---")
+
+    analysis_type = st.selectbox("Select Data Type", ["Stocks", "Crypto", "Commodities", "Forex", "Economic Indicators", "Weather"])
 
     if analysis_type == "Stocks":
         stocks_df = load_data("""
-            SELECT symbol, price, change_percent, timestamp
+            SELECT symbol, price, change_percent, volume, timestamp
             FROM stocks ORDER BY timestamp DESC
         """)
 
@@ -1995,41 +2157,81 @@ elif page == "Time Series":
             st.warning("No stock data for time series analysis.")
         else:
             stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-            symbols = stocks_df['symbol'].unique().tolist()
-            selected_symbol = st.selectbox("Select Stock", symbols)
+            stocks_df = stocks_df[stocks_df['timestamp'] >= start_date]
 
-            if selected_symbol:
-                symbol_data = stocks_df[stocks_df['symbol'] == selected_symbol].sort_values('timestamp')
+            if stocks_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                symbols = sorted(stocks_df['symbol'].unique().tolist())
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=symbol_data['timestamp'],
-                    y=symbol_data['price'],
-                    mode='lines+markers',
-                    name=selected_symbol,
-                    line=dict(color='#00d26a', width=2)
-                ))
-                fig.update_layout(
-                    title=f"{selected_symbol} Price History",
-                    **get_clean_plotly_layout(),
-                    height=400
+                # Multi-select for comparison
+                selected_symbols = st.multiselect(
+                    "Select Stocks to Compare",
+                    symbols,
+                    default=[symbols[0]] if symbols else []
                 )
-                st.plotly_chart(fig, use_container_width=True)
 
-                # Statistics
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Current", f"${symbol_data['price'].iloc[-1]:.2f}")
-                with col2:
-                    st.metric("High", f"${symbol_data['price'].max():.2f}")
-                with col3:
-                    st.metric("Low", f"${symbol_data['price'].min():.2f}")
-                with col4:
-                    st.metric("Avg", f"${symbol_data['price'].mean():.2f}")
+                if selected_symbols:
+                    fig = go.Figure()
+                    colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#1abc9c']
+
+                    for i, symbol in enumerate(selected_symbols):
+                        symbol_data = stocks_df[stocks_df['symbol'] == symbol].sort_values('timestamp')
+
+                        if normalize_prices and len(symbol_data) > 0:
+                            first_price = symbol_data['price'].iloc[0]
+                            y_values = ((symbol_data['price'] - first_price) / first_price * 100)
+                            y_label = "% Change"
+                        else:
+                            y_values = symbol_data['price']
+                            y_label = "Price ($)"
+
+                        fig.add_trace(go.Scatter(
+                            x=symbol_data['timestamp'],
+                            y=y_values,
+                            mode='lines',
+                            name=symbol,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    title = "Stock Price Comparison" if len(selected_symbols) > 1 else f"{selected_symbols[0]} Price History"
+                    if normalize_prices:
+                        title += " (Normalized)"
+
+                    fig.update_layout(
+                        title=title,
+                        yaxis_title=y_label,
+                        **get_clean_plotly_layout(),
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Statistics table
+                    st.markdown("##### Statistics")
+                    stats_data = []
+                    for symbol in selected_symbols:
+                        symbol_data = stocks_df[stocks_df['symbol'] == symbol].sort_values('timestamp')
+                        if len(symbol_data) > 0:
+                            current = symbol_data['price'].iloc[-1]
+                            first = symbol_data['price'].iloc[0]
+                            change_pct = ((current - first) / first * 100) if first != 0 else 0
+                            stats_data.append({
+                                'Symbol': symbol,
+                                'Current': f"${current:.2f}",
+                                'High': f"${symbol_data['price'].max():.2f}",
+                                'Low': f"${symbol_data['price'].min():.2f}",
+                                'Avg': f"${symbol_data['price'].mean():.2f}",
+                                'Change': f"{change_pct:+.2f}%",
+                                'Data Points': len(symbol_data)
+                            })
+
+                    if stats_data:
+                        st.dataframe(pd.DataFrame(stats_data), use_container_width=True, hide_index=True)
 
     elif analysis_type == "Crypto":
         crypto_df = load_data("""
-            SELECT symbol, price, change_percent_24h, market_cap, timestamp
+            SELECT symbol, price, change_percent_24h, market_cap, volume_24h, timestamp
             FROM crypto ORDER BY timestamp DESC
         """)
 
@@ -2037,26 +2239,188 @@ elif page == "Time Series":
             st.warning("No crypto data for time series analysis.")
         else:
             crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
-            symbols = crypto_df['symbol'].unique().tolist()
-            selected_symbol = st.selectbox("Select Cryptocurrency", symbols)
+            crypto_df = crypto_df[crypto_df['timestamp'] >= start_date]
 
-            if selected_symbol:
-                symbol_data = crypto_df[crypto_df['symbol'] == selected_symbol].sort_values('timestamp')
+            if crypto_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                symbols = sorted(crypto_df['symbol'].unique().tolist())
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=symbol_data['timestamp'],
-                    y=symbol_data['price'],
-                    mode='lines+markers',
-                    name=selected_symbol,
-                    line=dict(color='#f7931a', width=2)
-                ))
-                fig.update_layout(
-                    title=f"{selected_symbol} Price History",
-                    **get_clean_plotly_layout(),
-                    height=400
+                selected_symbols = st.multiselect(
+                    "Select Cryptocurrencies to Compare",
+                    symbols,
+                    default=[symbols[0]] if symbols else []
                 )
-                st.plotly_chart(fig, use_container_width=True)
+
+                if selected_symbols:
+                    fig = go.Figure()
+                    colors = ['#f7931a', '#627eea', '#00d26a', '#ff4757', '#3498db', '#9b59b6']
+
+                    for i, symbol in enumerate(selected_symbols):
+                        symbol_data = crypto_df[crypto_df['symbol'] == symbol].sort_values('timestamp')
+
+                        if normalize_prices and len(symbol_data) > 0:
+                            first_price = symbol_data['price'].iloc[0]
+                            y_values = ((symbol_data['price'] - first_price) / first_price * 100) if first_price != 0 else symbol_data['price']
+                            y_label = "% Change"
+                        else:
+                            y_values = symbol_data['price']
+                            y_label = "Price ($)"
+
+                        fig.add_trace(go.Scatter(
+                            x=symbol_data['timestamp'],
+                            y=y_values,
+                            mode='lines',
+                            name=symbol,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    title = "Crypto Price Comparison" if len(selected_symbols) > 1 else f"{selected_symbols[0]} Price History"
+                    if normalize_prices:
+                        title += " (Normalized)"
+
+                    fig.update_layout(
+                        title=title,
+                        yaxis_title=y_label,
+                        **get_clean_plotly_layout(),
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Market cap comparison if multiple selected
+                    if len(selected_symbols) > 1:
+                        st.markdown("##### Market Cap Comparison")
+                        latest_crypto = crypto_df.groupby('symbol').first().reset_index()
+                        selected_latest = latest_crypto[latest_crypto['symbol'].isin(selected_symbols)]
+
+                        fig_mc = px.bar(
+                            selected_latest,
+                            x='symbol',
+                            y='market_cap',
+                            color='symbol',
+                            title="Market Cap Comparison"
+                        )
+                        fig_mc.update_layout(**get_clean_plotly_layout(), height=300, showlegend=False)
+                        st.plotly_chart(fig_mc, use_container_width=True)
+
+    elif analysis_type == "Commodities":
+        commodities_df = load_data("""
+            SELECT symbol, name, price, change_percent, category, timestamp
+            FROM commodities ORDER BY timestamp DESC
+        """)
+
+        if commodities_df.empty:
+            st.warning("No commodities data for time series analysis.")
+        else:
+            commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
+            commodities_df = commodities_df[commodities_df['timestamp'] >= start_date]
+
+            if commodities_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                # Group by category
+                categories = commodities_df['category'].dropna().unique().tolist()
+                selected_category = st.selectbox("Filter by Category", ["All"] + sorted(categories))
+
+                if selected_category != "All":
+                    filtered_df = commodities_df[commodities_df['category'] == selected_category]
+                else:
+                    filtered_df = commodities_df
+
+                symbols = sorted(filtered_df['symbol'].unique().tolist())
+                selected_symbols = st.multiselect(
+                    "Select Commodities to Compare",
+                    symbols,
+                    default=[symbols[0]] if symbols else []
+                )
+
+                if selected_symbols:
+                    fig = go.Figure()
+                    colors = ['#ffd700', '#c0c0c0', '#b87333', '#00d26a', '#ff4757', '#3498db']
+
+                    for i, symbol in enumerate(selected_symbols):
+                        symbol_data = filtered_df[filtered_df['symbol'] == symbol].sort_values('timestamp')
+
+                        if normalize_prices and len(symbol_data) > 0:
+                            first_price = symbol_data['price'].iloc[0]
+                            y_values = ((symbol_data['price'] - first_price) / first_price * 100) if first_price != 0 else symbol_data['price']
+                            y_label = "% Change"
+                        else:
+                            y_values = symbol_data['price']
+                            y_label = "Price ($)"
+
+                        name = symbol_data['name'].iloc[0] if 'name' in symbol_data.columns and len(symbol_data) > 0 else symbol
+                        fig.add_trace(go.Scatter(
+                            x=symbol_data['timestamp'],
+                            y=y_values,
+                            mode='lines',
+                            name=name,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    fig.update_layout(
+                        title="Commodities Price History",
+                        yaxis_title=y_label,
+                        **get_clean_plotly_layout(),
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+    elif analysis_type == "Forex":
+        forex_df = load_data("""
+            SELECT symbol, rate, change_percent, timestamp
+            FROM forex ORDER BY timestamp DESC
+        """)
+
+        if forex_df.empty:
+            st.warning("No forex data for time series analysis.")
+        else:
+            forex_df['timestamp'] = pd.to_datetime(forex_df['timestamp'])
+            forex_df = forex_df[forex_df['timestamp'] >= start_date]
+
+            if forex_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                symbols = sorted(forex_df['symbol'].unique().tolist())
+                selected_symbols = st.multiselect(
+                    "Select Currency Pairs to Compare",
+                    symbols,
+                    default=[symbols[0]] if symbols else []
+                )
+
+                if selected_symbols:
+                    fig = go.Figure()
+                    colors = ['#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4']
+
+                    for i, symbol in enumerate(selected_symbols):
+                        symbol_data = forex_df[forex_df['symbol'] == symbol].sort_values('timestamp')
+
+                        if normalize_prices and len(symbol_data) > 0:
+                            first_rate = symbol_data['rate'].iloc[0]
+                            y_values = ((symbol_data['rate'] - first_rate) / first_rate * 100) if first_rate != 0 else symbol_data['rate']
+                            y_label = "% Change"
+                        else:
+                            y_values = symbol_data['rate']
+                            y_label = "Exchange Rate"
+
+                        fig.add_trace(go.Scatter(
+                            x=symbol_data['timestamp'],
+                            y=y_values,
+                            mode='lines',
+                            name=symbol,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    fig.update_layout(
+                        title="Forex Rate History",
+                        yaxis_title=y_label,
+                        **get_clean_plotly_layout(),
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
     elif analysis_type == "Economic Indicators":
         econ_df = load_data("""
@@ -2068,35 +2432,49 @@ elif page == "Time Series":
             st.warning("No economic data for time series analysis.")
         else:
             econ_df['timestamp'] = pd.to_datetime(econ_df['timestamp'])
-            indicators = econ_df['name'].unique().tolist()
-            selected_indicator = st.selectbox("Select Indicator", indicators)
+            econ_df = econ_df[econ_df['timestamp'] >= start_date]
 
-            if selected_indicator:
-                indicator_data = econ_df[econ_df['name'] == selected_indicator]
-                countries = indicator_data['country'].unique().tolist()
+            if econ_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                indicators = sorted(econ_df['name'].dropna().unique().tolist())
+                selected_indicator = st.selectbox("Select Indicator", indicators)
 
-                fig = go.Figure()
-                colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6']
-                for i, country in enumerate(countries):
-                    country_data = indicator_data[indicator_data['country'] == country].sort_values('timestamp')
-                    fig.add_trace(go.Scatter(
-                        x=country_data['timestamp'],
-                        y=country_data['value'],
-                        mode='lines+markers',
-                        name=country,
-                        line=dict(color=colors[i % len(colors)], width=2)
-                    ))
+                if selected_indicator:
+                    indicator_data = econ_df[econ_df['name'] == selected_indicator]
+                    countries = sorted(indicator_data['country'].unique().tolist())
 
-                fig.update_layout(
-                    title=f"{selected_indicator} - Cross Country Comparison",
-                    **get_clean_plotly_layout(),
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    selected_countries = st.multiselect(
+                        "Select Countries to Compare",
+                        countries,
+                        default=countries[:3] if len(countries) >= 3 else countries
+                    )
+
+                    if selected_countries:
+                        fig = go.Figure()
+                        colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71']
+
+                        for i, country in enumerate(selected_countries):
+                            country_data = indicator_data[indicator_data['country'] == country].sort_values('timestamp')
+                            fig.add_trace(go.Scatter(
+                                x=country_data['timestamp'],
+                                y=country_data['value'],
+                                mode='lines+markers',
+                                name=country,
+                                line=dict(color=colors[i % len(colors)], width=2)
+                            ))
+
+                        fig.update_layout(
+                            title=f"{selected_indicator} - Cross Country Comparison",
+                            **get_clean_plotly_layout(),
+                            height=450,
+                            hovermode='x unified'
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
 
     elif analysis_type == "Weather":
         weather_df = load_data("""
-            SELECT city, temperature, humidity, timestamp
+            SELECT city, temperature, humidity, wind_speed, timestamp
             FROM weather ORDER BY timestamp DESC
         """)
 
@@ -2104,30 +2482,43 @@ elif page == "Time Series":
             st.warning("No weather data for time series analysis.")
         else:
             weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+            weather_df = weather_df[weather_df['timestamp'] >= start_date]
             weather_df['temperature'] = pd.to_numeric(weather_df['temperature'], errors='coerce')
-            cities = weather_df['city'].unique().tolist()
-            selected_cities = st.multiselect("Select Cities", cities, default=cities[:3])
+            weather_df['humidity'] = pd.to_numeric(weather_df['humidity'], errors='coerce')
 
-            if selected_cities:
-                fig = go.Figure()
-                colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71']
-                for i, city in enumerate(selected_cities):
-                    city_data = weather_df[weather_df['city'] == city].sort_values('timestamp')
-                    fig.add_trace(go.Scatter(
-                        x=city_data['timestamp'],
-                        y=city_data['temperature'],
-                        mode='lines+markers',
-                        name=city,
-                        line=dict(color=colors[i % len(colors)], width=2)
-                    ))
+            if weather_df.empty:
+                st.info(f"No data available for the selected date range.")
+            else:
+                cities = sorted(weather_df['city'].unique().tolist())
+                selected_cities = st.multiselect("Select Cities", cities, default=cities[:3] if len(cities) >= 3 else cities)
 
-                fig.update_layout(
-                    title="Temperature Trends",
-                    yaxis_title="Temperature (C)",
-                    **get_clean_plotly_layout(),
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                metric = st.radio("Metric", ["Temperature", "Humidity"], horizontal=True)
+
+                if selected_cities:
+                    fig = go.Figure()
+                    colors = ['#00d26a', '#ff4757', '#ffa502', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71']
+
+                    y_col = 'temperature' if metric == "Temperature" else 'humidity'
+                    y_unit = "°C" if metric == "Temperature" else "%"
+
+                    for i, city in enumerate(selected_cities):
+                        city_data = weather_df[weather_df['city'] == city].sort_values('timestamp')
+                        fig.add_trace(go.Scatter(
+                            x=city_data['timestamp'],
+                            y=city_data[y_col],
+                            mode='lines+markers',
+                            name=city,
+                            line=dict(color=colors[i % len(colors)], width=2)
+                        ))
+
+                    fig.update_layout(
+                        title=f"{metric} Trends",
+                        yaxis_title=f"{metric} ({y_unit})",
+                        **get_clean_plotly_layout(),
+                        height=450,
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
 
 # ============================================================================
@@ -2489,78 +2880,228 @@ LIMIT 10"""
 
 elif page == "Alerts & Export":
     st.title("Alerts & Data Export")
+    st.markdown("*Monitor market movements and export data*")
     st.markdown("---")
 
-    tab1, tab2 = st.tabs(["Alerts", "Export Data"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Live Alerts", "Custom Alerts", "Alert History", "Export Data"])
 
     with tab1:
-        st.subheader("Active Alerts")
+        st.subheader("Live Market Alerts")
+        st.markdown("*Automatic alerts based on significant price movements*")
 
-        # Stock alerts
-        stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp DESC")
-        if not stocks_df.empty:
-            stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
-            latest_stocks = stocks_df.groupby('symbol').first().reset_index()
-            latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
-            big_movers = latest_stocks[abs(latest_stocks['change_percent']) > 5]
-            if not big_movers.empty:
-                st.markdown("#### Stock Alerts (>5% change)")
-                for _, row in big_movers.iterrows():
-                    change = row.get('change_percent', 0)
-                    color = "success-box" if change > 0 else "alert-box"
-                    st.markdown(f"""<div class='{color}'>
-                        <strong>{row['symbol']}</strong>: {format_change(change)} (${row['price']:.2f})
+        col_alert1, col_alert2 = st.columns(2)
+
+        with col_alert1:
+            # Stock alerts
+            st.markdown("#### Stocks")
+            stocks_df = load_data("SELECT * FROM stocks ORDER BY timestamp DESC")
+            if not stocks_df.empty:
+                stocks_df['timestamp'] = pd.to_datetime(stocks_df['timestamp'])
+                latest_stocks = stocks_df.groupby('symbol').first().reset_index()
+                latest_stocks['change_percent'] = pd.to_numeric(latest_stocks['change_percent'], errors='coerce').fillna(0)
+                big_movers = latest_stocks[abs(latest_stocks['change_percent']) > 5]
+                if not big_movers.empty:
+                    for _, row in big_movers.iterrows():
+                        change = row.get('change_percent', 0)
+                        color = "success-box" if change > 0 else "alert-box"
+                        direction = "up" if change > 0 else "down"
+                        st.markdown(f"""<div class='{color}'>
+                            <strong>{row['symbol']}</strong> {direction} {format_change(abs(change))} (${row['price']:.2f})
+                        </div>""", unsafe_allow_html=True)
+                else:
+                    st.info("No significant stock movements (>5%)")
+            else:
+                st.info("No stock data available")
+
+            # Commodities alerts
+            st.markdown("#### Commodities")
+            commodities_df = load_data("SELECT * FROM commodities ORDER BY timestamp DESC")
+            if not commodities_df.empty:
+                commodities_df['timestamp'] = pd.to_datetime(commodities_df['timestamp'])
+                latest_comm = commodities_df.groupby('symbol').first().reset_index()
+                latest_comm['change_percent'] = pd.to_numeric(latest_comm['change_percent'], errors='coerce').fillna(0)
+                big_comm = latest_comm[abs(latest_comm['change_percent']) > 3]
+                if not big_comm.empty:
+                    for _, row in big_comm.iterrows():
+                        change = row.get('change_percent', 0)
+                        color = "success-box" if change > 0 else "alert-box"
+                        name = row.get('name', row['symbol'])
+                        st.markdown(f"""<div class='{color}'>
+                            <strong>{name}</strong>: {format_change(change)} (${row['price']:.2f})
+                        </div>""", unsafe_allow_html=True)
+                else:
+                    st.info("No significant commodity movements (>3%)")
+
+        with col_alert2:
+            # Crypto alerts
+            st.markdown("#### Crypto")
+            crypto_df = load_data("SELECT * FROM crypto ORDER BY timestamp DESC")
+            if not crypto_df.empty:
+                crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
+                latest_crypto = crypto_df.groupby('symbol').first().reset_index()
+                latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
+                big_crypto = latest_crypto[abs(latest_crypto['change_percent_24h']) > 10]
+                if not big_crypto.empty:
+                    for _, row in big_crypto.iterrows():
+                        change = row.get('change_percent_24h', 0)
+                        color = "success-box" if change > 0 else "alert-box"
+                        st.markdown(f"""<div class='{color}'>
+                            <strong>{row['symbol']}</strong>: {format_change(change)} (${row['price']:,.2f})
+                        </div>""", unsafe_allow_html=True)
+                else:
+                    st.info("No significant crypto movements (>10%)")
+
+            # NEO alerts
+            st.markdown("#### Space - Hazardous NEOs")
+            neo_df = load_data("""
+                SELECT * FROM near_earth_objects
+                WHERE is_potentially_hazardous = true AND date >= CURRENT_DATE
+            """)
+            if not neo_df.empty:
+                for _, row in neo_df.iterrows():
+                    st.markdown(f"""<div class='alert-box'>
+                        <strong>{row['name']}</strong> - Approach: {row['date']}
                     </div>""", unsafe_allow_html=True)
             else:
-                st.info("No significant stock movements (>5%)")
+                st.info("No hazardous NEO approaches today")
 
-        # Crypto alerts
-        crypto_df = load_data("SELECT * FROM crypto ORDER BY timestamp DESC")
-        if not crypto_df.empty:
-            crypto_df['timestamp'] = pd.to_datetime(crypto_df['timestamp'])
-            latest_crypto = crypto_df.groupby('symbol').first().reset_index()
-            latest_crypto['change_percent_24h'] = pd.to_numeric(latest_crypto['change_percent_24h'], errors='coerce').fillna(0)
-            big_crypto = latest_crypto[abs(latest_crypto['change_percent_24h']) > 10]
-            if not big_crypto.empty:
-                st.markdown("#### Crypto Alerts (>10% change)")
-                for _, row in big_crypto.iterrows():
-                    change = row.get('change_percent_24h', 0)
-                    color = "success-box" if change > 0 else "alert-box"
-                    st.markdown(f"""<div class='{color}'>
-                        <strong>{row['symbol']}</strong>: {format_change(change)} (${row['price']:,.2f})
-                    </div>""", unsafe_allow_html=True)
-            else:
-                st.info("No significant crypto movements (>10%)")
-
-        # NEO alerts
-        neo_df = load_data("""
-            SELECT * FROM near_earth_objects
-            WHERE is_potentially_hazardous = true AND date >= CURRENT_DATE
-        """)
-        if not neo_df.empty:
-            st.markdown("#### Hazardous NEO Alerts")
-            for _, row in neo_df.iterrows():
-                st.markdown(f"""<div class='alert-box'>
-                    <strong>{row['name']}</strong> - Potentially Hazardous
-                    <br>Approach Date: {row['date']}
-                </div>""", unsafe_allow_html=True)
-
-        # GDELT unrest alerts
+        # GDELT unrest alerts - full width
         if table_exists('gdelt_events'):
+            st.markdown("---")
+            st.markdown("#### Global Unrest Alerts")
             unrest_df = load_data("""
                 SELECT * FROM gdelt_events
                 WHERE event_type IN ('PROTEST', 'RIOT', 'STRIKE') AND tone < -5
                 ORDER BY timestamp DESC LIMIT 5
             """)
             if not unrest_df.empty:
-                st.markdown("#### Social Unrest Alerts")
                 for _, row in unrest_df.iterrows():
+                    title_text = row['title'][:100] + "..." if len(row['title']) > 100 else row['title']
                     st.markdown(f"""<div class='warning-box'>
-                        <strong>{row['country']}</strong>: {row['title'][:80]}...
+                        <strong>{row['country']}</strong>: {title_text}
                         <br>Tone: {row['tone']:.2f} | Type: {row['event_type']}
                     </div>""", unsafe_allow_html=True)
+            else:
+                st.info("No significant social unrest events detected")
 
     with tab2:
+        st.subheader("Create Custom Alert")
+        st.markdown("*Set price thresholds for specific assets*")
+
+        col_create1, col_create2 = st.columns(2)
+
+        with col_create1:
+            alert_asset_type = st.selectbox("Asset Type", ["Stock", "Crypto", "Commodity", "Forex"])
+
+            # Get available symbols based on asset type
+            if alert_asset_type == "Stock":
+                symbols_df = load_data("SELECT DISTINCT symbol FROM stocks ORDER BY symbol")
+            elif alert_asset_type == "Crypto":
+                symbols_df = load_data("SELECT DISTINCT symbol FROM crypto ORDER BY symbol")
+            elif alert_asset_type == "Commodity":
+                symbols_df = load_data("SELECT DISTINCT symbol, name FROM commodities ORDER BY symbol")
+            else:
+                symbols_df = load_data("SELECT DISTINCT symbol FROM forex ORDER BY symbol")
+
+            if not symbols_df.empty:
+                alert_symbol = st.selectbox("Symbol", symbols_df['symbol'].tolist())
+            else:
+                alert_symbol = st.text_input("Symbol")
+
+        with col_create2:
+            alert_condition = st.selectbox("Condition", ["Price Above", "Price Below", "Change Above %", "Change Below %"])
+            alert_value = st.number_input("Value", value=0.0, step=0.01)
+            alert_name = st.text_input("Alert Name (optional)", placeholder="My Alert")
+
+        if st.button("Create Alert", type="primary"):
+            if alert_symbol and alert_value != 0:
+                # Check if user_alerts table exists
+                if table_exists('user_alerts'):
+                    try:
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            INSERT INTO user_alerts (asset_type, symbol, condition_type, threshold_value, name, is_active, created_at)
+                            VALUES (%s, %s, %s, %s, %s, true, NOW())
+                        """, (alert_asset_type.lower(), alert_symbol, alert_condition.lower().replace(" ", "_"), alert_value, alert_name or f"{alert_symbol} Alert"))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                        st.success(f"Alert created: {alert_symbol} {alert_condition} {alert_value}")
+                    except Exception as e:
+                        st.error(f"Error creating alert: {e}")
+                else:
+                    st.warning("Alert storage not available. Run database initialization to enable custom alerts.")
+            else:
+                st.warning("Please fill in all required fields")
+
+        # Show existing custom alerts
+        st.markdown("---")
+        st.subheader("Your Custom Alerts")
+
+        if table_exists('user_alerts'):
+            user_alerts_df = load_data("SELECT * FROM user_alerts WHERE is_active = true ORDER BY created_at DESC")
+
+            if not user_alerts_df.empty:
+                for idx, row in user_alerts_df.iterrows():
+                    col_a, col_b = st.columns([4, 1])
+                    with col_a:
+                        condition_display = row['condition_type'].replace("_", " ").title()
+                        st.markdown(f"""
+                        **{row['name']}** - {row['asset_type'].upper()}: {row['symbol']}
+                        {condition_display} {row['threshold_value']}
+                        """)
+                    with col_b:
+                        if st.button("Delete", key=f"del_alert_{row['id']}"):
+                            try:
+                                conn = get_db_connection()
+                                cursor = conn.cursor()
+                                cursor.execute("UPDATE user_alerts SET is_active = false WHERE id = %s", (row['id'],))
+                                conn.commit()
+                                cursor.close()
+                                conn.close()
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+            else:
+                st.info("No custom alerts created yet")
+        else:
+            st.info("Custom alerts feature requires database setup. Run `python initialize_database.py` to enable.")
+
+    with tab3:
+        st.subheader("Alert History")
+        st.markdown("*Past triggered alerts and notifications*")
+
+        if table_exists('alert_history'):
+            history_df = load_data("""
+                SELECT * FROM alert_history
+                ORDER BY triggered_at DESC
+                LIMIT 50
+            """)
+
+            if not history_df.empty:
+                # Summary metrics
+                col_h1, col_h2, col_h3 = st.columns(3)
+                with col_h1:
+                    st.metric("Total Alerts (24h)",
+                             len(history_df[history_df['triggered_at'] > (pd.Timestamp.now() - pd.Timedelta(days=1))]))
+                with col_h2:
+                    st.metric("Stock Alerts", len(history_df[history_df['asset_type'] == 'stock']))
+                with col_h3:
+                    st.metric("Crypto Alerts", len(history_df[history_df['asset_type'] == 'crypto']))
+
+                st.markdown("---")
+
+                # History table
+                display_df = history_df[['triggered_at', 'asset_type', 'symbol', 'alert_type', 'message']].copy()
+                display_df.columns = ['Time', 'Type', 'Symbol', 'Alert', 'Message']
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No alert history yet. Alerts will appear here when triggered.")
+        else:
+            st.info("Alert history requires database setup. Run `python initialize_database.py` to enable.")
+
+    with tab4:
         st.subheader("Export Data")
 
         export_options = {
@@ -2578,15 +3119,35 @@ elif page == "Alerts & Export":
         if table_exists('gdelt_events'):
             export_options["GDELT Events"] = "SELECT * FROM gdelt_events ORDER BY timestamp DESC LIMIT 1000"
 
-        selected_export = st.selectbox("Select data to export", list(export_options.keys()))
+        # Add World Bank if exists
+        if table_exists('worldbank_indicators'):
+            export_options["World Bank Indicators"] = "SELECT * FROM worldbank_indicators ORDER BY timestamp DESC LIMIT 1000"
 
-        if st.button("Generate Export"):
+        col_exp1, col_exp2 = st.columns([3, 1])
+        with col_exp1:
+            selected_export = st.selectbox("Select data to export", list(export_options.keys()))
+        with col_exp2:
+            export_format = st.selectbox("Format", ["CSV", "JSON"])
+
+        if st.button("Generate Export", type="primary"):
             with st.spinner("Loading data..."):
                 export_df = load_data(export_options[selected_export])
                 if not export_df.empty:
                     st.success(f"Loaded {len(export_df)} records")
-                    export_csv(export_df, selected_export.lower().replace(" ", "_"))
-                    st.dataframe(export_df.head(10), use_container_width=True)
+
+                    if export_format == "CSV":
+                        export_csv(export_df, selected_export.lower().replace(" ", "_"))
+                    else:
+                        # JSON export
+                        json_data = export_df.to_json(orient='records', date_format='iso')
+                        st.download_button(
+                            label="Download JSON",
+                            data=json_data,
+                            file_name=f"{selected_export.lower().replace(' ', '_')}.json",
+                            mime="application/json"
+                        )
+
+                    st.dataframe(export_df.head(10), use_container_width=True, hide_index=True)
                 else:
                     st.warning("No data available for export")
 
