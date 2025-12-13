@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.8
+Hermes Intelligence Platform Dashboard v6.9
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 """
@@ -120,87 +120,330 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling
+# Custom CSS for styling - Modern Dashboard Design v6.9
 CUSTOM_CSS = """
 <style>
-    /* Color classes for change values */
-    .positive { color: #00c853; font-weight: 600; }
-    .negative { color: #ff1744; font-weight: 600; }
-    .neutral { color: #757575; }
+    /* ========================================
+       DESIGN SYSTEM - CSS Variables
+       ======================================== */
+    :root {
+        /* Muted Professional Color Palette */
+        --color-positive: #0d9488;
+        --color-positive-light: #ccfbf1;
+        --color-positive-dark: #0f766e;
+        --color-negative: #e07a5f;
+        --color-negative-light: #fef2f2;
+        --color-negative-dark: #c45a42;
+        --color-neutral: #64748b;
+        --color-neutral-light: #f1f5f9;
 
-    /* Card styling */
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 0.5rem;
-        color: white;
+        /* Primary Action Colors */
+        --color-primary: #3b82f6;
+        --color-primary-hover: #2563eb;
+        --color-primary-light: #eff6ff;
+
+        /* Surface & Background */
+        --color-surface: #ffffff;
+        --color-surface-elevated: #f8fafc;
+        --color-border: #e2e8f0;
+        --color-border-light: #f1f5f9;
+
+        /* Text Colors */
+        --color-text-primary: #1e293b;
+        --color-text-secondary: #64748b;
+        --color-text-muted: #94a3b8;
+
+        /* Shadows */
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+
+        /* Border Radius */
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+
+        /* Transitions */
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.2s ease;
     }
 
-    /* Alert boxes */
+    /* ========================================
+       SEMANTIC COLOR CLASSES
+       ======================================== */
+    .positive { color: var(--color-positive); font-weight: 600; }
+    .negative { color: var(--color-negative); font-weight: 600; }
+    .neutral { color: var(--color-neutral); }
+
+    /* ========================================
+       GHOST BUTTON STYLING
+       ======================================== */
+    .stButton > button {
+        background: transparent !important;
+        border: 1px solid var(--color-border) !important;
+        color: var(--color-text-secondary) !important;
+        border-radius: var(--radius-sm) !important;
+        transition: all var(--transition-normal) !important;
+        font-weight: 500 !important;
+        padding: 0.5rem 1rem !important;
+    }
+    .stButton > button:hover {
+        background: var(--color-primary) !important;
+        border-color: var(--color-primary) !important;
+        color: white !important;
+        box-shadow: var(--shadow-sm) !important;
+        transform: translateY(-1px);
+    }
+    .stButton > button:active {
+        transform: translateY(0);
+        box-shadow: none !important;
+    }
+    /* Primary button variant */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"] {
+        background: var(--color-primary) !important;
+        border-color: var(--color-primary) !important;
+        color: white !important;
+    }
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="baseButton-primary"]:hover {
+        background: var(--color-primary-hover) !important;
+        border-color: var(--color-primary-hover) !important;
+    }
+
+    /* ========================================
+       METRIC CARD STYLING
+       ======================================== */
+    [data-testid="stMetric"] {
+        background: var(--color-surface);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-border);
+        transition: box-shadow var(--transition-normal);
+    }
+    [data-testid="stMetric"]:hover {
+        box-shadow: var(--shadow-md);
+    }
+    [data-testid="stMetricLabel"] {
+        color: var(--color-text-secondary) !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-weight: 600 !important;
+        font-variant-numeric: tabular-nums !important;
+        color: var(--color-text-primary) !important;
+    }
+    /* Delta colors - hide default arrow, use our colors */
+    [data-testid="stMetricDelta"] {
+        font-variant-numeric: tabular-nums !important;
+    }
+    [data-testid="stMetricDelta"][style*="color: rgb(9, 171, 59)"],
+    [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] svg {
+        display: none;
+    }
+
+    /* ========================================
+       DATAFRAME / TABLE STYLING
+       ======================================== */
+    .stDataFrame {
+        border-radius: var(--radius-md) !important;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+    .stDataFrame > div {
+        border: 1px solid var(--color-border) !important;
+        border-radius: var(--radius-md) !important;
+    }
+    /* Table header */
+    .stDataFrame thead th {
+        background: var(--color-surface-elevated) !important;
+        font-weight: 600 !important;
+        color: var(--color-text-secondary) !important;
+        border-bottom: 2px solid var(--color-border) !important;
+    }
+    /* Table rows - hover effect */
+    .stDataFrame tbody tr:hover {
+        background: var(--color-primary-light) !important;
+    }
+
+    /* ========================================
+       TABS STYLING
+       ======================================== */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        background: var(--color-surface-elevated);
+        padding: 0.25rem;
+        border-radius: var(--radius-md);
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: var(--radius-sm) !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 500 !important;
+        color: var(--color-text-secondary) !important;
+        transition: all var(--transition-fast) !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: var(--color-border-light) !important;
+        color: var(--color-text-primary) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background: var(--color-surface) !important;
+        color: var(--color-primary) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+
+    /* ========================================
+       EXPANDER STYLING
+       ======================================== */
+    .streamlit-expanderHeader {
+        background: var(--color-surface-elevated) !important;
+        border-radius: var(--radius-sm) !important;
+        font-weight: 500 !important;
+        color: var(--color-text-secondary) !important;
+    }
+    .streamlit-expanderHeader:hover {
+        color: var(--color-primary) !important;
+    }
+
+    /* ========================================
+       SIDEBAR STYLING
+       ======================================== */
+    [data-testid="stSidebar"] {
+        background: var(--color-surface-elevated) !important;
+    }
+    [data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        justify-content: flex-start !important;
+        text-align: left !important;
+    }
+
+    /* ========================================
+       SELECT BOX & INPUT STYLING
+       ======================================== */
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {
+        border-radius: var(--radius-sm) !important;
+        border-color: var(--color-border) !important;
+    }
+    .stSelectbox > div > div:focus-within,
+    .stMultiSelect > div > div:focus-within {
+        border-color: var(--color-primary) !important;
+        box-shadow: 0 0 0 1px var(--color-primary) !important;
+    }
+
+    /* ========================================
+       ALERT / MESSAGE BOXES
+       ======================================== */
     .alert-box {
-        background-color: #ffebee;
-        border-left: 4px solid #f44336;
+        background-color: var(--color-negative-light);
+        border-left: 4px solid var(--color-negative);
         padding: 1rem;
         margin: 0.5rem 0;
-        border-radius: 0 0.5rem 0.5rem 0;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
     .success-box {
-        background-color: #e8f5e9;
-        border-left: 4px solid #4caf50;
+        background-color: var(--color-positive-light);
+        border-left: 4px solid var(--color-positive);
         padding: 1rem;
         margin: 0.5rem 0;
-        border-radius: 0 0.5rem 0.5rem 0;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
     .warning-box {
-        background-color: #fff3e0;
-        border-left: 4px solid #ff9800;
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
         padding: 1rem;
         margin: 0.5rem 0;
-        border-radius: 0 0.5rem 0.5rem 0;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
 
-    /* Data freshness indicator */
-    .freshness-good { color: #4caf50; }
-    .freshness-warning { color: #ff9800; }
-    .freshness-stale { color: #f44336; }
+    /* ========================================
+       DATA FRESHNESS INDICATOR
+       ======================================== */
+    .freshness-good { color: var(--color-positive); }
+    .freshness-warning { color: #f59e0b; }
+    .freshness-stale { color: var(--color-negative); }
 
-    /* Tooltip styling */
+    /* ========================================
+       MARKET STATUS BADGES
+       ======================================== */
+    .market-open {
+        background-color: var(--color-positive-light);
+        color: var(--color-positive-dark);
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    .market-closed {
+        background-color: var(--color-negative-light);
+        color: var(--color-negative-dark);
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    /* ========================================
+       PORTFOLIO CARD
+       ======================================== */
+    .portfolio-card {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        color: white;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-lg);
+    }
+    .portfolio-card h3 { margin: 0 0 0.5rem 0; font-weight: 500; opacity: 0.9; }
+    .portfolio-card .value { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ========================================
+       TOOLTIP STYLING
+       ======================================== */
     .tooltip-icon {
-        color: #9e9e9e;
+        color: var(--color-text-muted);
         cursor: help;
         font-size: 0.8rem;
     }
 
-    /* Market status */
-    .market-open { background-color: #e8f5e9; color: #2e7d32; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
-    .market-closed { background-color: #ffebee; color: #c62828; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; }
-
-    /* Portfolio card */
-    .portfolio-card {
-        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-        padding: 1.5rem;
-        border-radius: 1rem;
-        color: white;
-        margin-bottom: 1rem;
-    }
-    .portfolio-card h3 { margin: 0 0 0.5rem 0; }
-    .portfolio-card .value { font-size: 2rem; font-weight: 700; }
-
-    /* Query builder */
+    /* ========================================
+       QUERY BUILDER
+       ======================================== */
     .query-result {
-        background-color: #f5f5f5;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
+        background-color: var(--color-surface-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
         padding: 1rem;
-        font-family: monospace;
+        font-family: 'SF Mono', 'Fira Code', monospace;
         overflow-x: auto;
     }
 
-    /* Mobile responsive */
+    /* ========================================
+       LLM CLASSIFICATION BADGES
+       ======================================== */
+    .llm-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    .llm-badge.bullish { background-color: var(--color-positive-light); color: var(--color-positive-dark); }
+    .llm-badge.bearish { background-color: var(--color-negative-light); color: var(--color-negative-dark); }
+    .llm-badge.neutral { background-color: var(--color-neutral-light); color: var(--color-neutral); }
+
+    /* ========================================
+       RESPONSIVE DESIGN
+       ======================================== */
     @media (max-width: 768px) {
-        .stMetric { padding: 0.5rem !important; }
-        .stMetric label { font-size: 0.75rem !important; }
-        .stMetric [data-testid="stMetricValue"] { font-size: 1.25rem !important; }
+        [data-testid="stMetric"] { padding: 0.75rem !important; }
+        [data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
+        [data-testid="stMetricValue"] { font-size: 1.25rem !important; }
         .stDataFrame { font-size: 0.75rem !important; }
         [data-testid="stSidebar"] { min-width: 200px !important; }
         .stTabs [data-baseweb="tab"] { padding: 0.5rem !important; font-size: 0.8rem !important; }
@@ -208,25 +451,18 @@ CUSTOM_CSS = """
         h2 { font-size: 1.25rem !important; }
         h3 { font-size: 1rem !important; }
     }
-
-    /* Tablet responsive */
     @media (max-width: 1024px) and (min-width: 769px) {
-        .stMetric [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
+        [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
         h1 { font-size: 1.75rem !important; }
     }
 
-    /* LLM classification badge */
-    .llm-badge {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        margin-left: 0.5rem;
-    }
-    .llm-badge.bullish { background-color: #e8f5e9; color: #2e7d32; }
-    .llm-badge.bearish { background-color: #ffebee; color: #c62828; }
-    .llm-badge.neutral { background-color: #f5f5f5; color: #616161; }
+    /* ========================================
+       UTILITY CLASSES
+       ======================================== */
+    .text-right { text-align: right !important; }
+    .text-center { text-align: center !important; }
+    .font-mono { font-family: 'SF Mono', 'Fira Code', monospace !important; font-variant-numeric: tabular-nums; }
+    .font-semibold { font-weight: 600 !important; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -353,28 +589,172 @@ def get_latest_commodities():
 # HELPER FUNCTIONS
 # ============================================================================
 
+# Design system colors (matching CSS variables)
+COLORS = {
+    'positive': '#0d9488',      # Teal
+    'positive_light': '#ccfbf1',
+    'positive_dark': '#0f766e',
+    'negative': '#e07a5f',      # Coral
+    'negative_light': '#fef2f2',
+    'negative_dark': '#c45a42',
+    'neutral': '#64748b',
+    'neutral_light': '#f1f5f9',
+    'primary': '#3b82f6',
+    'text_primary': '#1e293b',
+    'text_secondary': '#64748b',
+    'border': '#e2e8f0',
+}
+
+
 def format_change(value):
-    """Format a change value with color"""
+    """Format a change value with sign"""
     if value is None:
-        return "N/A"
+        return "—"
     return f"+{value:.2f}%" if value > 0 else f"{value:.2f}%"
 
 
-def format_large_number(value):
-    """Format large numbers with K, M, B suffixes"""
+def format_price(value, decimals=2, currency="$"):
+    """Format price with consistent decimals and commas."""
     if value is None:
-        return "N/A"
-    # Convert Decimal to float to avoid division errors
-    value = float(value)
-    if value >= 1e12:
-        return f"${value/1e12:.2f}T"
-    if value >= 1e9:
-        return f"${value/1e9:.2f}B"
-    if value >= 1e6:
-        return f"${value/1e6:.2f}M"
-    if value >= 1e3:
-        return f"${value/1e3:.2f}K"
-    return f"${value:.2f}"
+        return "—"
+    try:
+        value = float(value)
+        return f"{currency}{value:,.{decimals}f}"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def format_percent(value, decimals=2, show_sign=True):
+    """Format percentage with consistent styling."""
+    if value is None:
+        return "—"
+    try:
+        value = float(value)
+        sign = "+" if value > 0 and show_sign else ""
+        return f"{sign}{value:.{decimals}f}%"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def format_large_number(value, currency="$"):
+    """Format large numbers with K, M, B, T suffixes"""
+    if value is None:
+        return "—"
+    try:
+        value = float(value)
+        if abs(value) >= 1e12:
+            return f"{currency}{value/1e12:.2f}T"
+        if abs(value) >= 1e9:
+            return f"{currency}{value/1e9:.2f}B"
+        if abs(value) >= 1e6:
+            return f"{currency}{value/1e6:.2f}M"
+        if abs(value) >= 1e3:
+            return f"{currency}{value/1e3:.2f}K"
+        return f"{currency}{value:.2f}"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def format_number(value, decimals=0):
+    """Format number with commas and optional decimals."""
+    if value is None:
+        return "—"
+    try:
+        value = float(value)
+        if decimals > 0:
+            return f"{value:,.{decimals}f}"
+        return f"{value:,.0f}"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def get_change_color(value):
+    """Get color based on positive/negative value."""
+    if value is None:
+        return COLORS['neutral']
+    try:
+        value = float(value)
+        if value > 0:
+            return COLORS['positive']
+        elif value < 0:
+            return COLORS['negative']
+        return COLORS['neutral']
+    except (ValueError, TypeError):
+        return COLORS['neutral']
+
+
+def style_dataframe(df, percent_cols=None, price_cols=None, number_cols=None):
+    """
+    Apply consistent styling to a dataframe.
+    - Right-align numeric columns
+    - Color positive/negative values
+    - Format numbers consistently
+    """
+    if df.empty:
+        return df
+
+    # Create a copy to avoid modifying original
+    styled_df = df.copy()
+
+    # Define styling functions
+    def color_values(val):
+        """Color positive values teal, negative coral."""
+        try:
+            if isinstance(val, str):
+                # Check for percentage strings
+                clean_val = val.replace('%', '').replace('+', '').replace('$', '').replace(',', '')
+                num = float(clean_val)
+            else:
+                num = float(val)
+            if num > 0:
+                return f'color: {COLORS["positive"]}'
+            elif num < 0:
+                return f'color: {COLORS["negative"]}'
+        except (ValueError, TypeError):
+            pass
+        return ''
+
+    def right_align(val):
+        """Right-align numeric values."""
+        return 'text-align: right'
+
+    # Build style
+    styler = styled_df.style
+
+    # Apply coloring to specified columns
+    color_cols = []
+    if percent_cols:
+        color_cols.extend([c for c in percent_cols if c in styled_df.columns])
+    if price_cols:
+        color_cols.extend([c for c in price_cols if c in styled_df.columns])
+
+    if color_cols:
+        styler = styler.applymap(color_values, subset=color_cols)
+
+    # Right-align numeric columns
+    numeric_cols = []
+    if percent_cols:
+        numeric_cols.extend([c for c in percent_cols if c in styled_df.columns])
+    if price_cols:
+        numeric_cols.extend([c for c in price_cols if c in styled_df.columns])
+    if number_cols:
+        numeric_cols.extend([c for c in number_cols if c in styled_df.columns])
+
+    # Also detect numeric columns automatically
+    for col in styled_df.columns:
+        if styled_df[col].dtype in ['int64', 'float64', 'int32', 'float32']:
+            if col not in numeric_cols:
+                numeric_cols.append(col)
+
+    if numeric_cols:
+        styler = styler.applymap(right_align, subset=numeric_cols)
+
+    # Format using tabular numbers
+    styler = styler.set_properties(**{
+        'font-variant-numeric': 'tabular-nums'
+    })
+
+    return styler
 
 
 def export_csv(df, filename):
@@ -1400,16 +1780,16 @@ elif page == "Markets":
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with cols[i % 4]:
-                status_color = "#00a86b" if is_open else "#dc3545"
-                bg_color = "#d4edda" if is_open else "#f8f9fa"
-                border_color = "#28a745" if is_open else "#dc3545"
-                text_color = "#155724" if is_open else "#333"
+                # Use design system colors
+                status_color = COLORS['positive'] if is_open else COLORS['negative']
+                bg_color = COLORS['positive_light'] if is_open else "#f8fafc"
+                border_color = COLORS['positive'] if is_open else COLORS['negative']
                 st.markdown(
-                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
-                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
-                    <div style="color:#555; font-size:12px;">{status_text}</div>
-                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
+                    f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#64748b; font-size:12px;">{status_text}</div>
+                    <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
@@ -1420,16 +1800,15 @@ elif page == "Markets":
             info = STOCK_MARKETS[market]
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with cols2[i % 4]:
-                status_color = "#00a86b" if is_open else "#dc3545"
-                bg_color = "#d4edda" if is_open else "#f8f9fa"
-                border_color = "#28a745" if is_open else "#dc3545"
-                text_color = "#155724" if is_open else "#333"
+                status_color = COLORS['positive'] if is_open else COLORS['negative']
+                bg_color = COLORS['positive_light'] if is_open else "#f8fafc"
+                border_color = COLORS['positive'] if is_open else COLORS['negative']
                 st.markdown(
-                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
-                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
-                    <div style="color:#555; font-size:12px;">{status_text}</div>
-                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
+                    f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#64748b; font-size:12px;">{status_text}</div>
+                    <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
@@ -1440,15 +1819,16 @@ elif page == "Markets":
         for i, (market, info) in enumerate(METAL_MARKETS.items()):
             is_open, status_text, local_time = get_market_status(info['tz'], info['open'], info['close'], market)
             with metal_cols[i % 3]:
-                status_color = "#b8860b" if is_open else "#dc3545"  # Dark gold for open
-                bg_color = "#fff8dc" if is_open else "#f8f9fa"  # Cornsilk for open
-                border_color = "#daa520" if is_open else "#dc3545"
+                # Gold/amber tones for metal markets
+                status_color = "#b8860b" if is_open else COLORS['negative']
+                bg_color = "#fef3c7" if is_open else "#f8fafc"
+                border_color = "#d97706" if is_open else COLORS['negative']
                 st.markdown(
-                    f"""<div style="background-color:{bg_color}; padding:10px; border-radius:8px; margin:4px 0; border-left:5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="color:#333; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
-                    <div style="color:{status_color}; font-weight:700; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
-                    <div style="color:#555; font-size:12px;">{status_text}</div>
-                    <div style="color:#777; font-size:11px;">Local: {local_time}</div>
+                    f"""<div style="background-color:{bg_color}; padding:12px; border-radius:10px; margin:4px 0; border-left:4px solid {border_color}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                    <div style="color:#1e293b; font-weight:600; font-size:14px;">{info['flag']} {market}</div>
+                    <div style="color:{status_color}; font-weight:600; font-size:13px; margin:4px 0;">● {'OPEN' if is_open else 'CLOSED'}</div>
+                    <div style="color:#64748b; font-size:12px;">{status_text}</div>
+                    <div style="color:#94a3b8; font-size:11px;">Local: {local_time}</div>
                     </div>""",
                     unsafe_allow_html=True
                 )
