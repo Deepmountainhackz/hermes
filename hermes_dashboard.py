@@ -1,5 +1,5 @@
 """
-Hermes Intelligence Platform Dashboard v6.28
+Hermes Intelligence Platform Dashboard v6.29
 Features: Technical Analysis, Collection Automation, 36+ World Bank indicators,
 Real-time market data, Crypto, Forex, Weather, Space, and Global Events tracking.
 
@@ -1434,7 +1434,7 @@ if st.sidebar.button("🔄 Refresh Data", type="primary", use_container_width=Tr
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Session: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-st.sidebar.caption("v6.28 - Multi-Currency Calculators")
+st.sidebar.caption("v6.29 - Multi-Currency Calculators")
 
 
 # ============================================================================
@@ -8370,17 +8370,19 @@ elif page == "Calculators":
             st.markdown("**Initial Investment**")
             initial_investment = st.number_input(
                 f"Principal Amount ({calc_curr_symbol})",
-                min_value=0.0,
-                value=10000.0,
-                step=1000.0,
+                min_value=0,
+                value=10000,
+                step=1000,
+                format="%d",
                 help="The starting amount you're investing"
             )
 
             monthly_contribution = st.number_input(
                 f"Monthly Contribution ({calc_curr_symbol})",
-                min_value=0.0,
-                value=500.0,
-                step=100.0,
+                min_value=0,
+                value=500,
+                step=100,
+                format="%d",
                 help="Additional amount you'll add each month"
             )
 
@@ -8565,8 +8567,8 @@ elif page == "Calculators":
             retirement_age = st.number_input("Retirement Age", min_value=current_age + 1, max_value=90, value=65)
             life_expectancy = st.number_input("Life Expectancy", min_value=retirement_age + 1, max_value=110, value=90)
 
-            current_savings = st.number_input("Current Retirement Savings ($)", min_value=0.0, value=50000.0, step=10000.0)
-            monthly_savings = st.number_input("Monthly Contribution ($)", min_value=0.0, value=1000.0, step=100.0)
+            current_savings = st.number_input("Current Retirement Savings ($)", min_value=0, value=50000, step=1000, format="%d")
+            monthly_savings = st.number_input("Monthly Contribution ($)", min_value=0, value=1000, step=100, format="%d")
 
             pre_retire_return = st.slider("Pre-Retirement Return (%)", 0.0, 15.0, 7.0, 0.5)
             post_retire_return = st.slider("Post-Retirement Return (%)", 0.0, 10.0, 4.0, 0.5)
@@ -8674,12 +8676,12 @@ elif page == "Calculators":
         col1, col2 = st.columns(2)
 
         with col1:
-            loan_amount = st.number_input(f"Loan Amount ({loan_curr_symbol})", min_value=1000.0, value=float(default_amount), step=1000.0)
+            loan_amount = st.number_input(f"Loan Amount ({loan_curr_symbol})", min_value=1000, value=int(default_amount), step=1000, format="%d")
             interest_rate = st.number_input("Annual Interest Rate (%)", min_value=0.1, max_value=30.0, value=default_rate, step=0.1)
             loan_term_years = st.number_input("Loan Term (Years)", min_value=1, max_value=40, value=default_years)
 
             # Extra payment option
-            extra_payment = st.number_input(f"Extra Monthly Payment ({loan_curr_symbol})", min_value=0.0, value=0.0, step=50.0)
+            extra_payment = st.number_input(f"Extra Monthly Payment ({loan_curr_symbol})", min_value=0, value=0, step=50, format="%d")
 
         with col2:
             # Calculate monthly payment
@@ -8783,16 +8785,17 @@ elif page == "Calculators":
         col1, col2 = st.columns(2)
 
         with col1:
-            initial_value = st.number_input(f"Initial Investment ({curr_symbol})", min_value=0.0, value=10000.0, step=1000.0)
-            final_value = st.number_input(f"Current/Final Value ({curr_symbol})", min_value=0.0, value=15000.0, step=1000.0)
+            initial_value = st.number_input(f"Initial Investment ({curr_symbol})", min_value=0, value=10000, step=1000, format="%d")
+            final_value = st.number_input(f"Current/Final Value ({curr_symbol})", min_value=0, value=15000, step=1000, format="%d")
             investment_period = st.number_input("Investment Period (Years)", min_value=0.1, max_value=100.0, value=5.0, step=0.5)
 
             # Additional contributions
             total_contributions = st.number_input(
                 f"Total Additional Contributions ({curr_symbol})",
-                min_value=0.0,
-                value=0.0,
-                step=1000.0,
+                min_value=0,
+                value=0,
+                step=1000,
+                format="%d",
                 help="Sum of all additional money invested during the period"
             )
 
