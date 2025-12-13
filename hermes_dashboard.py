@@ -2480,17 +2480,29 @@ elif page == "Markets":
                 else:
                     return '#f44336'  # Very Weak
 
+            # Currency to flag HTML entities for cross-platform display
+            currency_flag_html = {
+                'USD': '&#127482;&#127480;',  # 🇺🇸
+                'EUR': '&#127466;&#127482;',  # 🇪🇺
+                'GBP': '&#127468;&#127463;',  # 🇬🇧
+                'JPY': '&#127471;&#127477;',  # 🇯🇵
+                'CHF': '&#127464;&#127469;',  # 🇨🇭
+                'AUD': '&#127462;&#127482;',  # 🇦🇺
+                'CAD': '&#127464;&#127462;',  # 🇨🇦
+                'CNY': '&#127464;&#127475;',  # 🇨🇳
+            }
+
             str_cols = st.columns(len(sorted_strength))
             for i, (curr, score) in enumerate(sorted_strength):
                 with str_cols[i]:
                     color = get_strength_color(score)
-                    flag = get_country_flag(curr)
+                    flag_html = currency_flag_html.get(curr, '&#127757;')  # Default globe
                     status = "Strong" if score > 1 else "Weak" if score < -1 else "Neutral"
                     st.markdown(
-                        f"""<div style="text-align:center; padding:10px; background-color:#f8fafc; border-radius:8px; border-top:4px solid {color}; border:1px solid #e2e8f0;">
-                        <div style="font-size:1.5em;">{flag}</div>
+                        f"""<div style="text-align:center; padding:12px; background-color:#f8fafc; border-radius:8px; border-top:4px solid {color}; border:1px solid #e2e8f0;">
+                        <div style="font-size:2.5em; line-height:1.2;">{flag_html}</div>
                         <b>{curr}</b><br>
-                        <span style="color:{color}; font-size:1.2em;">{score:+.1f}</span><br>
+                        <span style="color:{color}; font-size:1.2em; font-weight:600;">{score:+.1f}</span><br>
                         <small style="color:#64748b;">{status}</small>
                         </div>""",
                         unsafe_allow_html=True
