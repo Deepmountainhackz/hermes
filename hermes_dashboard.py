@@ -1588,6 +1588,8 @@ elif page == "Markets":
                     rate = row['rate']
 
                     if pair in baseline_rates and rate:
+                        # Convert Decimal to float to avoid type errors
+                        rate = float(rate)
                         baseline = baseline_rates[pair]
                         pct_change = ((rate - baseline) / baseline) * 100
 
@@ -1783,7 +1785,8 @@ elif page == "Crypto":
         elif crypto_view == "Market Cap Chart":
             st.subheader("Market Cap Distribution")
             top_coins = latest_crypto.nlargest(10, 'market_cap').copy()
-            top_coins['market_cap_b'] = top_coins['market_cap'] / 1e9
+            # Convert Decimal to float to avoid division errors
+            top_coins['market_cap_b'] = top_coins['market_cap'].apply(lambda x: float(x) / 1e9 if x else 0)
 
             fig = px.pie(
                 top_coins,
@@ -2027,9 +2030,11 @@ elif page == "Economic Indicators":
                 for idx, (_, row) in enumerate(latest_country.iterrows()):
                     with cols[idx % len(cols)]:
                         unit_str = f" {row['unit']}" if row.get('unit') else ""
+                        # Convert Decimal to float to avoid formatting errors
+                        val = float(row['value']) if row['value'] else None
                         st.metric(
                             label=row['name'] or row['indicator'],
-                            value=f"{row['value']:.2f}{unit_str}" if row['value'] else "N/A"
+                            value=f"{val:.2f}{unit_str}" if val else "N/A"
                         )
 
         # Comparison chart
@@ -4045,11 +4050,12 @@ elif page == "Time Series":
                         symbol_data = stocks_df[stocks_df['symbol'] == symbol].sort_values('timestamp')
 
                         if normalize_prices and len(symbol_data) > 0:
-                            first_price = symbol_data['price'].iloc[0]
-                            y_values = ((symbol_data['price'] - first_price) / first_price * 100)
+                            # Convert Decimal to float for arithmetic operations
+                            first_price = float(symbol_data['price'].iloc[0])
+                            y_values = ((symbol_data['price'].astype(float) - first_price) / first_price * 100)
                             y_label = "% Change"
                         else:
-                            y_values = symbol_data['price']
+                            y_values = symbol_data['price'].astype(float)
                             y_label = "Price ($)"
 
                         fig.add_trace(go.Scatter(
@@ -4126,11 +4132,12 @@ elif page == "Time Series":
                         symbol_data = crypto_df[crypto_df['symbol'] == symbol].sort_values('timestamp')
 
                         if normalize_prices and len(symbol_data) > 0:
-                            first_price = symbol_data['price'].iloc[0]
-                            y_values = ((symbol_data['price'] - first_price) / first_price * 100) if first_price != 0 else symbol_data['price']
+                            # Convert Decimal to float for arithmetic operations
+                            first_price = float(symbol_data['price'].iloc[0])
+                            y_values = ((symbol_data['price'].astype(float) - first_price) / first_price * 100) if first_price != 0 else symbol_data['price'].astype(float)
                             y_label = "% Change"
                         else:
-                            y_values = symbol_data['price']
+                            y_values = symbol_data['price'].astype(float)
                             y_label = "Price ($)"
 
                         fig.add_trace(go.Scatter(
@@ -4264,11 +4271,12 @@ elif page == "Time Series":
                         symbol_data = forex_df[forex_df['symbol'] == symbol].sort_values('timestamp')
 
                         if normalize_prices and len(symbol_data) > 0:
-                            first_rate = symbol_data['rate'].iloc[0]
-                            y_values = ((symbol_data['rate'] - first_rate) / first_rate * 100) if first_rate != 0 else symbol_data['rate']
+                            # Convert Decimal to float for arithmetic operations
+                            first_rate = float(symbol_data['rate'].iloc[0])
+                            y_values = ((symbol_data['rate'].astype(float) - first_rate) / first_rate * 100) if first_rate != 0 else symbol_data['rate'].astype(float)
                             y_label = "% Change"
                         else:
-                            y_values = symbol_data['rate']
+                            y_values = symbol_data['rate'].astype(float)
                             y_label = "Exchange Rate"
 
                         fig.add_trace(go.Scatter(
@@ -4324,7 +4332,7 @@ elif page == "Time Series":
                             country_data = indicator_data[indicator_data['country'] == country].sort_values('timestamp')
                             fig.add_trace(go.Scatter(
                                 x=country_data['timestamp'],
-                                y=country_data['value'],
+                                y=country_data['value'].astype(float),
                                 mode='lines+markers',
                                 name=country,
                                 line=dict(color=colors[i % len(colors)], width=2)
